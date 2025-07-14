@@ -16,7 +16,7 @@ public class User
     public string Password { get; set; }
 
     [MaxLength(20)]
-    public string Role { get; set; } // e.g., "user", "admin"
+    public string Role { get; set; } // e.g., "user", "admin", "Guest"
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
