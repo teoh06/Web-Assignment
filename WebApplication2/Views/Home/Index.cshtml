@@ -2,7 +2,145 @@
     ViewData["Title"] = "Home Page";
 }
 
+<style>
+    /* Base Styles */
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* Card Container */
+    .text-center {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        max-width: 800px;
+        margin: 2rem auto;
+        transition: all 0.3s ease;
+        animation: fadeIn 1s ease-out;
+    }
+
+        .text-center:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+    /* Typography */
+    .display-4 {
+        color: #2c3e50;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        position: relative;
+        padding-bottom: 15px;
+    }
+
+        .display-4::after {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(90deg, #3498db 0%, #2c3e50 100%);
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+    .lead {
+        color: #4a5568;
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+        /* Interactive Elements */
+        .lead a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+            position: relative;
+            transition: all 0.3s ease;
+            padding: 2px 0;
+        }
+
+            .lead a::after {
+                content: '';
+                position: absolute;
+                width: 0;
+                height: 2px;
+                background: #3498db;
+                bottom: -5px;
+                left: 0;
+                transition: width 0.3s ease;
+            }
+
+            .lead a:hover {
+                color: #2980b9;
+            }
+
+                .lead a:hover::after {
+                    width: 100%;
+                }
+
+    /* Button Styling */
+    .btn-primary {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        border: none;
+        padding: 15px 35px;
+        border-radius: 50px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+    /* Animation - Note the double @@ */
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive Adjustments - Note the double @@ */
+    @@media (max-width: 768px) {
+        .text-center {
+            padding: 2rem 1rem;
+            margin: 1rem;
+        }
+
+        .display-4 {
+            font-size: 2.5rem;
+        }
+    }
+</style>
+
 <div class="text-center">
     <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <p class="lead">Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+
+    <p>
+        <a asp-area=""
+           asp-controller="Home"
+           asp-action="Report"
+           class="btn btn-primary">
+            Go to Report Page
+        </a>
+    </p>
 </div>
