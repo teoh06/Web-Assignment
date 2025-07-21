@@ -1,0 +1,48 @@
+﻿@model WebApplication2.Models.RegisterVM
+
+<form asp-action="Register" method="post" enctype="multipart/form-data" class="form">
+	<div>
+		<label asp-for="Email"></label>
+		<input asp-for="Email" data-upper autofocus />
+		<span asp-validation-for="Email"></span>
+	</div>
+
+	<div>
+		<label asp-for="Password"></label>
+		<input asp-for="Password" type="password" autocomplete="new-password" />
+		<span asp-validation-for="Password"></span>
+	</div>
+
+	<div>
+		<label asp-for="ConfirmPassword"></label>
+		<input asp-for="ConfirmPassword" type="password" autocomplete="new-password" />
+		<span asp-validation-for="ConfirmPassword"></span>
+	</div>
+
+	<div>
+		<label asp-for="Name"></label>
+		<input asp-for="Name" data-upper data-trim/>
+		<span asp-validation-for="Name"></span>
+	</div>
+
+	<div>
+		<label asp-for="RoleType"></label>
+		<select asp-for="RoleType">
+			<option value="">Select role</option>
+			<option value="Admin">Admin</option>
+			<option value="Member">Member</option>
+		</select>
+		<span asp-validation-for="RoleType" ></span>
+
+	<div>
+		<label asp-for="ProfilePicture">Photo (optional)</label>
+		<input asp-for="ProfilePicture" type="file" accept="image/*" />
+		<span asp-validation-for="ProfilePicture"></span>
+	</div> 
+
+	<button type="submit">Register</button>
+</form>
+
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}

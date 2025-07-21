@@ -10,11 +10,13 @@ namespace WebApplication2;
 public class Helper
 {
     private readonly IWebHostEnvironment en;
+    private readonly IHttpContextAccessor ct;
 
     // TODO
-    public Helper(IWebHostEnvironment en)
+    public Helper(IWebHostEnvironment en, IHttpContextAccessor ct)
     {
         this.en = en;
+        this.ct = ct;
     }
 
     // ------------------------------------------------------------------------
@@ -71,53 +73,64 @@ public class Helper
     // ------------------------------------------------------------------------
 
     // TODO
-    private readonly object ph = new();
+    private readonly PasswordHasher<object> ph = new();
 
     public string HashPassword(string password)
     {
         // TODO
-        return "TODO";
+        return ph.HashPassword(0, password);
     }
 
     public bool VerifyPassword(string hash, string password)
     {
         // TODO
-        return false;
+        return ph.VerifyHashedPassword(0, hash, password) == PasswordVerificationResult.Success;
     }
 
     public void SignIn(string email, string role, bool rememberMe)
     {
         // (1) Claim, identity and principal
         // TODO
-        List<Claim> claims = [];
+        List<Claim> claims = [
+                new(ClaimTypes.Name, email),
+                new(ClaimTypes.Role, role),
+
+            ];
 
         // TODO
-        ClaimsIdentity identity = new();
+        ClaimsIdentity identity = new(claims, "Cookies");
 
         // TODO
-        ClaimsPrincipal principal = new();
+        ClaimsPrincipal principal = new(identity);
 
         // (2) Remember me (authentication properties)
         // TODO
-        AuthenticationProperties properties = new();
-
+        AuthenticationProperties properties = new()
+        {
+            IsPersistent = rememberMe,
+        };
         // (3) Sign in
-        // TODO
+        ct.HttpContext.SignInAsync(principal, properties);
     }
 
     public void SignOut()
     {
         // Sign out
         // TODO
+        ct.HttpContext!.SignOutAsync();
     }
 
     public string RandomPassword()
     {
         string s = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         string password = "";
-        
-        // TODO
 
+        Random r = new();
+        // TODO
+        for (int i = 1; i <= 10; i++)
+        {
+            password += s[r.Next(s.Length)];
+        }
         return password;
     }
 }
