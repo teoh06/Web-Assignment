@@ -1,0 +1,70 @@
+@{
+    ViewData["Title"] = "Submit Report";
+}
+
+<div class="container mt-4">
+    <h2>Submit New Report</h2>
+    
+    <!-- Success Message -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Validation Summary -->
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            <h5>Error submitting report:</h5>
+            <ul>
+                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <li>@error.ErrorMessage</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <form asp-controller="Home" asp-action="SubmitReport" method="post" enctype="multipart/form-data">
+        <!-- Form fields from your original code -->
+        <div class="row p-1">
+            <label class="col-1 col-form-label" for="userInput">User</label>
+            <div class="col-5">
+                <input type="text" id="userInput" name="UserName" class="form-control" />
+            </div>
+        </div>
+        <div class="row p-1">
+            <label class="col-1 col-form-label" for="descriptionInput">Description</label>
+            <div class="col-5">
+                <textarea id="descriptionInput" name="Description" class="form-control" rows="4"></textarea>
+            </div>
+        </div>
+        <div class="row p-1">
+            <label class="col-1 col-form-label" for="fileInput">Attachments</label>
+            <div class="col-5">
+                <input type="file" id="fileInput" name="Attachments" multiple class="form-control" />
+                <small class="form-text text-muted">Max file size: 5MB per file</small>
+            </div>
+        </div>
+        <div class="row p-1">
+            <div class="col-6 text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-send"></i> Submit Report
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <!-- Optional: Add client-side validation -->
+    <script>
+        // Example: Clear form after successful submission
+        if (document.querySelector('.alert-success')) {
+            document.querySelector('form').reset();
+        }
+    </script>
+}
