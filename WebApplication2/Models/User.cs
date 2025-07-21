@@ -17,6 +17,7 @@ public class User : BaseEntity
     
     [Required, MaxLength(50)]
     public string RoleType { get; set; } // "Admin", "Member", "Staff"
-    
+    public string? PhotoPath { get; set; }
+
     public ICollection<Report> Reports { get; set; } = new List<Report>();
 }
