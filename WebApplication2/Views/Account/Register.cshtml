@@ -2,40 +2,51 @@
 
 <form asp-action="Register" method="post" enctype="multipart/form-data" class="form">
 	<div>
-		<label asp-for="Email"></label>
+		<label asp-for="Email">Email</label>
 		<input asp-for="Email" data-upper autofocus />
 		<span asp-validation-for="Email"></span>
 	</div>
 
 	<div>
-		<label asp-for="Password"></label>
-		<input asp-for="Password" type="password" autocomplete="new-password" />
+		<label asp-for="Password">Password</label>
+		<div class="password-input-wrapper">
+			<input asp-for="Password" type="password" autocomplete="new-password" id="passwordInput" />
+			<span id="togglePassword" class="password-toggle-icon">
+				<i class="fas fa-eye-slash"></i>
+			</span>
+		</div>
 		<span asp-validation-for="Password"></span>
 	</div>
 
 	<div>
-		<label asp-for="ConfirmPassword"></label>
-		<input asp-for="ConfirmPassword" type="password" autocomplete="new-password" />
+		<label asp-for="ConfirmPassword">Confirm Password</label>
+		<div class="password-input-wrapper">
+			<input asp-for="ConfirmPassword" type="password" autocomplete="new-password" id="confirmPasswordInput" />
+			<span id="toggleConfirmPassword" class="password-toggle-icon">
+				<i class="fas fa-eye-slash"></i>
+			</span>
+		</div>
 		<span asp-validation-for="ConfirmPassword"></span>
 	</div>
 
 	<div>
-		<label asp-for="Name"></label>
+		<label asp-for="Name">Name</label>
 		<input asp-for="Name" data-upper data-trim/>
 		<span asp-validation-for="Name"></span>
 	</div>
 
 	<div>
-		<label asp-for="RoleType"></label>
+		<label asp-for="RoleType">Role Type</label>
 		<select asp-for="RoleType">
 			<option value="">Select role</option>
 			<option value="Admin">Admin</option>
 			<option value="Member">Member</option>
 		</select>
 		<span asp-validation-for="RoleType" ></span>
+	</div>
 
 	<div>
-		<label asp-for="ProfilePicture">Photo (optional)</label>
+		<label asp-for="ProfilePicture">Profile Photo (Optional)</label>
 		<input asp-for="ProfilePicture" type="file" accept="image/*" />
 		<span asp-validation-for="ProfilePicture"></span>
 	</div> 
@@ -45,4 +56,51 @@
 
 @section Scripts {
 	<partial name="_ValidationScriptsPartial" />
+
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+
+	    // Function to set up a password toggle
+	    function setupPasswordToggle(inputId, toggleId) {
+	        const passwordInput = document.getElementById(inputId);
+	        const toggleIcon = document.getElementById(toggleId);
+
+	        // Check if elements exist before proceeding
+	        if (!passwordInput || !toggleIcon) {
+	            console.warn(`Could not find elements for password toggle: Input ID "${inputId}", Toggle ID "${toggleId}"`);
+	            return; // Exit if elements are missing
+	        }
+
+	        const eyeIcon = toggleIcon.querySelector('i'); // Get the <i> tag inside the span
+
+			if (!eyeIcon) {
+			console.error();
+				return;
+			}
+
+			toggleIcon.addEventListener('click', function() {
+			const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+			passwordInput.setAttribute('type', type);
+
+			// Toggle the eye icon class
+			if (type === 'password') {
+			eyeIcon.classList.remove('fa-eye');
+			eyeIcon.classList.add('fa-eye-slash');
+			} else {
+			eyeIcon.classList.remove('fa-eye-slash');
+			eyeIcon.classList.add('fa-eye');
+			}
+			});
+			}
+
+			// Call the function for the main password field
+			setupPasswordToggle('passwordInput', 'togglePassword');
+
+			// Call the function for the confirm password field
+			setupPasswordToggle('confirmPasswordInput', 'toggleConfirmPassword');
+			});
+	</script>
 }
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link href="~/css/main.css" rel="stylesheet" media="all" />
