@@ -31,7 +31,11 @@
 
 	<div>
 		<label asp-for="Name">Name</label>
+
+		<input asp-for="Name" data-upper data-trim />
+
 		<input asp-for="Name" data-upper data-trim/>
+
 		<span asp-validation-for="Name"></span>
 	</div>
 
@@ -42,14 +46,18 @@
 			<option value="Admin">Admin</option>
 			<option value="Member">Member</option>
 		</select>
+
+		<span asp-validation-for="RoleType"></span>
+
 		<span asp-validation-for="RoleType" ></span>
+
 	</div>
 
 	<div>
 		<label asp-for="ProfilePicture">Profile Photo (Optional)</label>
 		<input asp-for="ProfilePicture" type="file" accept="image/*" />
 		<span asp-validation-for="ProfilePicture"></span>
-	</div> 
+	</div>
 
 	<button type="submit">Register</button>
 </form>
@@ -59,6 +67,20 @@
 
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
+
+
+		// Function to set up a password toggle
+		function setupPasswordToggle(inputId, toggleId) {
+			const passwordInput = document.getElementById(inputId);
+			const toggleIcon = document.getElementById(toggleId);
+
+			// Check if elements exist before proceeding
+			if (!passwordInput || !toggleIcon) {
+				console.warn(`Could not find elements for password toggle: Input ID "${inputId}", Toggle ID "${toggleId}"`);
+				return; // Exit if elements are missing
+			}
+
+			const eyeIcon = toggleIcon.querySelector('i'); // Get the <i> tag inside the span
 
 	    // Function to set up a password toggle
 	    function setupPasswordToggle(inputId, toggleId) {
