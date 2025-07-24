@@ -17,5 +17,6 @@ builder.Services.AddHttpContextAccessor();
 var app = builder.Build();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseRequestLocalization("en-MY");
 app.MapDefaultControllerRoute();
 app.Run();

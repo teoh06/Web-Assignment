@@ -40,3 +40,42 @@ public class LoginVM
 
     public bool RememberMe { get; set; }
 }
+
+public class ResetPasswordVM
+{
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; }
+}
+
+public class UpdatePasswordVM
+{
+    [StringLength(100, MinimumLength = 5)]
+    [DataType(DataType.Password)]
+    [Display(Name = "Current Password")]
+    public string Current { get; set; }
+
+    [StringLength(100, MinimumLength = 5)]
+    [DataType(DataType.Password)]
+    [Display(Name = "New Password")]
+    public string New { get; set; }
+
+    [StringLength(100, MinimumLength = 5)]
+    [Compare("New")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Confirm Password")]
+    public string Confirm { get; set; }
+}
+
+public class EmailVM
+{
+    [StringLength(100)]
+    [EmailAddress]
+    public string Email { get; set; }
+
+    public string Subject { get; set; }
+
+    public string Body { get; set; }
+
+    public bool IsBodyHtml { get; set; }
+}

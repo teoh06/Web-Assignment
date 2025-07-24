@@ -2,8 +2,11 @@
 using Microsoft.AspNetCore.Identity;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using System.Net.Mail;
+using System.Net;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace WebApplication2;
 
@@ -11,12 +14,15 @@ public class Helper
 {
     private readonly IWebHostEnvironment en;
     private readonly IHttpContextAccessor ct;
+    private readonly IConfiguration cf;
 
-    // TODO
-    public Helper(IWebHostEnvironment en, IHttpContextAccessor ct)
+    public Helper(IWebHostEnvironment en,
+                  IHttpContextAccessor ct,
+                  IConfiguration cf)
     {
         this.en = en;
         this.ct = ct;
+        this.cf = cf;
     }
 
     // ------------------------------------------------------------------------
@@ -72,51 +78,41 @@ public class Helper
     // Security Helper Functions
     // ------------------------------------------------------------------------
 
-    // TODO
     private readonly PasswordHasher<object> ph = new();
 
     public string HashPassword(string password)
     {
-        // TODO
         return ph.HashPassword(0, password);
     }
 
     public bool VerifyPassword(string hash, string password)
     {
-        // TODO
-        return ph.VerifyHashedPassword(0, hash, password) == PasswordVerificationResult.Success;
+        return ph.VerifyHashedPassword(0, hash, password)
+               == PasswordVerificationResult.Success;
     }
 
     public void SignIn(string email, string role, bool rememberMe)
     {
-        // (1) Claim, identity and principal
-        // TODO
-        List<Claim> claims = [
-                new(ClaimTypes.Name, email),
-                new(ClaimTypes.Role, role),
+        List<Claim> claims =
+        [
+            new(ClaimTypes.Name, email),
+            new(ClaimTypes.Role, role),
+        ];
 
-            ];
-
-        // TODO
         ClaimsIdentity identity = new(claims, "Cookies");
 
-        // TODO
         ClaimsPrincipal principal = new(identity);
 
-        // (2) Remember me (authentication properties)
-        // TODO
         AuthenticationProperties properties = new()
         {
             IsPersistent = rememberMe,
         };
-        // (3) Sign in
-        ct.HttpContext.SignInAsync(principal, properties);
+
+        ct.HttpContext!.SignInAsync(principal, properties);
     }
 
     public void SignOut()
     {
-        // Sign out
-        // TODO
         ct.HttpContext!.SignOutAsync();
     }
 
@@ -126,11 +122,77 @@ public class Helper
         string password = "";
 
         Random r = new();
-        // TODO
+
         for (int i = 1; i <= 10; i++)
         {
             password += s[r.Next(s.Length)];
         }
+
         return password;
+    }
+
+
+
+    // ------------------------------------------------------------------------
+    // Email Helper Functions
+    // ------------------------------------------------------------------------
+
+    public void SendEmail(MailMessage mail)
+    {
+        // TODO
+        string user = cf["Smtp:User"] ?? "";
+        string pass = cf["Smtp:Pass"] ?? "";
+        string name = cf["Smtp:Name"] ?? "";
+        string host = cf["Smtp:Host"] ?? "";
+        int port = cf.GetValue<int>("Smtp:Port");
+
+        // TODO
+        mail.From = new MailAddress(user, name);
+        using var smtp = new SmtpClient(host, port)
+        {
+            Host = host,
+            Port = port,
+            Credentials = new NetworkCredential(user, pass),
+            EnableSsl = true,
+        };
+        smtp.Send(mail);
+    }
+
+
+
+    // ------------------------------------------------------------------------
+    // DateTime Helper Functions
+    // ------------------------------------------------------------------------
+
+    // Return January (1) to December (12)
+    public SelectList GetMonthList()
+    {
+        var list = new List<object>();
+
+        for (int n = 1; n <= 12; n++)
+        {
+            list.Add(new
+            {
+                Id = n,
+                Name = new DateTime(1, n, 1).ToString("MMMM"),
+            });
+        }
+
+        return new SelectList(list, "Id", "Name");
+    }
+
+    // Return min to max years
+    public SelectList GetYearList(int min, int max, bool reverse = false)
+    {
+        var list = new List<int>();
+
+        for (int n = min; n <= max; n++)
+        {
+            list.Add(n);
+        }
+
+        if (reverse) list.Reverse();
+
+        return new SelectList(list);
     }
 }
