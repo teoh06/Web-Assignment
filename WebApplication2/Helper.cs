@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using System.Net.Mail;
 using System.Net;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace WebApplication2;
 
@@ -91,13 +92,15 @@ public class Helper
                == PasswordVerificationResult.Success;
     }
 
-    public void SignIn(string email, string role, bool rememberMe)
+    public async Task SignIn(User user, bool rememberMe)
     {
-        List<Claim> claims =
-        [
-            new(ClaimTypes.Name, email),
-            new(ClaimTypes.Role, role),
-        ];
+        List<Claim> claims = new()
+        {
+            new Claim(ClaimTypes.Name, user.Name),   
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.RoleType),
+            new Claim("UserId", user.Id.ToString())
+        };
 
         ClaimsIdentity identity = new(claims, "Cookies");
 
@@ -108,7 +111,11 @@ public class Helper
             IsPersistent = rememberMe,
         };
 
-        ct.HttpContext!.SignInAsync(principal, properties);
+        await ct.HttpContext!.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            principal,
+            properties
+        );
     }
 
     public void SignOut()

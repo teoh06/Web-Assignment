@@ -23,6 +23,11 @@ public class AccountController : Controller
     [HttpGet]
     public IActionResult Login()
     {
+        if (User.Identity.IsAuthenticated)
+        {
+            return RedirectToAction("LoginIndex", "Home");
+        }
+
         return View();
     }
 
@@ -33,7 +38,7 @@ public class AccountController : Controller
     }
     
     [HttpPost]
-    public IActionResult Register(RegisterVM model)
+    public async Task<IActionResult> Register(RegisterVM model)
     {
         if(!ModelState.IsValid)
         {
@@ -72,13 +77,13 @@ public class AccountController : Controller
         _context.Users.Add(user);
         _context.SaveChanges();
 
-        _helper.SignIn(user.Email , user.RoleType , rememberMe: true);
+        await _helper.SignIn(user, rememberMe: true);
 
         return RedirectToAction("Index", "Home");
     }
 
     [HttpPost]
-    public IActionResult Login(LoginVM model)
+    public async Task<IActionResult> Login(LoginVM model)
     {
         if(!ModelState.IsValid)
         {
@@ -91,8 +96,8 @@ public class AccountController : Controller
             ModelState.AddModelError("", "Invalid email or password.");
             return View(model);
         }
-        _helper.SignIn(user.Email, user.RoleType, model.RememberMe);
-        return RedirectToAction("Index", "Home");
+        await _helper.SignIn(user, model.RememberMe);
+        return RedirectToAction("LoginIndex","Home");
     }
 
     [HttpPost]
