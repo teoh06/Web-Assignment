@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
-
+using System.Collections.Generic;
 #nullable disable warnings
 
 namespace WebApplication2.Models;
@@ -78,4 +78,32 @@ public class EmailVM
     public string Body { get; set; }
 
     public bool IsBodyHtml { get; set; }
+}
+
+public class DashboardVM
+{
+    public int TotalUsers { get; set; }
+    public int TotalReports { get; set; }
+    public int PendingReports { get; set; }
+    public int ResolvedReports { get; set; }
+
+    public List<Report> RecentReports { get; set; } 
+}
+
+public class ReportFormVM
+{
+    [Required(ErrorMessage = "Description is required")]
+    public string Description { get; set; }
+
+    [Required(ErrorMessage = "CategoryID is required")]
+    public int CategoryId { get; set; }
+
+    [Required(ErrorMessage = "LocationID is required")]
+    public int LocationId { get; set; }
+
+    public List<IFormFile> Attachments { get; set; }
+
+    public List<Category> Categories { get; set; }
+
+    public List<Location> Locations { get; set; }
 }
