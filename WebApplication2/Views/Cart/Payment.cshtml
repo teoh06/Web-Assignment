@@ -1,0 +1,45 @@
+@using System.Globalization;
+
+@model WebApplication2.Controllers.PaymentVM
+@{
+    ViewBag.Title = "Payment";
+}
+<h2>Payment</h2>
+<form asp-action="Payment" method="post">
+    <div class="mb-3">
+        <label for="PaymentMethod">Payment Method</label>
+        <select asp-for="PaymentMethod" class="form-control" required>
+            <option value="">Select...</option>
+            <option>Cash</option>
+            <option>Card</option>
+        </select>
+    </div>
+    <div class="mb-3" id="card-fields" style="display:none">
+        <label for="CardNumber">Card Number</label>
+        <input asp-for="CardNumber" class="form-control" maxlength="16" pattern="\d{16}" />
+        <span asp-validation-for="CardNumber" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label>Total</label>
+        <input type="text" class="form-control" value="@Model.Total.ToString("C", new CultureInfo("en-MY"))" readonly />
+    </div>
+    <button type="submit" class="btn btn-success">Pay & Place Order</button>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+<script>
+        document.querySelector('[name="PaymentMethod"]').addEventListener('change', function() {
+        var cardFields = document.getElementById('card-fields');
+        if (this.value === 'Card') {
+            cardFields.style.display = '';
+            // Enable validation if needed
+            document.querySelector('[name="CardNumber"]').required = true;
+        } else {
+            cardFields.style.display = 'none';
+            // Disable validation
+            document.querySelector('[name="CardNumber"]').required = false;
+        }
+    });
+</script>
+}

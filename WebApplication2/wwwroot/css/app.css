@@ -1,0 +1,259 @@
+﻿/* Font ----------------------------------------------------------------------- */
+
+body, input, select, textarea, button {
+    font: 16px Roboto, sans-serif;
+}
+
+/* Layout --------------------------------------------------------------------- */
+
+body {
+    margin: 0;
+    height: 100vh;
+    display: grid;
+    grid: auto auto 1fr auto / auto;
+}
+
+header, 
+footer {
+    background: #ccc;
+    padding: 10px 50px;
+}
+
+header {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+header h1 {
+    flex: 1;
+    margin: 0;
+    padding-left: 40px;
+    background: url(/images/favicon.png) no-repeat left / 32px;
+}
+
+header a {
+    color: inherit;
+    text-decoration: none;
+}
+
+header img {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #999;
+    border-radius: 5px;
+}
+
+nav {
+    background: #999;
+    padding: 0 50px;
+    display: flex;
+}
+
+nav a {
+    background: #666;
+    color: #fff;
+    text-decoration: none;
+    padding: 5px 10px;
+    white-space: nowrap;
+}
+
+nav a:hover {
+    background: #333;
+}
+
+nav b {
+    padding: 5px 10px;
+    white-space: nowrap;
+}
+
+nav div {
+    flex: 1;
+}
+
+main {
+    padding: 20px 50px;
+}
+
+main h1 {
+    margin-top: 0;
+}
+
+/* Table ---------------------------------------------------------------------- */
+
+.table {
+    border-collapse: collapse;
+}
+
+.table th, 
+.table td {
+    border: 1px solid #333;
+    padding: 5px;
+}
+
+.table th {
+    background: #666;
+    color: #fff;
+}
+
+.table tr:hover td {
+    background: #ccc;
+}
+
+.detail th {
+    text-align: left;
+}
+
+.table th a {
+    color: inherit;
+    display: block;
+}
+
+.table th a.asc::after {
+    content: ' ▴';
+}
+
+.table th a.des::after {
+    content: ' ▾';
+}
+
+.table tr:has(input:checked) td {
+    background: tomato;
+}
+
+.table td:last-child {
+    position: relative;
+}
+
+.table .popup {
+    background: #fff;
+    border: inherit;
+    padding: inherit;
+    position: absolute;
+    z-index: 1;
+    white-space: nowrap;
+    top: 50%;
+    left: 100%;
+    transform: translate(5px, -50%);
+    display: none;
+}
+
+.table img.popup {
+    padding: 0;
+}
+
+.table tr:hover .popup {
+    display: block;
+}
+
+/* Pager ---------------------------------------------------------------------- */
+
+.pagination a,
+.pagination span {
+    background: #666 !important;
+    color: #fff !important;
+    border: 1px solid #000 !important;
+}
+
+.pagination a:hover,
+.pagination span:hover {
+    background: #333 !important;
+}
+
+.pagination .active a,
+.pagination .active span {
+    background: #333 !important;
+}
+
+.pagination .disabled a,
+.pagination .disabled span {
+    background: #ccc !important;
+}
+
+/* Flash Message -------------------------------------------------------------- */
+
+.info {
+    position: fixed;
+    background: #666;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 10px 20px;
+    max-width: 500px;
+    left: 50%;
+    transform: translate(-50%, 0);
+    top: -100px;
+    opacity: 0;
+}
+
+.info:not(:empty) {
+    animation: fade 5s;
+}
+
+@keyframes fade {
+      0% { top: -100px; opacity: 0; }
+     10% { top:  100px; opacity: 1; }
+     90% { top:  100px; opacity: 1; }
+    100% { top: -100px; opacity: 0; }
+}
+
+/* Form ----------------------------------------------------------------------- */
+
+label > * {
+    vertical-align: text-top;
+}
+
+.form {
+    display: grid;
+    grid: auto / auto auto auto;
+    gap: 5px;
+    place-content: start;
+    place-items: center start;
+}
+
+.form > label:not(:has(*)) {
+    background: #ccc;
+    font-weight: bold;
+    padding: 5px;
+    place-self: stretch;
+}
+
+.form > section,
+.validation-summary-valid,
+.validation-summary-errors {
+    grid-column: 1 / -1;
+}
+
+.validation-summary-valid ul,
+.validation-summary-errors ul {
+    margin: 0;
+}
+
+.field-validation-error,
+.validation-summary-errors {
+    color: red;
+}
+
+/* 
+    Upload --------------------------------------------------------------- */
+
+.upload img {
+    display: block;
+    border: 1px solid #333;
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+/* Badge ---------------------------------------------------------------------- */
+
+.badge {
+    display: inline-block;
+    background-color: #666;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 3px;
+    min-width: 30px;
+    text-align: center;
+}

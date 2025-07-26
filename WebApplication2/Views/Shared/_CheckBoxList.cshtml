@@ -1,0 +1,18 @@
+﻿@model (string Name, dynamic List, bool IsBreak)
+
+<div>
+    @foreach (SelectListItem item in Model.List)
+    {
+        <label>
+            <input type="checkbox"
+                   name="@Model.Name"
+                   value="@item.Value"
+                   checked="@item.Selected">@item.Text
+        </label>
+
+        if (Model.IsBreak)
+        {
+            <br>
+        }
+    }
+</div>

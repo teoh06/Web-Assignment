@@ -1,0 +1,20 @@
+@model WebApplication2.Models.MenuItem
+@{
+    ViewBag.Title = "Menu Item Details";
+}
+<div>
+    <h4>Name: @Model.Name</h4>
+    <h4>Category: @Model.Category?.Name</h4>
+    <h4>Description: @Model.Description</h4>
+    <h4>Price: @Model.Price.ToString("C")</h4>
+    <a href="@Url.Action("Edit", new { id = Model.MenuItemId })" class="btn btn-primary">Edit</a>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
+    @if (User.IsInRole("Member"))
+    {
+        <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline">
+            <input type="hidden" name="menuItemId" value="@Model.MenuItemId" />
+            <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px" />
+            <button type="submit" class="btn btn-success">Add to Cart</button>
+        </form>
+    }
+</div>

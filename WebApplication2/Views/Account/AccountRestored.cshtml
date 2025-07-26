@@ -1,0 +1,28 @@
+﻿@{
+    ViewBag.Title = "Account Restored";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Account Successfully Restored</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Your account has been successfully restored. You can now log in.</p>
+                    <a href="@Url.Action("Login", "Account")" class="btn btn-primary">Go to Login Page</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-redirect to Login after 5 seconds
+        setTimeout(function() {
+            window.location.href = "@Url.Action("Login", "Account")";
+        }, 5000); // Redirect after 5 seconds
+    </script>
+}

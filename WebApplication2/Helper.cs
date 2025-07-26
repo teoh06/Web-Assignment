@@ -96,13 +96,14 @@ public class Helper
     {
         List<Claim> claims = new()
         {
-            new Claim(ClaimTypes.Name, user.Name),   
+            new Claim(ClaimTypes.Name, user.Name),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.RoleType),
+            new Claim(ClaimTypes.Role, user.Role),             
             new Claim("UserId", user.Id.ToString())
+
         };
 
-        ClaimsIdentity identity = new(claims, "Cookies");
+        ClaimsIdentity identity = new(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
         ClaimsPrincipal principal = new(identity);
 

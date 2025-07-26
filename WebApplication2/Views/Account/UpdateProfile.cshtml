@@ -1,0 +1,50 @@
+﻿@model UpdateProfileVM
+
+@{
+    ViewBag.Title = "Account | Update Profile";
+}
+
+<form class="form" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly"></div>
+
+    <label asp-for="Email"></label>
+    <b>@Model.Email</b>
+    <br>
+
+    <label asp-for="Name"></label>
+    <input asp-for="Name" autofocus>
+    <span asp-validation-for="Name"></span>
+
+    <label asp-for="ProfilePicture"></label>
+    <label class="upload">
+        <small>Select Photo...</small>
+        <input asp-for="ProfilePicture" accept="image/jpeg,image/png" hidden>
+        <img src="/photos/@Model.PhotoURL">
+    </label>
+    <span asp-validation-for="ProfilePicture"></span>
+
+    <section>
+        <button>Update</button>
+        <button type="reset">Reset</button>
+    </section>
+</form>
+
+<hr />
+
+<section class="danger-zone">
+    <h3>Delete Account</h3>
+    <p>Once you delete your account, you will receive an email to finalize the process. There is a grace period for recovery.</p>
+    <form id="deleteAccountForm" asp-controller="Account" asp-action="InitiateAccountDeletion" method="post">
+        <button class="delete-button" type="submit">Delete Your Account</button>
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        document.getElementById('deleteAccountForm').addEventListener('submit', function (e) {
+            if (!confirm('Do you really want to delete your account? This action will send a confirmation email to your registered address.')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+}
