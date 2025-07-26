@@ -1,0 +1,9 @@
+@model WebApplication2.Models.Category
+@{
+    ViewBag.Title = "Category Details";
+}
+<div>
+    <h4>Name: @Model.Name</h4>
+    <a href="@Url.Action("Edit", new { id = Model.CategoryId })" class="btn btn-primary">Edit</a>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
+</div>

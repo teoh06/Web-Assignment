@@ -1,8 +1,16 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using WebApplication2.Services;
 using WebApplication2.Models;
 using System.Net.Mail;
+using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
+using System; 
+using System.Linq;
 using MailAttachment = System.Net.Mail.Attachment;
+using Microsoft.AspNetCore.Identity.UI.Services;
 
 namespace WebApplication2.Controllers;
 
@@ -12,23 +20,38 @@ public class AccountController : Controller
     private readonly DB _context;
     private readonly Helper _helper;
     private readonly IWebHostEnvironment _environment;
+    private readonly IEmailService _emailService;
 
-    public AccountController(DB context, Helper helper, IWebHostEnvironment environment)
+    public AccountController(DB context, Helper helper, IWebHostEnvironment environment, IEmailService emailService)
         {
             this._context = context;
             this._helper = helper;
             this._environment =  environment;
-        }
+            this._emailService = emailService;
+    }
 
     [HttpGet]
     public IActionResult Login()
-    {
-        if (User.Identity.IsAuthenticated)
-        {
-            return RedirectToAction("LoginIndex", "Home");
-        }
-
+    { 
         return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Login(LoginVM model, string? returnURL)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+        var user = _context.Users.FirstOrDefault(u => u.Email == model.Email);
+
+        if (user == null || !_helper.VerifyPassword(user.Hash, model.Password) || string.IsNullOrWhiteSpace(user.Hash))
+        {
+            ModelState.AddModelError("", "Invalid email or password.");
+            return View(model);
+        }
+        await _helper.SignIn(user, model.RememberMe);
+        return RedirectToAction("Index", "Home");
     }
 
     [HttpGet]
@@ -40,7 +63,11 @@ public class AccountController : Controller
     [HttpPost]
     public async Task<IActionResult> Register(RegisterVM model)
     {
-        if(!ModelState.IsValid)
+        Console.WriteLine("REGISTER POST START"); // Log start
+        Console.WriteLine($"Model Valid: {ModelState.IsValid}");
+        Console.WriteLine($"Email: {model.Email}");
+        Console.WriteLine($"ProfilePicture: {model.ProfilePicture?.FileName}");
+        if (!ModelState.IsValid)
         {
             return View(model);
         }
@@ -65,13 +92,13 @@ public class AccountController : Controller
             photoFile = _helper.SavePhoto(model.ProfilePicture, "photos");
         }
 
-        var user = new User
+
+        var user = new Member
         {
             Email = model.Email,
-            PasswordHash = _helper.HashPassword(model.Password),
+            Hash = _helper.HashPassword(model.Password),
             Name = model.Name,
-            RoleType = model.RoleType,
-            PhotoPath = photoFile
+            PhotoURL = photoFile
         };
 
         _context.Users.Add(user);
@@ -82,30 +109,17 @@ public class AccountController : Controller
         return RedirectToAction("Index", "Home");
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Login(LoginVM model)
-    {
-        if(!ModelState.IsValid)
-        {
-            return View(model);
-        }
-        var user = _context.Users.FirstOrDefault(u => u.Email == model.Email);
-
-        if(user == null || !_helper.VerifyPassword(user.PasswordHash, model.Password) || string.IsNullOrWhiteSpace(user.PasswordHash))
-        {
-            ModelState.AddModelError("", "Invalid email or password.");
-            return View(model);
-        }
-        await _helper.SignIn(user, model.RememberMe);
-        return RedirectToAction("LoginIndex","Home");
-    }
+    
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult Logout()
     {
-        _helper.SignOut();
-        return RedirectToAction("Login");
+        _helper.SignOut(); // Sign out user (clears cookie, session, etc.)
+        TempData["Info"] = "Logout successful.";
+        return RedirectToAction("Login", "Account");
     }
+
 
     public IActionResult ResetPassword()
     {
@@ -129,7 +143,7 @@ public class AccountController : Controller
         }
 
         string password = _helper.RandomPassword();
-        u.PasswordHash = _helper.HashPassword(password);
+        u.Hash = _helper.HashPassword(password);
         _context.SaveChanges();
 
         sendResetPasswordEmail(u, password);
@@ -143,6 +157,11 @@ public class AccountController : Controller
     {
         var mail = new MailMessage();
         mail.To.Add(new MailAddress(u.Email, u.Name));
+        if (u == null || string.IsNullOrEmpty(u.Email) || string.IsNullOrEmpty(u.Name))
+        {
+            throw new Exception("User data incomplete in sendResetPasswordEmail");
+        }
+
         mail.Subject = "Reset Password";
         mail.IsBodyHtml = true;
 
@@ -198,5 +217,14 @@ public class AccountController : Controller
 
         _helper.SendEmail(mail);
     }
+
+    [AcceptVerbs("Get", "Post")]
+    public IActionResult CheckEmail(string email)
+    {
+        bool isAvailable = !_context.Users.Any(u => u.Email == email);
+        return Json(isAvailable);
+    }
+
+    
 
 }

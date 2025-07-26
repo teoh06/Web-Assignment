@@ -1,0 +1,14 @@
+@model WebApplication2.Models.Category
+@{
+    ViewBag.Title = "Edit Category";
+}
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="CategoryId" />
+    <div class="form-group">
+        <label asp-for="Name"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
+</form>

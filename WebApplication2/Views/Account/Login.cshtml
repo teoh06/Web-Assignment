@@ -1,61 +1,33 @@
-﻿@model WebApplication2.Models.LoginVM
+﻿@model LoginVM
 
-@if (!ViewData.ModelState.IsValid)
-{
-    <div class="validation-errors">
-        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-        {
-            <div>@error.ErrorMessage</div>
-        }
-    </div>
+@{
+    ViewBag.Title = "Account | Login";
 }
 
-<form asp-action="Login" method="post" class="form">
-    <div>
-        <label asp-for="Email"></label>
-        <input asp-for="Email" data-upper autofocus />
-        <span asp-validation-for="Email"></span>
-    </div>
+<form class="form" method="post">
+    <div asp-validation-summary="ModelOnly"></div>
 
-    <div>
-        <label asp-for="Password"></label>
-        <div class="password-input-wrapper">
-            <input asp-for="Password" type="password" autocomplete="new-password" id="passwordInput" />
-            <span id="togglePassword" class="password-toggle-icon"> <i class="fas fa-eye-slash"></i> </span>
-        </div>
-        <span asp-validation-for="Password"></span>
-    </div>
+    <label asp-for="Email"></label>
+    <input asp-for="Email" autofocus>
+    <span asp-validation-for="Email"></span>
 
-    <div>
-        <input asp-for="RememberMe" type="checkbox" />
-        <label asp-for="RememberMe">Remember Me</label>
-    </div>
+    <label asp-for="Password" ></label>
+    <input asp-for="Password" autocomplete="new-password">
+    <span asp-validation-for="Password"></span>
 
-    <button type="submit">Login</button>
+    <br>
+    <label>
+        <input asp-for="RememberMe">Remember Me
+    </label>
+    <br>
+
+    <section>
+        <button>Login</button>
+        <button type="reset">Reset</button>
+    </section>
 </form>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-
-    <script>
-        // Password toggle functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleButton = document.getElementById('togglePassword');
-            const passwordInput = document.getElementById('passwordInput');
-
-            toggleButton.addEventListener('click', function() {
-                // Toggle between password and text
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-
-                // Toggle eye icon
-                toggleButton.innerHTML = type === 'password'
-                    ? '<i class="far fa-eye"></i>'
-                    : '<i class="far fa-eye-slash"></i>';
-            });
-        });
-    </script>
-}
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<link href="~/css/main.css" rel="stylesheet" media="all" />
+<p>
+    [ <a href="/Account/Register">Register</a> |
+      <a href="/Account/ResetPassword">Reset Password</a> ]
+</p>

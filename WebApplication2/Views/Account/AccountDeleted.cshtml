@@ -1,0 +1,41 @@
+﻿@{
+    ViewBag.Title = "Account Deleted";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">Account Permanently Deleted</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Your account has been permanently deleted from our system.</p>
+                    <p class="card-text">We're sorry to see you go. If you ever change your mind, you'll need to register a new account.</p>
+                    <hr>
+                    <p class="text-muted">You can now close this window or return to the home page.</p>
+                    <a href="/" class="btn btn-primary">Go to Home Page</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-header.bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .delete-button {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+        .delete-button:hover {
+            background-color: #c82333;
+        }
+</style>

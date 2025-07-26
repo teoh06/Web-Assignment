@@ -1,0 +1,26 @@
+@model IEnumerable<WebApplication2.Models.Category>
+@{
+    ViewBag.Title = "Categories";
+}
+<p><a href="@Url.Action("Create")">Create New Category</a></p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.Name</td>
+            <td>
+                <a href="@Url.Action("Edit", new { id = item.CategoryId })">Edit</a> |
+                <a href="@Url.Action("Details", new { id = item.CategoryId })">Details</a> |
+                <a href="@Url.Action("Delete", new { id = item.CategoryId })">Delete</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

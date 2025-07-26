@@ -1,0 +1,35 @@
+@{
+    ViewBag.Title = "Account Deletion Initiated";
+}
+
+<p>
+    Your account deletion process has been initiated.
+    An email has been sent to your registered email address to finalize the deletion.
+    Please check your inbox (and spam folder).
+</p>
+
+<p>
+    Remember, there is a grace period for account recovery.
+</p>
+<br>
+<br>
+
+@if (ViewBag.EmailError != null)
+{
+    <div class="alert alert-danger">
+        <b>Email sending failed:</b> @ViewBag.EmailError
+    </div>
+}
+
+<div>
+    <a href="@Url.Action("Index", "Home")">Return to Home</a>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-redirect to Home/Index after 5 seconds (5000 milliseconds)
+        setTimeout(function() {
+            window.location.href = "@Url.Action("Index", "Home")";
+        }, 5000); // Redirect after 5 seconds
+    </script>
+}

@@ -1,0 +1,31 @@
+@model WebApplication2.Controllers.ReceiptVM
+@using System.Globalization;
+@{
+    ViewBag.Title = "Receipt";
+}
+<h2>Receipt</h2>
+<p>Order #: <b>@Model.OrderId</b></p>
+<p>Date: @Model.Date.ToString("g")</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td>@item.Name</td>
+            <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
+            <td>@item.Quantity</td>
+            <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
+        </tr>
+    }
+    </tbody>
+</table>
+<h4>Total Paid: @Model.Total.ToString("C", new CultureInfo("en-MY"))</h4>
+<a href="@Url.Action("Index", "MenuItem")" class="btn btn-primary">Back to Menu</a>

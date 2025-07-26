@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
+
 #nullable disable warnings
 
 namespace WebApplication2.Models;
@@ -9,22 +10,23 @@ public class RegisterVM
 {
     [Required(ErrorMessage = "Email is required.")]
     [EmailAddress(ErrorMessage = "Invalid email format.")]
+    [Remote("CheckEmail", controller:"Account", ErrorMessage = "Duplicated Email.")]
     public string Email { get; set; }
 
     [Required(ErrorMessage = "Password cannot be empty.")]
-    [MinLength(6, ErrorMessage = "Password must be at least 6 characters long.")]
+    [StringLength(100, MinimumLength = 5, ErrorMessage = "Password must be between 6 and 100 characters long.")]
+    [DataType(DataType.Password)]
     public string Password { get; set; }
 
     [Required(ErrorMessage = "Confirm Password cannot be empty.")]
     [Compare("Password", ErrorMessage = "Password and confirm password not match.")]
-    public string ConfirmPassword { get; set; }
+    [StringLength(100, MinimumLength = 5)]
+    [DataType(DataType.Password)]
+    public string Confirm { get; set; }
 
     [Required]
     [MaxLength(100, ErrorMessage = "Name cannot exceed 100 characters.")]
     public string Name { get; set; }
-
-    [Required(ErrorMessage = "Role type is required.")]
-    public string RoleType { get; set; }
 
     public IFormFile? ProfilePicture { get; set; } 
 }
@@ -45,6 +47,7 @@ public class ResetPasswordVM
 {
     [Required]
     [EmailAddress]
+    [StringLength(100)]
     public string Email { get; set; }
 }
 
@@ -80,30 +83,14 @@ public class EmailVM
     public bool IsBodyHtml { get; set; }
 }
 
-public class DashboardVM
+public class UpdateProfileVM
 {
-    public int TotalUsers { get; set; }
-    public int TotalReports { get; set; }
-    public int PendingReports { get; set; }
-    public int ResolvedReports { get; set; }
+    public string? Email { get; set; }
 
-    public List<Report> RecentReports { get; set; } 
-}
+    [StringLength(100)]
+    public string Name { get; set; }
 
-public class ReportFormVM
-{
-    [Required(ErrorMessage = "Description is required")]
-    public string Description { get; set; }
+    public string? PhotoURL { get; set; }
 
-    [Required(ErrorMessage = "CategoryID is required")]
-    public int CategoryId { get; set; }
-
-    [Required(ErrorMessage = "LocationID is required")]
-    public int LocationId { get; set; }
-
-    public List<IFormFile> Attachments { get; set; }
-
-    public List<Category> Categories { get; set; }
-
-    public List<Location> Locations { get; set; }
+    public IFormFile? ProfilePicture { get; set; }
 }

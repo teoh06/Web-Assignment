@@ -1,0 +1,13 @@
+@model WebApplication2.Models.MenuItem
+@{
+    ViewBag.Title = "Delete Menu Item";
+}
+<h3>Are you sure you want to delete this?</h3>
+<div>
+    <h4>@Model.Name</h4>
+    <form asp-action="Delete" method="post">
+        <input type="hidden" asp-for="MenuItemId" />
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
