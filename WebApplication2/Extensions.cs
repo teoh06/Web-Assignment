@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
-namespace WebApplication2;
+namespace Demo;
 
 public static class Extensions
 {

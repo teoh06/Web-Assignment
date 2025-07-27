@@ -9,7 +9,7 @@ using System.Net.Mail;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 
-namespace WebApplication2;
+namespace Demo;
 
 public class Helper
 {
@@ -92,31 +92,27 @@ public class Helper
                == PasswordVerificationResult.Success;
     }
 
-    public async Task SignIn(User user, bool rememberMe)
+    public void SignIn(string email, string role, bool rememberMe)
     {
-        List<Claim> claims = new()
-        {
-            new Claim(ClaimTypes.Name, user.Name),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role ?? "Member"),             
-            new Claim("UserId", user.Id.ToString())
+        // (1) Claim, identity and principal
+        List<Claim> claims =
+        [
+            new(ClaimTypes.Name, email),
+            new(ClaimTypes.Role, role),
+        ];
 
-        };
-
-        ClaimsIdentity identity = new(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        ClaimsIdentity identity = new(claims, "Cookies");
 
         ClaimsPrincipal principal = new(identity);
 
+        // (2) Remember me (authentication properties)
         AuthenticationProperties properties = new()
         {
             IsPersistent = rememberMe,
         };
 
-        await ct.HttpContext!.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            principal,
-            properties
-        );
+        // (3) Sign in
+        ct.HttpContext!.SignInAsync(principal, properties);
     }
 
     public void SignOut()

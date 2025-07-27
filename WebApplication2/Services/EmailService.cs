@@ -1,7 +1,7 @@
 ﻿using System; 
 using System.Net.Mail; 
 using System.Threading.Tasks;
-using WebApplication2.Services; 
+using Demo.Services; 
 public class EmailService : IEmailService
 {
     private readonly string _smtpServer;
@@ -27,24 +27,19 @@ public class EmailService : IEmailService
 
             using (MailMessage mail = new MailMessage())
             {
-                mail.From = new MailAddress(_senderEmail, "Your Website Name"); // Use your configured sender email and a friendly name
+                mail.From = new MailAddress(_senderEmail); // Use sender email from config
                 mail.To.Add(new MailAddress(toEmail));
-                // If you need CC or BCC, you can add them here:
-                // mail.CC.Add(new MailAddress("MyEmailID@gmail.com")); // Example CC
-
                 mail.Subject = subject;
                 mail.Body = message;
-                mail.IsBodyHtml = true; // Assuming your 'message' (emailBody) from AccountController is HTML
+                mail.IsBodyHtml = true;
 
                 try
                 {
-                    await smtpClient.SendMailAsync(mail); // Use SendMailAsync for async operation
+                    await smtpClient.SendMailAsync(mail);
                 }
                 catch (Exception ex)
                 {
-                    // Log the exception (e.g., using ILogger)
                     Console.WriteLine($"Error sending email: {ex.Message}");
-                    // You might want to throw the exception or handle it gracefully
                     throw;
                 }
             }

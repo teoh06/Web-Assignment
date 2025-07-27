@@ -1,38 +1,38 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Globalization;
-using X.PagedList.Extensions;
 using Microsoft.AspNetCore.Authorization;
-using WebApplication2.Models;
+using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
-namespace WebApplication2.Controllers;
+namespace Demo.Controllers;
 
 public class HomeController : Controller
 {
-    private readonly DB _dbContext;
-    private readonly IWebHostEnvironment _hostingEnvironment;
-
-    public HomeController(DB dbContext, IWebHostEnvironment hostingEnvironment)
+    private readonly DB db;
+    public HomeController(DB db)
     {
-        _dbContext = dbContext;
-        _hostingEnvironment = hostingEnvironment;
+        this.db = db;
     }
 
     // GET: Home/Index
     public IActionResult Index()
     {
-        return View();
+        // Get 3 featured menu items (e.g., by price descending, or just take 3)
+        var featured = db.MenuItems
+            .OrderByDescending(m => m.Price)
+            .Take(3)
+            .Select(m => new FeaturedMenuItemVM
+            {
+                Name = m.Name,
+                Description = m.Description,
+                Price = m.Price,
+                Image = "/images/" + (string.IsNullOrEmpty(m.PhotoURL) ? "default.png" : m.PhotoURL)
+            })
+            .ToList();
+        return View(featured);
     }
-
 
     // GET: Home/Both
     [Authorize]
     public IActionResult Both()
-    {
-        return View();
-    }
-    [Authorize(Roles = "Guest")]
-    public IActionResult Guest()
     {
         return View();
     }
@@ -50,20 +50,11 @@ public class HomeController : Controller
     {
         return View();
     }
-
-    // GET: Home/Report
-    public IActionResult Report()
-    {
-        return View();
-    }
-
-    // GET: Home/Privacy
-    public IActionResult Privacy()
-    {
-        return View();
-    }
-
-    
-
-
+}
+public class FeaturedMenuItemVM
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public decimal Price { get; set; }
+    public string Image { get; set; }
 }

@@ -1,6 +1,6 @@
 @using System.Globalization;
 
-@model IEnumerable<WebApplication2.Models.MenuItem>
+@model IEnumerable<Demo.Models.MenuItem>
 @{
     ViewBag.Title = "Menu Items";
 }
@@ -11,6 +11,7 @@
 <table class="table">
     <thead>
         <tr>
+            <th></th>
             <th>Name</th>
             <th>Category</th>
             <th>Price</th>
@@ -18,26 +19,52 @@
         </tr>
     </thead>
     <tbody>
-    @foreach (var item in Model)
-    {
-        <tr>
-            <td>@item.Name</td>
-            <td>@item.Category?.Name</td>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td style="display: flex; justify-content: center; align-items: center; height: 180px;">
+                    @if (!string.IsNullOrEmpty(item.PhotoURL))
+                    {
+                        <img src="/images/@item.PhotoURL" alt="@item.Name" class="item-photo" />
+                    }
+                </td>
+
+                <td>@item.Name</td>
+                <td>@item.Category?.Name</td>
                 <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-            <td>
-                <a href="@Url.Action("Edit", new { id = item.MenuItemId })">Edit</a> |
-                <a href="@Url.Action("Details", new { id = item.MenuItemId })">Details</a> |
-                <a href="@Url.Action("Delete", new { id = item.MenuItemId })">Delete</a>
-                @if (User.IsInRole("Member"))
-                {
-                    <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline">
-                        <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                        <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px" />
-                        <button type="submit" class="btn btn-success btn-sm">Add to Cart</button>
-                    </form>
-                }
-            </td>
-        </tr>
-    }
+                <td>
+                    <a href="@Url.Action("Edit", new { id = item.MenuItemId })">Edit</a> |
+                    <a href="@Url.Action("Details", new { id = item.MenuItemId })">Details</a> |
+                    <a href="@Url.Action("Delete", new { id = item.MenuItemId })">Delete</a>
+                    @if (User.IsInRole("Member"))
+                    {
+                        <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline">
+                            <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                            <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px" />
+                            <button type="submit" class="btn btn-success btn-sm">Add to Cart</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
     </tbody>
 </table>
+
+<style>
+    /* Add this CSS to your stylesheet */
+    .item-photo {
+        height: 100px; /* increased size */
+        width: auto;
+        object-fit: cover;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .item-photo:hover {
+        cursor: pointer;
+        transform: scale(0.9);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+</style>

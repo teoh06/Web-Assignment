@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using WebApplication2.Models;
+using Demo.Models;
 
-namespace WebApplication2.Controllers;
+namespace Demo.Controllers;
 
 public class MenuItemController : Controller
 {
@@ -41,7 +41,7 @@ public class MenuItemController : Controller
         return View(menuItem);
     }
 
-    // GET: /MenuItem/Edit/5
+    // GET: /MenuItem/Edit/
     public IActionResult Edit(int id)
     {
         var menuItem = db.MenuItems.Find(id);
@@ -50,7 +50,7 @@ public class MenuItemController : Controller
         return View(menuItem);
     }
 
-    // POST: /MenuItem/Edit/5
+    // POST: /MenuItem/Edit/
     [HttpPost]
     [ValidateAntiForgeryToken]
     public IActionResult Edit(int id, MenuItem menuItem)
@@ -66,7 +66,7 @@ public class MenuItemController : Controller
         return View(menuItem);
     }
 
-    // GET: /MenuItem/Delete/5
+    // GET: /MenuItem/Delete/
     public IActionResult Delete(int id)
     {
         var menuItem = db.MenuItems.Include(m => m.Category).FirstOrDefault(m => m.MenuItemId == id);
@@ -74,7 +74,7 @@ public class MenuItemController : Controller
         return View(menuItem);
     }
 
-    // POST: /MenuItem/Delete/5
+    // POST: /MenuItem/Delete/
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public IActionResult DeleteConfirmed(int id)
@@ -88,7 +88,7 @@ public class MenuItemController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // GET: /MenuItem/Details/5
+    // GET: /MenuItem/Details/
     public IActionResult Details(int id)
     {
         var menuItem = db.MenuItems.Include(m => m.Category).FirstOrDefault(m => m.MenuItemId == id);

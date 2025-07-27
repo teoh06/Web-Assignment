@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using WebApplication2.Models;
+using Demo.Models;
 
 #nullable disable
 
@@ -22,7 +22,7 @@ namespace Demo.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("WebApplication2.Models.Category", b =>
+            modelBuilder.Entity("Demo.Models.Category", b =>
                 {
                     b.Property<int>("CategoryId")
                         .ValueGeneratedOnAdd()
@@ -40,7 +40,7 @@ namespace Demo.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.MenuItem", b =>
+            modelBuilder.Entity("Demo.Models.MenuItem", b =>
                 {
                     b.Property<int>("MenuItemId")
                         .ValueGeneratedOnAdd()
@@ -75,7 +75,7 @@ namespace Demo.Migrations
                     b.ToTable("MenuItems");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.Order", b =>
+            modelBuilder.Entity("Demo.Models.Order", b =>
                 {
                     b.Property<int>("OrderId")
                         .ValueGeneratedOnAdd()
@@ -101,7 +101,7 @@ namespace Demo.Migrations
                     b.ToTable("Orders");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.OrderItem", b =>
+            modelBuilder.Entity("Demo.Models.OrderItem", b =>
                 {
                     b.Property<int>("OrderItemId")
                         .ValueGeneratedOnAdd()
@@ -130,7 +130,7 @@ namespace Demo.Migrations
                     b.ToTable("OrderItems");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.User", b =>
+            modelBuilder.Entity("Demo.Models.User", b =>
                 {
                     b.Property<string>("Email")
                         .HasMaxLength(100)
@@ -176,16 +176,16 @@ namespace Demo.Migrations
                     b.UseTphMappingStrategy();
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.Admin", b =>
+            modelBuilder.Entity("Demo.Models.Admin", b =>
                 {
-                    b.HasBaseType("WebApplication2.Models.User");
+                    b.HasBaseType("Demo.Models.User");
 
                     b.HasDiscriminator().HasValue("Admin");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.Member", b =>
+            modelBuilder.Entity("Demo.Models.Member", b =>
                 {
-                    b.HasBaseType("WebApplication2.Models.User");
+                    b.HasBaseType("Demo.Models.User");
 
                     b.Property<string>("PhotoURL")
                         .IsRequired()
@@ -195,9 +195,9 @@ namespace Demo.Migrations
                     b.HasDiscriminator().HasValue("Member");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.MenuItem", b =>
+            modelBuilder.Entity("Demo.Models.MenuItem", b =>
                 {
-                    b.HasOne("WebApplication2.Models.Category", "Category")
+                    b.HasOne("Demo.Models.Category", "Category")
                         .WithMany("MenuItems")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -206,9 +206,9 @@ namespace Demo.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.Order", b =>
+            modelBuilder.Entity("Demo.Models.Order", b =>
                 {
-                    b.HasOne("WebApplication2.Models.Member", "Member")
+                    b.HasOne("Demo.Models.Member", "Member")
                         .WithMany("Orders")
                         .HasForeignKey("MemberEmail")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -217,15 +217,15 @@ namespace Demo.Migrations
                     b.Navigation("Member");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.OrderItem", b =>
+            modelBuilder.Entity("Demo.Models.OrderItem", b =>
                 {
-                    b.HasOne("WebApplication2.Models.MenuItem", "MenuItem")
+                    b.HasOne("Demo.Models.MenuItem", "MenuItem")
                         .WithMany()
                         .HasForeignKey("MenuItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("WebApplication2.Models.Order", "Order")
+                    b.HasOne("Demo.Models.Order", "Order")
                         .WithMany("OrderItems")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -236,17 +236,17 @@ namespace Demo.Migrations
                     b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.Category", b =>
+            modelBuilder.Entity("Demo.Models.Category", b =>
                 {
                     b.Navigation("MenuItems");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.Order", b =>
+            modelBuilder.Entity("Demo.Models.Order", b =>
                 {
                     b.Navigation("OrderItems");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.Member", b =>
+            modelBuilder.Entity("Demo.Models.Member", b =>
                 {
                     b.Navigation("Orders");
                 });

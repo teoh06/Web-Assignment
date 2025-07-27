@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace WebApplication2.Views.Account
+namespace Demo.Views.Account
 {
     public class AccountDeletedModel : PageModel
     {

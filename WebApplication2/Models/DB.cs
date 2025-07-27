@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Threading.Tasks;
 
-namespace WebApplication2.Models;
+namespace Demo.Models;
 
 #nullable disable warnings
 
@@ -123,8 +123,9 @@ public class OrderItem
 // SmtpSetting class does NOT have a [Key] attribute because it's a keyless entity
 public class SmtpSettings
 {
-    public string SmtpServer { get; set; }
-    public int SmtpPort { get; set; }
-    public string SenderEmail { get; set; }
-    public string SenderPassword { get; set; }
+    public string User { get; set; }
+    public string Pass { get; set; }
+    public string Name { get; set; }
+    public string Host { get; set; }
+    public int Port { get; set; }
 }
