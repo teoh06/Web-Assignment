@@ -9,7 +9,7 @@ using System.Net.Mail;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 
-namespace Demo;
+namespace WebApplication2;
 
 public class Helper
 {

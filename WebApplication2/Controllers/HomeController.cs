@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 
-namespace Demo.Controllers;
+namespace WebApplication2.Controllers;
 
 public class HomeController : Controller
 {

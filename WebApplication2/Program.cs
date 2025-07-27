@@ -1,12 +1,12 @@
-global using Demo;
-global using Demo.Models;
+global using WebApplication2;
+global using WebApplication2.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
-using Demo.Data;
-using Demo.Services;
+using WebApplication2.Data;
+using WebApplication2.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

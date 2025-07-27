@@ -1,7 +1,7 @@
-@model Demo.Models.MenuItem
+@model WebApplication2.Models.MenuItem
 @{
     ViewBag.Title = "Edit Menu Item";
-    var categories = ViewBag.Categories as List<Demo.Models.Category>;
+    var categories = ViewBag.Categories as List<WebApplication2.Models.Category>;
 }
 <form asp-action="Edit" method="post">
     <input type="hidden" asp-for="MenuItemId" />

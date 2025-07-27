@@ -2474,7 +2474,7 @@ class Modal extends BaseComponent {
     this._isTransitioning = true;
     this._focustrap.deactivate();
     this._element.classList.remove(CLASS_NAME_SHOW$4);
-    this._queueCallback(() => this._hideModal(), this._element, this._isAnimated());
+    this._queueCallback(() => this._hiWebApplication2dal(), this._element, this._isAnimated());
   }
   dispose() {
     EventHandler.off(window, EVENT_KEY$4);
@@ -2559,7 +2559,7 @@ class Modal extends BaseComponent {
       });
     });
   }
-  _hideModal() {
+  _hiWebApplication2dal() {
     this._element.style.display = 'none';
     this._element.setAttribute('aria-hidden', true);
     this._element.removeAttribute('aria-modal');
@@ -3278,7 +3278,7 @@ class Tooltip extends BaseComponent {
   }
   dispose() {
     clearTimeout(this._timeout);
-    EventHandler.off(this._element.closest(SELECTOR_MODAL), EVENT_MODAL_HIDE, this._hideModalHandler);
+    EventHandler.off(this._element.closest(SELECTOR_MODAL), EVENT_MODAL_HIDE, this._hiWebApplication2dalHandler);
     if (this._element.getAttribute('data-bs-original-title')) {
       this._element.setAttribute('title', this._element.getAttribute('data-bs-original-title'));
     }
@@ -3521,12 +3521,12 @@ class Tooltip extends BaseComponent {
         });
       }
     }
-    this._hideModalHandler = () => {
+    this._hiWebApplication2dalHandler = () => {
       if (this._element) {
         this.hide();
       }
     };
-    EventHandler.on(this._element.closest(SELECTOR_MODAL), EVENT_MODAL_HIDE, this._hideModalHandler);
+    EventHandler.on(this._element.closest(SELECTOR_MODAL), EVENT_MODAL_HIDE, this._hiWebApplication2dalHandler);
   }
   _fixTitle() {
     const title = this._element.getAttribute('title');
