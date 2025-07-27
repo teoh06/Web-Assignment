@@ -21,7 +21,8 @@ public static class SeedData
             {
                 new Category { Name = "Burgers" },
                 new Category { Name = "Pizzas" },
-                new Category { Name = "Salads" }
+                new Category { Name = "Salads" },
+                new Category { Name = "Desserts" },
             };
             context.Categories.AddRange(categories);
             context.SaveChanges();
@@ -51,7 +52,15 @@ public static class SeedData
                     Price = 9.75M,
                     PhotoURL = "salad.jpg",
                     CategoryId = categories.Single(c => c.Name == "Salads").CategoryId
-                }
+                },
+                new MenuItem
+                {
+                    Name = "Tiramisu",
+                    Description = "layers of coffee-soaked ladyfinger biscuits, creamy mascarpone cheese, and cocoa powder.",
+                    Price = 10.99M,
+                    PhotoURL = "tiramisu.jpg",
+                    CategoryId = categories.Single(c => c.Name == "Desserts").CategoryId
+                },
             };
             context.MenuItems.AddRange(menuItems);
             context.SaveChanges();
