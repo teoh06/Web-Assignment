@@ -1,7 +1,7 @@
-﻿using Demo.Models;
+﻿using WebApplication2.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Demo.Data;
+namespace WebApplication2.Data;
 
 public static class SeedData
 {

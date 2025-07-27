@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Threading.Tasks;
 
-namespace Demo.Models;
+namespace WebApplication2.Models;
 
 #nullable disable warnings
 

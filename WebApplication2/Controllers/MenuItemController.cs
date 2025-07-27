@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Demo.Models;
+using WebApplication2.Models;
 
-namespace Demo.Controllers;
+namespace WebApplication2.Controllers;
 
 public class MenuItemController : Controller
 {

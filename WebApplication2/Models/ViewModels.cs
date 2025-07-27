@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 #nullable disable warnings
 
-namespace Demo.Models;
+namespace WebApplication2.Models;
 
 public class RegisterVM
 {

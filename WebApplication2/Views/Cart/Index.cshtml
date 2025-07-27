@@ -1,7 +1,7 @@
 @using System.Globalization;
 
 @inject DB db
-@model List<Demo.Controllers.CartItemVM>
+@model List<WebApplication2.Controllers.CartItemVM>
 @{
     ViewBag.Title = "Your Cart";
     decimal total = Model.Sum(x => x.Price * x.Quantity);

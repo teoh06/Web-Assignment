@@ -1,5 +1,5 @@
-﻿using Demo.Models;
-using Demo.Services;
+﻿using WebApplication2.Models;
+using WebApplication2.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Linq; // Make sure this is included for Any and Where
 using System.Threading.Tasks;
 
-namespace Demo.Controllers;
+namespace WebApplication2.Controllers;
 
 public class AccountController : Controller
 {

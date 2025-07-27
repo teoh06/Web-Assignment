@@ -1,7 +1,7 @@
 ﻿using System; 
 using System.Net.Mail; 
 using System.Threading.Tasks;
-using Demo.Services; 
+using WebApplication2.Services; 
 public class EmailService : IEmailService
 {
     private readonly string _smtpServer;
