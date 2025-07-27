@@ -6,12 +6,12 @@ using WebApplication2.Models;
 using System.Net.Mail;
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using System; 
 using System.Linq;
 using MailAttachment = System.Net.Mail.Attachment;
 using Microsoft.AspNetCore.Identity.UI.Services;
-
 namespace WebApplication2.Controllers;
 
 public class AccountController : Controller
@@ -50,7 +50,26 @@ public class AccountController : Controller
             ModelState.AddModelError("", "Invalid email or password.");
             return View(model);
         }
-        await _helper.SignIn(user, model.RememberMe);
+
+        else if (user.IsPendingDeletion) // Add this condition
+        {
+            ModelState.AddModelError("", "This account is pending deletion. Please check your email for restoration options.");
+            return View(model);
+        }
+
+        
+        if(ModelState.IsValid)
+        {
+            TempData["Info"] = "Login successfully.";
+            await _helper.SignIn(user, model.RememberMe);
+
+            if (!string.IsNullOrEmpty(returnURL))
+            {
+                return Redirect(returnURL);
+            }
+            return RedirectToAction("Index", "Home");
+        }
+        
         return RedirectToAction("Index", "Home");
     }
 
@@ -175,7 +194,7 @@ public class AccountController : Controller
         }
         else if (u is Member m && !string.IsNullOrWhiteSpace(m.PhotoURL))
         {
-            path = Path.Combine(_environment.WebRootPath, "photos", "edb1c48494e9459e98d187f8edf7a044.jpg");
+            path = Path.Combine(_environment.WebRootPath, "photos", m.PhotoURL);
         }
         else
         {
@@ -225,6 +244,220 @@ public class AccountController : Controller
         return Json(isAvailable);
     }
 
-    
+    public IActionResult AccessDenied(string? returnURL)
+    {
+        return View();
+    }
 
+    public IActionResult UpdatePassword()
+    {
+        return View();
+    }
+
+
+    [Authorize]
+    [HttpPost]
+    public IActionResult UpdatePassword(UpdatePasswordVM vm)
+    {
+
+        var user = _context.Users.Find(User.Identity!.Name);
+        if (user == null) return RedirectToAction("Index", "Home");
+
+        // If current password not matched
+        // TODO
+        if (!_helper.VerifyPassword(user.Hash, vm.Current))
+        {
+            ModelState.AddModelError("Current", "Current Password not matched.");
+        }
+
+        if (ModelState.IsValid)
+        {
+            // Update user password (hash)
+            user.Hash = _helper.HashPassword(vm.New);
+            _context.SaveChanges();
+
+            TempData["Info"] = "Password updated.";
+            return RedirectToAction("UpdatePassword");
+        }
+
+        return View();
+    }
+
+
+    public IActionResult UpdateProfile()
+    {
+        // Get member record based on email (PK)
+        // TODO
+        var m = _context.Members.Find(User.Identity!.Name);
+        if (m == null) return RedirectToAction("Index", "Home");
+
+        var vm = new UpdateProfileVM
+        {
+            Email = m.Email,
+            Name = m.Name,
+            PhotoURL = m.PhotoURL,
+        };
+
+        return View(vm);
+    }
+
+    public IActionResult Index()
+    {
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+        Console.WriteLine($"[DEBUG] Logged-in user: {email}, Role: {role}");
+
+        return View();
+    }
+
+
+
+    [HttpPost]
+    public IActionResult UpdateProfile(UpdateProfileVM vm)
+    {
+        // Get member record based on email (PK)
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+        var m = _context.Members.Find(email);
+
+
+        if (m == null) return RedirectToAction("Index", "Home");
+
+        if (vm.ProfilePicture != null)
+        {
+            var err = _helper.ValidatePhoto(vm.ProfilePicture);
+            if (err != "") ModelState.AddModelError("Photo", err);
+        }
+
+        if (ModelState.IsValid)
+        {
+            m.Name = vm.Name;
+
+            if (vm.ProfilePicture != null)
+            {
+                _helper.DeletePhoto(m.PhotoURL, "photos");
+                m.PhotoURL = _helper.SavePhoto(vm.ProfilePicture, "photos");
+            }
+
+            _context.SaveChanges();
+
+            TempData["Info"] = "Profile updated.";
+            return RedirectToAction("UpdateProfile");
+        }
+
+        vm.Email = m.Email;
+        vm.PhotoURL = m.PhotoURL;
+        return View(vm);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> InitiateAccountDeletion()
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity.Name);
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
+        user.IsPendingDeletion = true;
+        user.DeletionRequestDate = DateTime.UtcNow;
+        user.DeletionToken = Guid.NewGuid().ToString("N");
+        await _context.SaveChangesAsync();
+
+        // --- Send a confirmation email using the INJECTED EmailService ---
+        string emailError = null;
+        try
+        {
+            // Use the injected _emailService directly
+            var recoveryLink = Url.Action("RestoreAccount", "Account", new { token = user.DeletionToken }, Request.Scheme);
+            var permanentDeleteLink = Url.Action("PermanentDelete", "Account", new { token = user.DeletionToken }, Request.Scheme);
+
+            string emailSubject = "Account Deletion Request";
+            string emailBody = $@"
+                <p>We have received a request to delete your account.</p>
+                <p>If you did not make this request, please ignore this email.</p>
+                <p>Your account will be permanently deleted in 7 days. If you change your mind, you can restore your account by clicking the link below:</p>
+                <a href='{recoveryLink}'>Restore My Account</a>
+                <br>
+                <p>If you are certain you want to delete your account immediately, click the link below:</p>
+                <a href='{permanentDeleteLink}'>Delete My Account Permanently</a>";
+
+            await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); // Use _emailService
+        }
+        catch (Exception ex)
+        {
+            emailError = $"Email sending failed: {ex.Message}"; // More descriptive error
+        }
+
+        await HttpContext.SignOutAsync();
+
+        if (emailError != null)
+        {
+            ViewBag.EmailError = emailError;
+        }
+
+        return View("DeletionInitiated");
+    }
+
+    // This action is triggered by the link in the email.
+    [HttpGet]
+    public async Task<IActionResult> RestoreAccount(string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            return BadRequest("Invalid token.");
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.DeletionToken == token && u.IsPendingDeletion);
+
+        if (user != null && user.DeletionRequestDate.Value.AddDays(7) > DateTime.UtcNow)
+        {
+            // Token is valid and within the grace period, so restore the account
+            user.IsPendingDeletion = false;
+            user.DeletionRequestDate = null;
+            user.DeletionToken = null;
+            await _context.SaveChangesAsync();
+
+            return View("AccountRestored"); // A view confirming account restoration
+        }
+
+        return View("Error", "Invalid or expired token."); // An error view
+    }
+
+    // This action is triggered by the permanent delete link in the email.
+    [HttpGet]
+    public async Task<IActionResult> PermanentDelete(string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            return BadRequest("Invalid token.");
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.DeletionToken == token && u.IsPendingDeletion);
+
+        if (user != null)
+        {
+            // IMPORTANT: Handle related data.
+            // The database schema shows that a Member has Orders. You cannot delete a member
+            // without first handling their orders due to the foreign key constraint.
+            var memberOrders = await _context.Orders.Where(o => o.MemberEmail == user.Email).ToListAsync();
+            if (memberOrders.Any())
+            {
+                // First delete order items, then the orders
+                foreach (var order in memberOrders)
+                {
+                    var orderItems = await _context.OrderItems.Where(oi => oi.OrderId == order.OrderId).ToListAsync();
+                    _context.OrderItems.RemoveRange(orderItems);
+                }
+                _context.Orders.RemoveRange(memberOrders);
+            }
+
+            // Finally, delete the user
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return View("AccountDeleted"); // A view confirming permanent deletion
+        }
+
+        return View("Error", "Invalid or expired token.");
+    }
 }
