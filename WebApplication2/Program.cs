@@ -1,5 +1,6 @@
 global using WebApplication2;
 global using WebApplication2.Models;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using WebApplication2.Data;
 using WebApplication2.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddSqlServer<DB>($@"
     Data Source=(LocalDB)\MSSQLLocalDB;
@@ -15,9 +17,18 @@ builder.Services.AddSqlServer<DB>($@"
 ");
 builder.Services.AddScoped<Helper>();
 
-builder.Services.AddAuthentication().AddCookie();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ClaimsIssuer = "MyApp";
+    });
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSession();
+
+
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
 builder.Services.AddTransient<IEmailService, EmailService>(serviceProvider =>
 {
@@ -49,6 +60,9 @@ using (var scope = app.Services.CreateScope())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseSession();
+
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapDefaultControllerRoute();
 app.UseRequestLocalization(new RequestLocalizationOptions
 {
