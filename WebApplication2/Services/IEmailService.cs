@@ -1,7 +1,7 @@
-﻿// IEmailService.cs (in WebApplication2.Models folder)
+﻿// IEmailService.cs (in Demo.Models folder)
 using System.Threading.Tasks;
 
-namespace WebApplication2.Services; // Ensure this matches your models' namespace
+namespace Demo.Services; // Ensure this matches your models' namespace
 
 public interface IEmailService
 {

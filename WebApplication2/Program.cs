@@ -1,12 +1,12 @@
-global using WebApplication2;
-global using WebApplication2.Models;
+global using Demo;
+global using Demo.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
-using WebApplication2.Data;
-using WebApplication2.Services;
+using Demo.Data;
+using Demo.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,15 +29,15 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSession();
 
 
-builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddTransient<IEmailService, EmailService>(serviceProvider =>
 {
     var smtpSettings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SmtpSettings>>().Value;
     return new EmailService(
-        smtpSettings.SmtpServer,
-        smtpSettings.SmtpPort,
-        smtpSettings.SenderEmail,
-        smtpSettings.SenderPassword
+        smtpSettings.Host,
+        smtpSettings.Port,
+        smtpSettings.User,
+        smtpSettings.Pass
     );
 });
 

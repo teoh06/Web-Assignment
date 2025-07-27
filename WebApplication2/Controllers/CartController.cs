@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using WebApplication2.Models;
+using Demo.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.ComponentModel.DataAnnotations;
 
-namespace WebApplication2.Controllers;
+namespace Demo.Controllers;
 
 public class CartController : Controller
 {

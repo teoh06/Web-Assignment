@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using WebApplication2.Models;
+using Demo.Models;
 
-namespace WebApplication2.Controllers;
+namespace Demo.Controllers;
 
 public class CategoryController : Controller
 {

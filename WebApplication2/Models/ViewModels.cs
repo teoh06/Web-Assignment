@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 #nullable disable warnings
 
-namespace WebApplication2.Models;
+namespace Demo.Models;
 
 public class RegisterVM
 {
@@ -28,7 +28,7 @@ public class RegisterVM
     [MaxLength(100, ErrorMessage = "Name cannot exceed 100 characters.")]
     public string Name { get; set; }
 
-    public IFormFile? ProfilePicture { get; set; } 
+    public IFormFile ProfilePicture { get; set; } 
 }
 
 public class LoginVM
@@ -93,4 +93,12 @@ public class UpdateProfileVM
     public string? PhotoURL { get; set; }
 
     public IFormFile? ProfilePicture { get; set; }
+}
+
+public class FeaturedMenuItemVM
+{
+    public string Image { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public decimal Price { get; set; }
 }
