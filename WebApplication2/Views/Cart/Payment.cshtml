@@ -4,7 +4,6 @@
 @{
     ViewBag.Title = "Payment";
 }
-<h2>Payment</h2>
 <form asp-action="Payment" method="post">
     <div class="mb-3">
         <label for="PaymentMethod">Payment Method</label>
@@ -28,18 +27,18 @@
 </form>
 
 @section Scripts {
-<script>
-        document.querySelector('[name="PaymentMethod"]').addEventListener('change', function() {
-        var cardFields = document.getElementById('card-fields');
-        if (this.value === 'Card') {
-            cardFields.style.display = '';
-            // Enable validation if needed
-            document.querySelector('[name="CardNumber"]').required = true;
-        } else {
-            cardFields.style.display = 'none';
-            // Disable validation
-            document.querySelector('[name="CardNumber"]').required = false;
-        }
-    });
-</script>
+    <script>
+            document.querySelector('[name="PaymentMethod"]').addEventListener('change', function() {
+            var cardFields = document.getElementById('card-fields');
+            if (this.value === 'Card') {
+                cardFields.style.display = '';
+                // Enable validation if needed
+                document.querySelector('[name="CardNumber"]').required = true;
+            } else {
+                cardFields.style.display = 'none';
+                // Disable validation
+                document.querySelector('[name="CardNumber"]').required = false;
+            }
+        });
+    </script>
 }

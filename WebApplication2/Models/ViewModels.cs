@@ -28,7 +28,7 @@ public class RegisterVM
     [MaxLength(100, ErrorMessage = "Name cannot exceed 100 characters.")]
     public string Name { get; set; }
 
-    public IFormFile ProfilePicture { get; set; } 
+    public IFormFile? ProfilePicture { get; set; } 
 }
 
 public class LoginVM
@@ -102,3 +102,4 @@ public class FeaturedMenuItemVM
     public string Description { get; set; }
     public decimal Price { get; set; }
 }
+

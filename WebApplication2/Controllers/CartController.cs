@@ -56,7 +56,8 @@ public class CartController : Controller
             TempData["Info"] = "Cart is empty.";
             return RedirectToAction("Index");
         }
-        var vm = new PaymentVM {
+        var vm = new PaymentVM
+        {
             Total = cart.Sum(x => x.Price * x.Quantity)
         };
         return View(vm);

@@ -24,7 +24,7 @@ public class HomeController : Controller
                 Name = m.Name,
                 Description = m.Description,
                 Price = m.Price,
-                Image = "/images/" + (string.IsNullOrEmpty(m.PhotoURL) ? "default.png" : m.PhotoURL)
+                Image = "/images/" + (string.IsNullOrEmpty(m.PhotoURL) ? "default.jpg" : m.PhotoURL)
             })
             .ToList();
         return View(featured);

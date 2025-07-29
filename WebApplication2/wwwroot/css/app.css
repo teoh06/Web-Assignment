@@ -237,11 +237,11 @@ label > * {
 /* 
     Upload --------------------------------------------------------------- */
 
-.upload img {
+.upload img {  
     display: block;
     border: 1px solid #333;
-    width: 200px;
-    height: 200px;
+    width: 150px;
+    height: 150px;
     object-fit: cover;
     cursor: pointer;
 }
@@ -256,4 +256,69 @@ label > * {
     border-radius: 3px;
     min-width: 30px;
     text-align: center;
+}
+
+
+
+/* NEW ERA - 29/7/2025 */
+
+/* CSS for the menu-container with centered content and hover floating effect */
+.menu-container {
+    max-width: 600px; /* medium size */
+    margin: 40px auto; /* center horizontally with spacing */
+    padding: 30px; /* inner spacing */
+    border-radius: 15px; /* rounded corners */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* subtle shadow for depth */
+    background-color: #ffffff; /* white background for a clean look */
+    border: 1px solid #e0e0e0; /* light border for definition */
+    /* Flexbox for centering content */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* horizontal center */
+    justify-content: center; /* vertical center if needed */
+
+    transition: all 0.3s ease; /* smooth transition */
+}
+
+/* Hover effect with floating translation */
+.menu-container:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); /* deeper shadow on hover */
+    transform: translateY(-5px); /* floating upward */
+}
+
+.browse-menu-title {
+    text-align: center; /* center text */
+    margin-left: 150px;
+}
+
+.in-the-middle {
+    display: flex;
+    align-items: center; /* center horizontally */
+    justify-content: center; /* center vertically */
+}
+
+
+.home-menu-display {
+    display: flex;
+    flex-wrap: wrap; /* allows wrapping to next line */
+    gap: 20px; /* spacing between items */
+    justify-content: center; /* center items horizontally */
+    align-items: stretch; /* stretch items vertically if needed */
+}
+
+/* Style each item container if needed (optional) */
+.home-menu-display .card {
+    flex: 1 1 calc(25% - 20px); /* 4 items per row, minus gap */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* center content inside card */
+    text-align: center; /* center text inside card */
+}
+
+/* Responsive adjustment for smaller screens */
+@media (max-width: 768px) {
+    .home-menu-display .card {
+        flex: 1 1 calc(50% - 20px); /* 2 items per row on small screens */
+    }
 }
