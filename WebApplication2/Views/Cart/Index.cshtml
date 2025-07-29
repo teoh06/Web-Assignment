@@ -6,7 +6,6 @@
     ViewBag.Title = "Your Cart";
     decimal total = Model.Sum(x => x.Price * x.Quantity);
 }
-<h2>Your Cart</h2>
 @if (!Model.Any())
 {
     <p>Your cart is empty.</p>
@@ -24,21 +23,21 @@ else
             </tr>
         </thead>
         <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.Name</td>
-                <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-                <td>@item.Quantity</td>
-                <td>@((item.Price* item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
-                <td>
-                    <form asp-controller="Cart" asp-action="Remove" method="post" style="display:inline">
-                        <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                        <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                    </form>
-                </td>
-            </tr>
-        }
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Name</td>
+                    <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
+                    <td>@item.Quantity</td>
+                    <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
+                    <td>
+                        <form asp-controller="Cart" asp-action="Remove" method="post" style="display:inline">
+                            <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+            }
         </tbody>
     </table>
     <h4>Total: @total.ToString("C", new CultureInfo("en-MY"))</h4>

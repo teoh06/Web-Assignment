@@ -113,7 +113,7 @@ public class AccountController : Controller
             ModelState.AddModelError("Email", "Duplicated Email.");
         }
 
-        if (ModelState.IsValid("Photo"))
+        if (ModelState.IsValid("Photo") && vm.ProfilePicture != null)
         {
             var err = hp.ValidatePhoto(vm.ProfilePicture);
             if (err != "") ModelState.AddModelError("Photo", err);
@@ -127,7 +127,7 @@ public class AccountController : Controller
                 Email = vm.Email,
                 Hash = hp.HashPassword(vm.Password),
                 Name = vm.Name,
-                PhotoURL = hp.SavePhoto(vm.ProfilePicture, "photos"),
+                PhotoURL = vm.ProfilePicture != null ? hp.SavePhoto(vm.ProfilePicture, "photos") : "default.jpg", // Use default if not provided
                 DeletionToken = "",
             });
             db.SaveChanges();

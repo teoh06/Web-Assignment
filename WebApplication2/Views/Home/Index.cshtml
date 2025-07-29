@@ -1,28 +1,103 @@
-﻿@model List<WebApplication2.Controllers.FeaturedMenuItemVM>
+﻿@inject DB db
+@model List<WebApplication2.Controllers.FeaturedMenuItemVM>
 @using System.Globalization;
+
+@{
+    var user = db.Users.FirstOrDefault(); // gets the first user
+}
+
 @{
     ViewBag.Title = "Welcome to Food Ordering System";
 }
-<div class="jumbotron text-center">
-    <p>Order your favorite meals for in-house dining with ease!</p>
-    <a href="/MenuItem" class="btn btn-success btn-lg">Browse Menu</a>
-</div>
+<div class="page-container">
+    <div class="menu-container">
 
-<h3 class="mt-5">Featured Menu</h3>
-<div class="row">
-    @foreach (var item in Model)
-    {
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <img src="@item.Image" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
-                <div class="card-body">
-                    <h5 class="card-title">@item.Name</h5>
-                    <p class="card-text">@item.Description</p>
-                </div>
-                <div class="card-footer">
-                    <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+        @if (User.IsInRole("Member"))
+        {
+            <p class="nice-word">
+                Hi @user.Name</p>
+        }
+
+        <div class="jumbotron text-center">
+            <p>Order your favorite meals for in-house dining with ease!</p>
+            <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Browse Menu</a>
+        </div>
+    </div>
+
+    <h3 class="in-the-middle">Featured Menu</h3>
+    <br>
+    <div class="home-menu-display">
+        @foreach (var item in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <img src="@item.Image" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">@item.Name</h5>
+                        <p class="card-text">@item.Description</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    }
+        }
+    </div>
 </div>
+
+<style>
+    /* Example: style differently if title contains 'Food' */
+    .page-container {
+        background-color: #f0f8ff;/* light blue background */
+        align-content: center;
+        justify-content: center;
+    }
+
+    .nice-word {
+        font-family: "Victor Mono", monospace;
+        font-size: 50px;
+        cursor: pointer; /* indicates clickable */
+        display: inline-block;
+        transition: transform 0.3s, color 0.3s;
+    }
+
+    /* Pop-out effect (optional) */
+    .nice-word.pop-out {
+        transform: scale(1.5);
+        /* Additional styles if needed */
+    }
+
+    /* Rainbow style applied after click */
+    .nice-word.rainbow {
+        background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+        background-size: 400% 400%;
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        /* Optional: add animated shifting of colors */
+        animation: rainbow-shift 3s linear infinite;
+    }
+
+    /* Rainbow shifting animation */
+    @@keyframes rainbow-shift {
+        0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+    const word = document.querySelector('.nice-word');
+
+    word.addEventListener('click', () => {
+        // Add the rainbow class to display rainbow colors
+        if (!word.classList.contains('rainbow')) {
+            word.classList.add('rainbow');
+        }
+        // Optional: trigger pop-out effect
+        word.classList.add('pop-out');
+        setTimeout(() => word.classList.remove('pop-out'), 300);
+    });
+});
+</script>
+

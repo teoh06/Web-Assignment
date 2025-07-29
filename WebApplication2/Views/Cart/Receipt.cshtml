@@ -3,7 +3,6 @@
 @{
     ViewBag.Title = "Receipt";
 }
-<h2>Receipt</h2>
 <p>Order #: <b>@Model.OrderId</b></p>
 <p>Date: @Model.Date.ToString("g")</p>
 <table class="table">
@@ -16,15 +15,15 @@
         </tr>
     </thead>
     <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.Name</td>
-            <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-            <td>@item.Quantity</td>
-            <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
-        </tr>
-    }
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@item.Name</td>
+                <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
+                <td>@item.Quantity</td>
+                <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
+            </tr>
+        }
     </tbody>
 </table>
 <h4>Total Paid: @Model.Total.ToString("C", new CultureInfo("en-MY"))</h4>

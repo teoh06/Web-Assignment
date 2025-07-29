@@ -17,8 +17,8 @@
 
     <label asp-for="ProfilePicture"></label>
     <label class="upload">
-        <small>Select ProfilePicture...</small>
-        <input asp-for="ProfilePicture" accept="image/jpeg,image/png" hidden>
+        <small>Select Profile Picture...</small>
+        <input asp-for="ProfilePicture" accept="image/jpeg, image/png, image/jpg, image/webp, image/gif, image/bmp, image/svg+xml, image/tiff" hidden>
         <img src="/photos/@Model.PhotoURL">
     </label>
     <span asp-validation-for="ProfilePicture"></span>

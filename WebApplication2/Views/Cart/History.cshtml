@@ -3,7 +3,6 @@
 @{
     ViewBag.Title = "My Orders";
 }
-<h2>My Orders</h2>
 @if (!Model.Any())
 {
     <p>You have not placed any orders yet.</p>
@@ -21,18 +20,18 @@ else
             </tr>
         </thead>
         <tbody>
-        @foreach (var order in Model)
-        {
-            <tr>
-                <td>@order.OrderId</td>
-                <td>@order.Date.ToString("g")</td>
-                <td>@order.Status</td>
-                <td>@order.Total.ToString("C", new CultureInfo("en-MY"))</td>
-                <td>
-                    <a href="@Url.Action("Receipt", "Cart", new { id = order.OrderId })" class="btn btn-sm btn-info">View Receipt</a>
-                </td>
-            </tr>
-        }
+            @foreach (var order in Model)
+            {
+                <tr>
+                    <td>@order.OrderId</td>
+                    <td>@order.Date.ToString("g")</td>
+                    <td>@order.Status</td>
+                    <td>@order.Total.ToString("C", new CultureInfo("en-MY"))</td>
+                    <td>
+                        <a href="@Url.Action("Receipt", "Cart", new { id = order.OrderId })" class="btn btn-sm btn-info">View Receipt</a>
+                    </td>
+                </tr>
+            }
         </tbody>
     </table>
 }
