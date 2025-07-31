@@ -44,12 +44,12 @@ public class AccountController : Controller
             ModelState.AddModelError("", "Login credentials not matched.");
         }
 
-        /*
+        
         else if (u.IsPendingDeletion) // Add this condition
         {
             ModelState.AddModelError("", "This account is pending deletion. Please check your email for restoration options.");
         }
-        */
+        
 
         if (ModelState.IsValid)
         {
@@ -61,8 +61,12 @@ public class AccountController : Controller
             // (4) Handle return URL
             if (string.IsNullOrEmpty(returnURL))
             {
-                return RedirectToAction("Index", "Home");
+                if (u is Admin)
+                    return RedirectToAction("Index", "Admin");
+                else
+                    return RedirectToAction("Index", "Home");
             }
+
         }
 
         return View(vm);
@@ -382,4 +386,38 @@ public class AccountController : Controller
 
         return View("Error", "Invalid or expired token.");
     }
+
+    [HttpPost]
+    public IActionResult Delete(string email)
+    {
+        var user = db.Users.Find(email);
+        if (user != null && !user.IsPendingDeletion)
+        {
+            user.IsPendingDeletion = true;
+            user.DeletionRequestDate = DateTime.Now;
+            user.DeletionToken = Guid.NewGuid().ToString("n");
+            db.SaveChanges();
+
+            TempData["Info"] = "User marked for deletion.";
+        }
+        return RedirectToAction("ManageUsers", "Admin");
+    }
+
+    [HttpPost]
+    public IActionResult Restore(string token)
+    {
+        var user = db.Users.FirstOrDefault(u => u.DeletionToken == token);
+        if (user != null && user.IsPendingDeletion)
+        {
+            user.IsPendingDeletion = false;
+            user.DeletionRequestDate = null;
+            user.DeletionToken = null;
+            db.SaveChanges();
+
+            TempData["Info"] = "User restored.";
+        }
+        return RedirectToAction("ManageUsers", "Admin");
+    }
+
+
 }

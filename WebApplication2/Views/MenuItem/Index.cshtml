@@ -1,179 +1,75 @@
-@model WebApplication2.Controllers.MenuItemIndexVM
+@model WebApplication2.Models.MenuItemIndexVM
 @using System.Globalization;
 @{
     ViewBag.Title = "Menu";
+    var isMember = User.IsInRole("Member");
+    var isAdmin = User.IsInRole("Admin");
+}
+@if (User.IsInRole("Admin"))
+{
+    <p><a class="btn btn-success mb-3" asp-controller="MenuItem" asp-action="Create">+ Add New Product</a></p>
 }
 
-<h2 class="text-center">Our Menu</h2>
+<h2 class="text-center">@ViewBag.Title</h2>
 
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="input-group">
-            <input type="text" id="searchBar" class="form-control" placeholder="Search menu items..." value="@Model.SearchString">
-            <button class="btn btn-outline-secondary" type="button" id="clearSearch">Clear</button>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <select id="categoryFilter" class="form-select">
-            <option value="0">All Categories</option>
-            @foreach (var category in Model.Categories)
-            {
-                <option value="@category.CategoryId" selected="@(Model.SelectedCategoryId == category.CategoryId ? "selected" : null)">
-                    @category.Name
-                </option>
-            }
-        </select>
-    </div>
-    <div class="col-md-2">
-        <button class="btn btn-primary w-100" id="applyFilters">Apply</button>
-    </div>
-</div>
+<!-- Filters here (search + category) -->
 
-<div class="table-responsive">
-    <table class="table table-hover">
-        <thead>
-            <tr>
-                <th>Photo</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody id="menuItemsTableBody">
-            @await Html.PartialAsync("_MenuItemsTableRows", Model.MenuItems) @* Initial load from Partial View *@
-        </tbody>
-    </table>
-</div>
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Photo</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="menuItemsTableBody">
+        @if (isAdmin)
+        {
+            @await Html.PartialAsync("_AdminMenuItemsTableRows", Model.MenuItems)
+        }
+        else if (isMember)
+        {
+            @await Html.PartialAsync("_MemberMenuItemsTableRows", Model.MenuItems)
+        }
+    </tbody>
+
+</table>
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const searchBar = document.getElementById('searchBar');
-            const clearSearchBtn = document.getElementById('clearSearch');
-            const categoryFilter = document.getElementById('categoryFilter');
-            const applyFiltersBtn = document.getElementById('applyFilters');
-            const menuItemsTableBody = document.getElementById('menuItemsTableBody');
+        document.querySelector('.table').addEventListener('submit', function (event) {
+            if (event.target.classList.contains('add-to-cart-form')) {
+                event.preventDefault();
 
-            // Function to fetch and update menu items via AJAX
-            function fetchMenuItems() {
-                const searchString = searchBar.value;
-                const categoryId = categoryFilter.value; // Will be "0" or a categoryId
+                const form = event.target;
+                const formData = new FormData(form);
+                const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
-                // Construct query string
-                const params = new URLSearchParams();
-                if (searchString) {
-                    params.append('searchString', searchString);
-                }
-                if (categoryId && categoryId !== '0') {
-                    params.append('categoryId', categoryId);
-                }
-
-                const queryString = params.toString();
-                const url = `/MenuItem/GetFilteredMenuItems?${queryString}`; // Ensure this URL matches your controller
-
-                fetch(url)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Clear existing table rows
-                        menuItemsTableBody.innerHTML = '';
-
-                        // Re-render table rows with new data
-                        if (data && data.length > 0) {
-                            data.forEach(item => {
-                                const row = `
-                                    <tr>
-                                        <td><img src="/Images/${item.photoURL}" alt="${item.name}" style="width:70px; height:70px; object-fit:cover;"></td>
-                                        <td>${item.name}</td>
-                                        <td>${item.description}</td>
-                                        <td>${item.categoryName}</td>
-                                        <td>${item.price}</td>
-                                        <td>
-                                            <form asp-controller="Cart" asp-action="Add" method="post" class="add-to-cart-form" data-menu-item-id="${item.menuItemId}">
-                                                <input type="hidden" name="menuItemId" value="${item.menuItemId}" />
-                                                <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px;" class="form-control d-inline-block" />
-                                                <button type="submit" class="btn btn-primary btn-sm mt-1">Add to Cart</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                `;
-                                menuItemsTableBody.innerHTML += row;
-                            });
-                        } else {
-                            menuItemsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No menu items found.</td></tr>';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching menu items:', error);
-                        menuItemsTableBody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Failed to load menu items. Please try again.</td></tr>';
-                    });
-            }
-
-            // Event Listeners
-            applyFiltersBtn.addEventListener('click', fetchMenuItems); // Apply filters button
-            searchBar.addEventListener('keypress', function(event) {
-                if (event.key === 'Enter') { // Trigger search on Enter key press
-                    fetchMenuItems();
-                }
-            });
-            clearSearchBtn.addEventListener('click', function() {
-                searchBar.value = ''; // Clear search bar
-                fetchMenuItems(); // Re-fetch all items
-            });
-            categoryFilter.addEventListener('change', fetchMenuItems); // Auto-apply on category change
-
-                // --- Re-attach Event Listener for Add to Cart Forms (Delegation) ---
-                document.querySelector('.table').addEventListener('submit', function(event) {
-                    if (event.target.classList.contains('add-to-cart-form')) {
-                        event.preventDefault(); // Prevent default form submission
-
-                        const form = event.target;
-                        const menuItemId = form.querySelector('input[name="menuItemId"]').value;
-                        const quantity = form.querySelector('input[name="quantity"]').value;
-
-                        fetch(form.action, { // Use form.action to get the URL (/Cart/Add)
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded', // Default for form submission
-                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                            },
-                            body: `menuItemId=${menuItemId}&quantity=${quantity}` // URL-encoded body
-                        })
-                        .then(response => {
-                            // Check if the HTTP status is OK (200-299)
-                            if (response.ok) {
-                                return response.json(); // Parse the JSON response
-                            }
-                            // If not OK, attempt to parse JSON for error message or throw
-                            return response.json().then(errorData => {
-                                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-                            });
-                        })
-                        .then(data => {
-                            // This block runs if the fetch was successful AND response was valid JSON
-                            if (data.success) {
-                                alert(data.message); // Show the success message from the server
-                                // Optional: Update a cart counter display here if you have one
-                                // e.g., updateCartCount(data.newTotal);
-                            } else {
-                                // This handles cases where the server returned JSON but with success: false
-                                alert('Failed to add item to cart: ' + data.message);
-                            }
-                        })
-                        .catch(error => {
-                            // This block runs if fetch fails (network error) or JSON parsing fails,
-                            // or if the previous .then() throws an error.
-                            console.error('Error adding to cart:', error);
-                            alert('Error adding item to cart. Please try again. Details: ' + error.message);
-                        });
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': token
+                    },
+                    body: new URLSearchParams([...formData])
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                    } else {
+                        alert(data.message || 'Failed to add to cart.');
                     }
+                })
+                .catch(error => {
+                    console.error('Error adding to cart:', error);
+                    alert('Something went wrong.');
                 });
-            });
+            }
+        });
     </script>
 }
+
+

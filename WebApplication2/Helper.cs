@@ -94,7 +94,7 @@ public class Helper
 
     public void SignIn(string email, string role, bool rememberMe)
     {
-        // (1) Claim, identity and principal
+
         List<Claim> claims =
         [
             new(ClaimTypes.Name, email),
@@ -102,18 +102,16 @@ public class Helper
         ];
 
         ClaimsIdentity identity = new(claims, "Cookies");
-
         ClaimsPrincipal principal = new(identity);
 
-        // (2) Remember me (authentication properties)
         AuthenticationProperties properties = new()
         {
             IsPersistent = rememberMe,
         };
 
-        // (3) Sign in
-        ct.HttpContext!.SignInAsync(principal, properties);
+        ct.HttpContext!.SignInAsync("Cookies", principal, properties);
     }
+
 
     public void SignOut()
     {
