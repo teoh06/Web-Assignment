@@ -102,4 +102,12 @@ public class FeaturedMenuItemVM
     public string Description { get; set; }
     public decimal Price { get; set; }
 }
+public class MenuItemIndexVM
+{
+    public List<MenuItem> MenuItems { get; set; }
+    public List<Category> Categories { get; set; }
+    public string SearchString { get; set; }
+    public int? SelectedCategoryId { get; set; }
+}
+
 

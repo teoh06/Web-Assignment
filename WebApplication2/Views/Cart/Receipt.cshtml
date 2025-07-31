@@ -3,8 +3,13 @@
 @{
     ViewBag.Title = "Receipt";
 }
-<p>Order #: <b>@Model.OrderId</b></p>
-<p>Date: @Model.Date.ToString("g")</p>
+<div class="receipt-details">
+    <p>Order #: <b>@Model.OrderId</b></p>
+    <p>Date: @Model.Date.ToString("g")</p>
+    <p>Status: <b>@Model.Status</b></p>
+    <p>Paid By: <b>@Model.PaymentMethod</b></p>
+    <p>Ordered By: <b>@Model.MemberEmail</b></p>
+</div>
 <table class="table">
     <thead>
         <tr>

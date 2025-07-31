@@ -1,23 +1,97 @@
+using WebApplication2.Models; // Ensure this namespace matches your DB context and models
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using WebApplication2.Models;
+using System.Collections.Generic; // For List<T>
+using System.Linq; // For LINQ queries like Where, OrderBy, Select
+using System.Threading.Tasks; // For async/await
 
 namespace WebApplication2.Controllers;
 
 public class MenuItemController : Controller
 {
-    private readonly DB db;
+    private readonly DB db; // Renamed 'db' to 'db' for consistency
+
     public MenuItemController(DB db)
     {
         this.db = db;
     }
 
-    // GET: /MenuItem
-    public IActionResult Index()
+    // GET: /MenuItem/Index
+    // This action will handle search queries and category filters for the initial page load
+    public async Task<IActionResult> Index(string searchString, int? categoryId)
     {
-        var items = db.MenuItems.Include(m => m.Category).ToList();
-        return View(items);
+        // Prepare the base query for menu items, including their categories
+        var menuItemsQuery = from m in db.MenuItems
+                             select m;
+
+        menuItemsQuery = menuItemsQuery.Include(m => m.Category);
+
+        // Apply search filter if searchString is provided
+        if (!string.IsNullOrEmpty(searchString))
+        {
+            // Case-insensitive search on MenuItem Name
+            menuItemsQuery = menuItemsQuery.Where(s => s.Name.Contains(searchString));
+        }
+
+        // Apply category filter if categoryId is provided (and not "All Categories" which is 0)
+        if (categoryId.HasValue && categoryId.Value > 0)
+        {
+            menuItemsQuery = menuItemsQuery.Where(m => m.CategoryId == categoryId.Value);
+        }
+
+        // Order by Name for consistent display
+        menuItemsQuery = menuItemsQuery.OrderBy(m => m.Name);
+
+        // Fetch all categories to populate the filter dropdown in the view
+        var categories = await db.Categories.OrderBy(c => c.Name).ToListAsync();
+
+        // Create a ViewModel to hold both menu items and categories, plus current filter values
+        var viewModel = new MenuItemIndexVM
+        {
+            MenuItems = await menuItemsQuery.ToListAsync(), // Execute the filtered query
+            Categories = categories,
+            SearchString = searchString, // Pass back current search string to keep input field populated
+            SelectedCategoryId = categoryId // Pass back current category ID to keep dropdown selected
+        };
+
+        return View(viewModel);
     }
+
+    // NEW ACTION: This action will be called by AJAX requests for filtered menu items
+    [HttpGet] // Or [HttpPost] if you prefer, but GET is common for filtering data
+    public async Task<IActionResult> GetFilteredMenuItems(string searchString, int? categoryId)
+    {
+        var menuItemsQuery = from m in db.MenuItems
+                             select m;
+
+        menuItemsQuery = menuItemsQuery.Include(m => m.Category);
+
+        if (!string.IsNullOrEmpty(searchString))
+        {
+            menuItemsQuery = menuItemsQuery.Where(s => s.Name.Contains(searchString));
+        }
+
+        if (categoryId.HasValue && categoryId.Value > 0)
+        {
+            menuItemsQuery = menuItemsQuery.Where(m => m.CategoryId == categoryId.Value);
+        }
+
+        menuItemsQuery = menuItemsQuery.OrderBy(m => m.Name);
+
+        // Select only necessary properties to send back as JSON
+        var items = await menuItemsQuery.Select(m => new
+        {
+            m.MenuItemId,
+            m.Name,
+            m.Description,
+            Price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY")), // Format price for display
+            CategoryName = m.Category.Name, // Get category name
+            PhotoURL = m.PhotoURL // Assuming PhotoURL is a string path
+        }).ToListAsync();
+
+        return Json(items); // Return filtered items as JSON
+    }
+
 
     // GET: /MenuItem/Create
     public IActionResult Create()
@@ -95,4 +169,12 @@ public class MenuItemController : Controller
         if (menuItem == null) return NotFound();
         return View(menuItem);
     }
+}
+
+public class MenuItemIndexVM
+{
+    public List<MenuItem> MenuItems { get; set; }
+    public List<Category> Categories { get; set; }
+    public string SearchString { get; set; }
+    public int? SelectedCategoryId { get; set; }
 }

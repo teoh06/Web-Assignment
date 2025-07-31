@@ -12,7 +12,7 @@ using WebApplication2.Models;
 namespace WebApplication2.Migrations
 {
     [DbContext(typeof(DB))]
-    [Migration("20250729124633_CreateDB")]
+    [Migration("20250731091846_CreateDB")]
     partial class CreateDB
     {
         /// <inheritdoc />

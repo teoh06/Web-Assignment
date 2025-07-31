@@ -76,7 +76,9 @@ main {
 }
 
 main h1 {
-    margin-top: 0;
+    margin: 35px;
+    text-align: center;
+    font-family: "Victor Mono", monospace;
 }
 
 /* Table ---------------------------------------------------------------------- */
@@ -288,7 +290,6 @@ label > * {
 
 .browse-menu-title {
     text-align: center; /* center text */
-    margin-left: 150px;
 }
 
 .in-the-middle {
@@ -320,5 +321,51 @@ label > * {
 @media (max-width: 768px) {
     .home-menu-display .card {
         flex: 1 1 calc(50% - 20px); /* 2 items per row on small screens */
+    }
+}
+
+
+/* CSS for the Home/Index page */
+.page-container {
+    background-color: #FF8F00; 
+    align-content: center;
+    justify-content: center;
+    border: none;
+    border-radius: 40px;
+}
+
+.nice-word {
+    font-family: "Victor Mono", monospace;
+    font-size: 50px;
+    cursor: pointer; /* indicates clickable */
+    display: inline-block;
+    transition: transform 0.3s, color 0.3s;
+}
+
+    /* Pop-out effect (optional) */
+    .nice-word.pop-out {
+        transform: scale(1.5);
+        /* Additional styles if needed */
+    }
+
+    /* Rainbow style applied after click */
+    .nice-word.rainbow {
+        background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+        background-size: 400% 400%;
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        /* Optional: add animated shifting of colors */
+        animation: rainbow-shift 3s linear infinite;
+    }
+
+/* Rainbow shifting animation */
+@keyframes rainbow-shift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 100% 50%;
     }
 }
