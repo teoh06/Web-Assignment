@@ -44,9 +44,10 @@
 
     <nav>
         <a href="/">Home</a>
-        <a href="/MenuItem">Menu</a>
+        
         @if (User.IsInRole("Member"))
         {
+            <a href="/MenuItem">Menu</a>
             <a href="/Cart">Cart</a>
             <a href="/Cart/History">My Orders</a>
         }
@@ -54,6 +55,7 @@
         {
             <a href="/MenuItem/Index">Manage Menu Items</a>
             <a href="/Category/Index">Manage Categories</a>
+            <a class="nav-link" asp-controller="Admin" style="display:inline" asp-action="Index">Admin Panel</a>
         }
         <div></div>
         @if (User.Identity!.IsAuthenticated)

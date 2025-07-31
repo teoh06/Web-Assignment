@@ -1,15 +1,16 @@
-using WebApplication2.Models; // Ensure this namespace matches your DB context and models
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic; // For List<T>
 using System.Linq; // For LINQ queries like Where, OrderBy, Select
 using System.Threading.Tasks; // For async/await
+using WebApplication2.Models; // Ensure this namespace matches your DB context and models
 
 namespace WebApplication2.Controllers;
 
 public class MenuItemController : Controller
 {
-    private readonly DB db; // Renamed 'db' to 'db' for consistency
+    private readonly DB db; 
 
     public MenuItemController(DB db)
     {
@@ -94,6 +95,7 @@ public class MenuItemController : Controller
 
 
     // GET: /MenuItem/Create
+    [Authorize(Roles = "Admin")]
     public IActionResult Create()
     {
         ViewBag.Categories = db.Categories.ToList();
@@ -102,9 +104,11 @@ public class MenuItemController : Controller
 
     // POST: /MenuItem/Create
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public IActionResult Create(MenuItem menuItem)
     {
+        Console.WriteLine("POST Create reached!");
         if (ModelState.IsValid)
         {
             db.MenuItems.Add(menuItem);
@@ -130,15 +134,27 @@ public class MenuItemController : Controller
     public IActionResult Edit(int id, MenuItem menuItem)
     {
         if (id != menuItem.MenuItemId) return NotFound();
+
         if (ModelState.IsValid)
         {
+            var existing = db.MenuItems.AsNoTracking().FirstOrDefault(m => m.MenuItemId == id);
+            if (existing == null) return NotFound();
+
+            // 🛠 If no new PhotoURL is provided, keep the existing one
+            if (string.IsNullOrWhiteSpace(menuItem.PhotoURL))
+            {
+                menuItem.PhotoURL = existing.PhotoURL;
+            }
+
             db.Entry(menuItem).State = EntityState.Modified;
             db.SaveChanges();
             return RedirectToAction(nameof(Index));
         }
+
         ViewBag.Categories = db.Categories.ToList();
         return View(menuItem);
     }
+
 
     // GET: /MenuItem/Delete/
     public IActionResult Delete(int id)
@@ -171,10 +187,4 @@ public class MenuItemController : Controller
     }
 }
 
-public class MenuItemIndexVM
-{
-    public List<MenuItem> MenuItems { get; set; }
-    public List<Category> Categories { get; set; }
-    public string SearchString { get; set; }
-    public int? SelectedCategoryId { get; set; }
-}
+

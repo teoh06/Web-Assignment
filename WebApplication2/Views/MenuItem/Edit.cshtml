@@ -25,6 +25,15 @@
         <input asp-for="Price" class="form-control" />
         <span asp-validation-for="Price" class="text-danger"></span>
     </div>
+    <div class="form-group">
+        <label asp-for="PhotoURL"></label>
+        <input asp-for="PhotoURL" class="form-control" />
+        <span asp-validation-for="PhotoURL" class="text-danger"></span>
+    </div>
+
     <button type="submit" class="btn btn-primary">Save</button>
     <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
 </form>
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

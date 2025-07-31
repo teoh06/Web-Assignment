@@ -63,6 +63,25 @@ public static class SeedData
             };
             context.MenuItems.AddRange(menuItems);
             context.SaveChanges();
+
+
+            if (!context.Admins.Any())
+            {
+                var helper = new Helper(
+                    serviceProvider.GetRequiredService<IWebHostEnvironment>(),
+                    serviceProvider.GetRequiredService<IHttpContextAccessor>(),
+                    serviceProvider.GetRequiredService<IConfiguration>());
+
+                context.Admins.Add(new Admin
+                {
+                    Email = "admin@email.com",
+                    Name = "Admin",
+                    Hash = helper.HashPassword("123456")
+                });
+
+                context.SaveChanges();
+            }
+
         }
     }
 }
