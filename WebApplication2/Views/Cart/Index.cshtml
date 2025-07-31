@@ -1,48 +1,214 @@
-@using System.Globalization;
-
-@inject DB db
 @model List<WebApplication2.Controllers.CartItemVM>
+@using System.Globalization;
+@using Microsoft.AspNetCore.Http;
+@inject IHtmlHelper Html
+
 @{
     ViewBag.Title = "Your Cart";
-    decimal total = Model.Sum(x => x.Price * x.Quantity);
 }
+
 @if (!Model.Any())
 {
-    <p>Your cart is empty.</p>
+    <p id="emptyCartMessage">Your cart is empty.</p>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Item</th>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>Subtotal</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
+    <div id="cartContent">
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>@item.Name</td>
-                    <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-                    <td>@item.Quantity</td>
-                    <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
-                    <td>
-                        <form asp-controller="Cart" asp-action="Remove" method="post" style="display:inline">
-                            <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                        </form>
+                    <th>Item</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="cartTableBody">
+                @foreach (var item in Model)
+                {
+                    <tr data-menu-item-id="@item.MenuItemId">
+                        <td>@item.Name</td>
+                        <td class="item-price" data-price="@item.Price">
+                            @item.Price.ToString("C", new CultureInfo("en-MY"))
+                        </td>
+                        <td>
+                            <input type="number"
+                                   class="item-quantity form-control"
+                                   value="@item.Quantity"
+                                   min="1" max="100" style="width:70px; display:inline-block;"
+                                   data-item-price="@item.Price"
+                                   data-menu-item-id="@item.MenuItemId" />
+                        </td>
+                        <td class="item-subtotal">
+                            @((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))
+                        </td>
+                        <td>
+                            <a href="#" class="btn btn-danger btn-sm remove-item" data-menu-item-id="@item.MenuItemId">Remove</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end"><h4>Total:</h4></td>
+                    <td id="grandTotal" colspan="2">
+                        @Model.Sum(item => item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY"))
                     </td>
                 </tr>
-            }
-        </tbody>
-    </table>
-    <h4>Total: @total.ToString("C", new CultureInfo("en-MY"))</h4>
-    <form asp-controller="Cart" asp-action="Payment" method="get">
-        <button type="submit" class="btn btn-primary">Proceed to Payment</button>
-    </form>
+            </tfoot>
+        </table>
+
+        <div class="mb-3">
+            <a asp-action="Payment" class="btn btn-success">Proceed to Payment</a>
+            <a asp-action="Clear" class="btn btn-warning">Clear Cart</a>
+        </div>
+    </div>
 }
-<a href="@Url.Action("Index", "MenuItem")" class="btn btn-secondary">Continue Shopping</a>
+
+<a asp-action="Index" asp-controller="MenuItem" class="btn btn-secondary">Continue Shopping</a>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const cartTableBody = document.getElementById('cartTableBody');
+            const grandTotalElement = document.getElementById('grandTotal');
+            const cartContentDiv = document.getElementById('cartContent'); // To hide/show cart section
+            const emptyCartMessage = document.getElementById('emptyCartMessage'); // To show message
+
+            // Currency formatter for Malaysian Ringgit (adjust locale if needed)
+            const currencyFormatter = new Intl.NumberFormat('en-MY', {
+                style: 'currency',
+                currency: 'MYR'
+            });
+
+            // Function to get Anti-Forgery Token
+            function getAntiForgeryToken() {
+                // This assumes your _Layout.cshtml or page has an input for the token.
+                // Common ways: <input type="hidden" name="__RequestVerificationToken" value="YOUR_TOKEN_HERE">
+                // or if it's within a form generated by ASP.NET Core:
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                return tokenInput ? tokenInput.value : '';
+            }
+
+            // Function to update individual subtotals and the grand total on the client-side
+            function updateDisplayTotals() {
+                let currentGrandTotal = 0;
+                document.querySelectorAll('#cartTableBody tr').forEach(row => {
+                    const quantityInput = row.querySelector('.item-quantity');
+                    const subtotalCell = row.querySelector('.item-subtotal');
+                    const price = parseFloat(quantityInput.dataset.itemPrice);
+                    const quantity = parseInt(quantityInput.value);
+
+                    const subtotal = quantity * price;
+                    subtotalCell.textContent = currencyFormatter.format(subtotal);
+                    currentGrandTotal += subtotal;
+                });
+                grandTotalElement.textContent = currencyFormatter.format(currentGrandTotal);
+
+                // Show/hide empty cart message based on cart content
+                if (cartTableBody.children.length === 0) {
+                    if (cartContentDiv) cartContentDiv.style.display = 'none';
+                    if (emptyCartMessage) emptyCartMessage.style.display = 'block';
+                } else {
+                    if (cartContentDiv) cartContentDiv.style.display = 'block';
+                    if (emptyCartMessage) emptyCartMessage.style.display = 'none';
+                }
+            }
+
+            // --- Event Listener for Quantity Changes ---
+            cartTableBody.addEventListener('input', function(event) {
+                if (event.target.classList.contains('item-quantity')) {
+                    const input = event.target;
+                    const menuItemId = input.dataset.menuItemId;
+                    let newQuantity = parseInt(input.value);
+
+                    // Basic client-side validation for quantity
+                    if (isNaN(newQuantity) || newQuantity < 1) {
+                        newQuantity = 1;
+                        input.value = 1; // Correct the input display immediately
+                    }
+                    if (newQuantity > 100) {
+                        newQuantity = 100;
+                        input.value = 100; // Correct the input display immediately
+                    }
+
+                    // Perform AJAX call to update the cart on the server
+                    fetch('/Cart/UpdateQuantity', { // Adjust URL if your CartController is not at /Cart
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': getAntiForgeryToken()
+                        },
+                        body: JSON.stringify({ menuItemId: menuItemId, quantity: newQuantity })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            // If server response is not OK, attempt to parse JSON for error message
+                            return response.json().then(error => { throw new Error(error.message || `Server error: ${response.status} ${response.statusText}`); });
+                        }
+                        return response.json(); // Parse the JSON response
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Server updated successfully, now update client-side display
+                            updateDisplayTotals();
+                            console.log('Cart quantity updated successfully on server.');
+                        } else {
+                            console.error('Failed to update cart:', data.message);
+                            alert('Failed to update quantity: ' + data.message);
+                            // Optionally, revert input.value or show a more prominent error message
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error during quantity update fetch:', error);
+                        alert('An error occurred while updating quantity. Please try again. ' + error.message);
+                    });
+                }
+            });
+
+            // --- Event Listener for Remove Item (AJAX) ---
+            cartTableBody.addEventListener('click', function(event) {
+                if (event.target.classList.contains('remove-item')) {
+                    event.preventDefault(); // Prevent default link behavior
+                    const menuItemId = event.target.dataset.menuItemId;
+                    const rowToRemove = event.target.closest('tr'); // Get the parent <tr> element
+
+                    fetch('/Cart/RemoveItem', { // New AJAX endpoint for removing
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': getAntiForgeryToken()
+                        },
+                        body: JSON.stringify({ menuItemId: menuItemId }) // Only need menuItemId for removal
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(error => { throw new Error(error.message || `Server error: ${response.status} ${response.statusText}`); });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            if (rowToRemove) {
+                                rowToRemove.remove(); // Remove row from DOM
+                            }
+                            updateDisplayTotals(); // Recalculate and update grand total
+
+                        } else {
+                            console.error('Failed to remove item:', data.message);
+                            alert('Failed to remove item: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error during item removal fetch:', error);
+                        alert('An error occurred while removing item. Please try again. ' + error.message);
+                    });
+                }
+            });
+
+            // Initial calculation and display update on page load
+            updateDisplayTotals();
+        });
+    </script>
+}

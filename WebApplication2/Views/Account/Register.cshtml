@@ -13,11 +13,21 @@
     <span asp-validation-for="Email"></span>
 
     <label asp-for="Password"></label>
-    <input asp-for="Password" autocomplete="new-password" />
+    <div class="password-toggle-container">
+        <input asp-for="Password" autocomplete="new-password" id="registerPasswordInput" />
+        <span class="password-toggle-icon" onclick="togglePasswordVisibility('registerPasswordInput', this)">
+            <i class="fas fa-eye"></i>
+        </span>
+    </div>
     <span asp-validation-for="Password"></span>
 
     <label asp-for="Confirm"></label>
-    <input asp-for="Confirm" autocomplete="new-password" />
+    <div class="password-toggle-container">
+        <input asp-for="Confirm" autocomplete="new-password" id="confirmPasswordInput" />
+        <span class="password-toggle-icon" onclick="togglePasswordVisibility('confirmPasswordInput', this)">
+            <i class="fas fa-eye"></i>
+        </span>
+    </div>
     <span asp-validation-for="Confirm"></span>
 
 
@@ -34,13 +44,50 @@
     <span asp-validation-for="ProfilePicture"></span>
 
     <section>
-        <button type="submit" class="btn btn-primary">Register</button>
+        <button>Register</button>
         <button type="reset">Reset</button>
     </section>
 </form>
 
-@section foot {
+@section Scripts {
     <script>
-        $.validator.setDefaults({ ignore: '' });
+        // The same reusable function as in Login.cshtml
+        function togglePasswordVisibility(inputId, iconSpan) {
+            const passwordInput = document.getElementById(inputId);
+            const icon = iconSpan.querySelector('i');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
     </script>
+    <style>
+        /* The same styles as in Login.cshtml */
+        .password-toggle-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+            .password-toggle-container input {
+                width: calc(100% - 40px);
+                padding-right: 35px;
+            }
+
+        .password-toggle-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #888;
+            font-size: 1.1em;
+        }
+    </style>
 }

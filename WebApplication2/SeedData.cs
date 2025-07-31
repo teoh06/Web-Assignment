@@ -19,8 +19,7 @@ public static class SeedData
 
             var categories = new Category[]
             {
-                new Category { Name = "Burgers" },
-                new Category { Name = "Pizzas" },
+                new Category { Name = "Fast Food" },
                 new Category { Name = "Salads" },
                 new Category { Name = "Desserts" },
             };
@@ -35,7 +34,7 @@ public static class SeedData
                     Description = "Juicy beef patty, cheese, lettuce, tomato, and our special sauce.",
                     Price = 12.99M,
                     PhotoURL = "burger.jpg",
-                    CategoryId = categories.Single(c => c.Name == "Burgers").CategoryId
+                    CategoryId = categories.Single(c => c.Name == "Fast Food").CategoryId
                 },
                 new MenuItem
                 {
@@ -43,7 +42,7 @@ public static class SeedData
                     Description = "Stone-baked pizza with mozzarella, tomato, and basil.",
                     Price = 15.50M,
                     PhotoURL = "pizza.jpg",
-                    CategoryId = categories.Single(c => c.Name == "Pizzas").CategoryId
+                    CategoryId = categories.Single(c => c.Name == "Fast Food").CategoryId
                 },
                 new MenuItem
                 {
