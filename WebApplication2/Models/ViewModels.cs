@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
+using System.Linq;
 
 #nullable disable warnings
 
@@ -102,4 +103,20 @@ public class FeaturedMenuItemVM
     public string Description { get; set; }
     public decimal Price { get; set; }
 }
+public class MenuItemIndexVM
+{
+    public List<MenuItem> MenuItems { get; set; }
+    public List<Category> Categories { get; set; }
+    public string SearchString { get; set; }
+    public int? SelectedCategoryId { get; set; }
+}
+public class MenuItemDetailsVM
+{
+    public MenuItem MenuItem { get; set; }
+    public List<MenuItemRating> Ratings { get; set; }
+    public List<MenuItemComment> Comments { get; set; }
+    public double AverageRating => Ratings?.Count > 0 ? Ratings.Average(r => r.Value) : 0;
+    public int RatingsCount => Ratings?.Count ?? 0;
+}
+
 

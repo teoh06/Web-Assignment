@@ -18,9 +18,10 @@ public class HomeController : Controller
         // Get 3 featured menu items (e.g., by price descending, or just take 3)
         var featured = db.MenuItems
             .OrderByDescending(m => m.Price)
-            .Take(3)
+            .Take(4)
             .Select(m => new FeaturedMenuItemVM
             {
+                MenuItemId = m.MenuItemId,
                 Name = m.Name,
                 Description = m.Description,
                 Price = m.Price,
@@ -53,6 +54,7 @@ public class HomeController : Controller
 }
 public class FeaturedMenuItemVM
 {
+    public int MenuItemId { get; set; }
     public string Name { get; set; }
     public string Description { get; set; }
     public decimal Price { get; set; }

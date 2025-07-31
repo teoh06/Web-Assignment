@@ -308,7 +308,7 @@ label > * {
 
 /* Style each item container if needed (optional) */
 .home-menu-display .card {
-    flex: 1 1 calc(25% - 20px); /* 4 items per row, minus gap */
+    flex: 1 1 calc((100% - 3 * 20px) / 4); /* 4 items per row, minus gap */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -319,6 +319,6 @@ label > * {
 /* Responsive adjustment for smaller screens */
 @media (max-width: 768px) {
     .home-menu-display .card {
-        flex: 1 1 calc(50% - 20px); /* 2 items per row on small screens */
+        flex: 1 1 calc((100% - 3 * 20px) / 4); /* 2 items per row on small screens */
     }
 }

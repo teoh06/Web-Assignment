@@ -1,5 +1,8 @@
-﻿using WebApplication2.Models;
+﻿using WebApplication2;
+using WebApplication2.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace WebApplication2.Data;
 
@@ -64,6 +67,26 @@ public static class SeedData
             };
             context.MenuItems.AddRange(menuItems);
             context.SaveChanges();
+
+
+
+
+            // --- Seed Admin Account ---
+            if (!context.Admins.Any())
+            {
+                string adminEmail = "admin@example.com";
+                string adminName = "Admin";
+                string adminPassword = "Admin123!"; // Change after first login
+                var hp = new Helper(null, null, null); // Only for hashing
+                string hash = hp.HashPassword(adminPassword);
+                context.Admins.Add(new Admin
+                {
+                    Email = adminEmail,
+                    Name = adminName,
+                    Hash = hash
+                });
+                context.SaveChanges();
+            }
         }
     }
 }

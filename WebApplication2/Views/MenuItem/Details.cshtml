@@ -1,20 +1,156 @@
-@model WebApplication2.Models.MenuItem
+﻿@model WebApplication2.Models.MenuItemDetailsVM
 @{
     ViewBag.Title = "Menu Item Details";
+    var menuItem = Model.MenuItem;
 }
-<div>
-    <h4>Name: @Model.Name</h4>
-    <h4>Category: @Model.Category?.Name</h4>
-    <h4>Description: @Model.Description</h4>
-    <h4>Price: @Model.Price.ToString("C")</h4>
-    <a href="@Url.Action("Edit", new { id = Model.MenuItemId })" class="btn btn-primary">Edit</a>
-    <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
-    @if (User.IsInRole("Member"))
-    {
-        <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline">
-            <input type="hidden" name="menuItemId" value="@Model.MenuItemId" />
-            <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px" />
-            <button type="submit" class="btn btn-success">Add to Cart</button>
-        </form>
-    }
+<div class="card mb-4 menuitem-details-card">
+    <div class="row g-0">
+        <div class="col-md-5">
+            <img src="/Images/@menuItem.PhotoURL" class="img-fluid rounded-start menuitem-photo" alt="@menuItem.Name">
+        </div>
+        <div class="col-md-7">
+            <div class="card-body">
+                <h3 class="card-title">@menuItem.Name</h3>
+                <h5 class="card-subtitle mb-2 text-muted">@menuItem.Category?.Name</h5>
+                <p class="card-text">@menuItem.Description</p>
+                <h4 class="text-success">@menuItem.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</h4>
+                <br>
+
+                @if (User.IsInRole("Member"))
+                {
+                <div class="mb-2">
+                    <button class="btn btn-outline-danger btn-sm" onclick="toggleFavorite(this)"><span id="fav-icon">♡</span> Favorite</button>
+                </div>
+                <div class="mb-2 rating-summary">
+                    <span id="avg-rating" class="fw-bold">@Model.AverageRating.ToString("0.0")</span> / 5
+                    <span class="ms-2">(@Model.RatingsCount ratings)</span>
+                </div>
+                <div class="mb-2">
+                    <label>Rate this item:</label>
+                    <span id="user-rating">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span class="star" data-value="@i" style="font-size:1.5em; cursor:pointer; color:gold;">☆</span>
+                        }
+                    </span>
+                    </div>
+                }
+                else
+                {
+                    <p><b>Login to order.</b></p>
+                }
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <a href="@Url.Action("Edit", new { id = menuItem.MenuItemId })" class="btn btn-primary">Edit</a>
+                }
+                <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
+                @if (User.IsInRole("Member"))
+                {
+                    <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline">
+                        <input type="hidden" name="menuItemId" value="@menuItem.MenuItemId" />
+                        <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px" />
+                        <button type="submit" class="btn btn-success">Add to Cart</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
 </div>
+
+<div class="card mt-4 menuitem-comments-card">
+    <div class="card-header">Comments</div>
+    <div class="card-body">
+        <div id="comments-list">
+            @foreach (var c in Model.Comments)
+            {
+                <div class="mb-2 comment-item"><b>@c.Member?.Name (Foodie Voice)</b>: @c.Content <span class="text-muted small">(@c.CommentedAt.ToShortTimeString())</span></div>
+            }
+        </div>
+        @if (User.Identity.IsAuthenticated)
+        {
+            <form id="comment-form" onsubmit="addComment(event)">
+                <div class="input-group">
+                    <input type="text" id="comment-input" class="form-control" placeholder="Add a comment..." maxlength="200" required />
+                    <button type="submit" class="btn btn-outline-primary">Post</button>
+                </div>
+            </form>
+        }
+        else
+        {
+            <div class="text-muted">Login to add a comment.</div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function toggleFavorite(btn) {
+    var icon = document.getElementById('fav-icon');
+    if (icon.textContent === '♡') {
+        icon.textContent = '♥';
+        btn.classList.remove('btn-outline-danger');
+        btn.classList.add('btn-danger');
+    } else {
+        icon.textContent = '♡';
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-outline-danger');
+    }
+}
+// Star rating AJAX
+const stars = document.querySelectorAll('.star');
+stars.forEach(star => {
+    star.addEventListener('mouseover', function() {
+        const val = parseInt(this.getAttribute('data-value'));
+        stars.forEach((s, i) => s.textContent = i < val ? '★' : '☆');
+    });
+    star.addEventListener('mouseout', function() {
+        stars.forEach(s => s.textContent = '☆');
+    });
+    star.addEventListener('click', function() {
+        const val = this.getAttribute('data-value');
+        fetch('@Url.Action("AddRating", "MenuItem")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+            body: `menuItemId=@menuItem.MenuItemId&value=${val}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('avg-rating').textContent = data.avg.toFixed(1);
+            document.querySelector('.rating-summary .ms-2').textContent = `(${data.count} ratings)`;
+            alert('Thank you for rating ' + val + ' stars!');
+        });
+    });
+});
+// Comment AJAX
+function addComment(e) {
+    e.preventDefault();
+    var input = document.getElementById('comment-input');
+    var list = document.getElementById('comments-list');
+    if (input.value.trim()) {
+        fetch('@Url.Action("AddComment", "MenuItem")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+            body: `menuItemId=@menuItem.MenuItemId&content=${encodeURIComponent(input.value)}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            var div = document.createElement('div');
+            div.className = 'mb-2 comment-item';
+            div.innerHTML = `<b>You</b>: ${data.content} <span class='text-muted small'>(just now)</span>`;
+            list.prepend(div);
+            input.value = '';
+        });
+    }
+}
+</script>
+}
+<style>
+.menuitem-details-card { box-shadow: 0 2px 8px #ccc; }
+.menuitem-photo { width: 100%; height: 250px; object-fit: cover; border-radius: 10px 0 0 10px; }
+.rating-summary { font-size: 1.2em; margin-bottom: 0.5em; }
+.menuitem-comments-card { box-shadow: 0 2px 8px #eee; }
+.comment-item { background: #f8f8f8; border-radius: 5px; padding: 6px 10px; margin-bottom: 4px; }
+#user-rating .star { transition: transform 0.1s; }
+#user-rating .star:hover { transform: scale(1.2); }
+</style>

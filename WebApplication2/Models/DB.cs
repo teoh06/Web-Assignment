@@ -19,6 +19,8 @@ public class DB : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
+    public DbSet<MenuItemRating> MenuItemRatings { get; set; }
+    public DbSet<MenuItemComment> MenuItemComments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -118,6 +120,38 @@ public class OrderItem
     [Required]
     [Column(TypeName = "decimal(18,2)")]
     public decimal UnitPrice { get; set; }
+}
+
+public class MenuItemRating
+{
+    [Key]
+    public int RatingId { get; set; }
+    [Range(1,5)]
+    public int Value { get; set; }
+    [Required]
+    public string MemberEmail { get; set; }
+    [ForeignKey("MemberEmail")]
+    public Member Member { get; set; }
+    public int MenuItemId { get; set; }
+    [ForeignKey("MenuItemId")]
+    public MenuItem MenuItem { get; set; }
+    public DateTime RatedAt { get; set; } = DateTime.Now;
+}
+
+public class MenuItemComment
+{
+    [Key]
+    public int CommentId { get; set; }
+    [Required]
+    public string MemberEmail { get; set; }
+    [ForeignKey("MemberEmail")]
+    public Member Member { get; set; }
+    public int MenuItemId { get; set; }
+    [ForeignKey("MenuItemId")]
+    public MenuItem MenuItem { get; set; }
+    [Required, MaxLength(500)]
+    public string Content { get; set; }
+    public DateTime CommentedAt { get; set; } = DateTime.Now;
 }
 
 // SmtpSetting class does NOT have a [Key] attribute because it's a keyless entity

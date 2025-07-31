@@ -15,7 +15,8 @@
         @if (User.IsInRole("Member"))
         {
             <p class="nice-word">
-                Hi @user.Name</p>
+                Hi @member.Name
+            </p>
         }
 
         <div class="jumbotron text-center">
@@ -30,16 +31,18 @@
         @foreach (var item in Model)
         {
             <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <img src="@item.Image" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
-                    <div class="card-body">
-                        <h5 class="card-title">@item.Name</h5>
-                        <p class="card-text">@item.Description</p>
+                <a href="/MenuItem/Details/@item.MenuItemId" class="card-link-wrapper">
+                    <div class="card h-100">
+                        <img src="@item.Image" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
+                        <div class="card-body">
+                            <h5 class="card-title">@item.Name</h5>
+                            <p class="card-text">@item.Description</p>
+                        </div>
+                        <div class="card-footer">
+                            <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                        </div>
                     </div>
-                    <div class="card-footer">
-                        <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
-                    </div>
-                </div>
+                </a>
             </div>
         }
     </div>
@@ -86,18 +89,30 @@
 </style>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-    const word = document.querySelector('.nice-word');
+        document.addEventListener('DOMContentLoaded', () => {
+        const word = document.querySelector('.nice-word');
 
-    word.addEventListener('click', () => {
-        // Add the rainbow class to display rainbow colors
-        if (!word.classList.contains('rainbow')) {
-            word.classList.add('rainbow');
-        }
-        // Optional: trigger pop-out effect
-        word.classList.add('pop-out');
-        setTimeout(() => word.classList.remove('pop-out'), 300);
+        word.addEventListener('click', () => {
+            // Add the rainbow class to display rainbow colors
+            if (!word.classList.contains('rainbow')) {
+                word.classList.add('rainbow');
+            }
+            // Optional: trigger pop-out effect
+            word.classList.add('pop-out');
+            setTimeout(() => word.classList.remove('pop-out'), 300);
+        });
     });
-});
 </script>
 
+<style>
+    .card-link-wrapper {
+        text-decoration: none; /* Remove underline from the link */
+        color: inherit; /* Inherit text color */
+    }
+
+        .card-link-wrapper:hover .card {
+            transform: translateY(-5px); /* Add a subtle lift effect on hover */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Add a shadow on hover */
+            transition: all 0.3s ease; /* Smooth transition */
+        }
+</style>

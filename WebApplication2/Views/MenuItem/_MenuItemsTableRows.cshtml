@@ -1,0 +1,63 @@
+﻿@model List<WebApplication2.Models.MenuItem>
+@using System.Globalization;
+
+@if (Model != null && Model.Any())
+{
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>
+                @if (!string.IsNullOrEmpty(item.PhotoURL))
+                {
+                    <a href="@Url.Action("Details", "MenuItem", new { id = item.MenuItemId })">
+                        <img src="/Images/@item.PhotoURL" alt="@item.Name" class="item-photo" />
+                    </a>
+                }
+            </td>
+            <td>@item.Name</td>
+            <td>@item.Description</td>
+            <td>@item.Category?.Name</td> @* Use null-conditional operator for safety *@
+            <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
+            @if (User.IsInRole("Member"))
+            {
+                <td>
+                    <form asp-controller="Cart" asp-action="Add" method="post" class="add-to-cart-form" data-menu-item-id="@item.MenuItemId">
+                    <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                    <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px;" class="form-control d-inline-block" />
+                    <button type="submit" class="btn btn-primary btn-sm mt-1">Add to Cart</button>
+                </form>
+                </td>
+            }
+            else
+            {
+                <td>
+                    <form asp-controller="Cart" asp-action="Add" method="post" class="add-to-cart-form" data-menu-item-id="@item.MenuItemId" hidden>
+                    <input type="hidden" name="menuItemId" value="@item.MenuItemId" hidden/>
+                    <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px;" class="form-control d-inline-block" hidden/>
+                    <button type="submit" class="btn btn-primary btn-sm mt-1" hidden>Add to Cart</button>
+                </form>
+                </td>
+            }
+        </tr>
+    }
+}
+else
+{
+    <tr><td colspan="6" class="text-center">No menu items found.</td></tr>
+}
+
+<style>
+    /* Add this CSS to your stylesheet (e.g., wwwroot/css/app.css or site.css) */
+    .item-photo {
+        height: 70px; /* Adjust as needed */
+        width: 70px; /* Maintain aspect ratio */
+        object-fit: cover;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        transition: transform 0.2s ease-in-out;
+    }
+
+        .item-photo:hover {
+            transform: scale(1.05); /* Slightly enlarge on hover */
+        }
+</style>
