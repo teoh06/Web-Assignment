@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WebApplication2.Migrations
 {
     /// <inheritdoc />
-    public partial class CreateDB : Migration
+    public partial class PhotoURLNullableTrue : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -53,7 +53,7 @@ namespace WebApplication2.Migrations
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    PhotoURL = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PhotoURL = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CategoryId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -89,6 +89,62 @@ namespace WebApplication2.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MenuItemComments",
+                columns: table => new
+                {
+                    CommentId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MemberEmail = table.Column<string>(type: "nvarchar(100)", nullable: false),
+                    MenuItemId = table.Column<int>(type: "int", nullable: false),
+                    Content = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CommentedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuItemComments", x => x.CommentId);
+                    table.ForeignKey(
+                        name: "FK_MenuItemComments_MenuItems_MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItems",
+                        principalColumn: "MenuItemId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MenuItemComments_Users_MemberEmail",
+                        column: x => x.MemberEmail,
+                        principalTable: "Users",
+                        principalColumn: "Email",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MenuItemRatings",
+                columns: table => new
+                {
+                    RatingId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Value = table.Column<int>(type: "int", nullable: false),
+                    MemberEmail = table.Column<string>(type: "nvarchar(100)", nullable: false),
+                    MenuItemId = table.Column<int>(type: "int", nullable: false),
+                    RatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuItemRatings", x => x.RatingId);
+                    table.ForeignKey(
+                        name: "FK_MenuItemRatings_MenuItems_MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItems",
+                        principalColumn: "MenuItemId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MenuItemRatings_Users_MemberEmail",
+                        column: x => x.MemberEmail,
+                        principalTable: "Users",
+                        principalColumn: "Email",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "OrderItems",
                 columns: table => new
                 {
@@ -117,6 +173,26 @@ namespace WebApplication2.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_MenuItemComments_MemberEmail",
+                table: "MenuItemComments",
+                column: "MemberEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemComments_MenuItemId",
+                table: "MenuItemComments",
+                column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemRatings_MemberEmail",
+                table: "MenuItemRatings",
+                column: "MemberEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MenuItemRatings_MenuItemId",
+                table: "MenuItemRatings",
+                column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MenuItems_CategoryId",
                 table: "MenuItems",
                 column: "CategoryId");
@@ -140,6 +216,12 @@ namespace WebApplication2.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "MenuItemComments");
+
+            migrationBuilder.DropTable(
+                name: "MenuItemRatings");
+
             migrationBuilder.DropTable(
                 name: "OrderItems");
 

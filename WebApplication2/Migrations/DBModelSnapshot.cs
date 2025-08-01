@@ -62,7 +62,6 @@ namespace WebApplication2.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PhotoURL")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
@@ -73,6 +72,68 @@ namespace WebApplication2.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("MenuItems");
+                });
+
+            modelBuilder.Entity("WebApplication2.Models.MenuItemComment", b =>
+                {
+                    b.Property<int>("CommentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CommentId"));
+
+                    b.Property<DateTime>("CommentedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("MemberEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CommentId");
+
+                    b.HasIndex("MemberEmail");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("MenuItemComments");
+                });
+
+            modelBuilder.Entity("WebApplication2.Models.MenuItemRating", b =>
+                {
+                    b.Property<int>("RatingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RatingId"));
+
+                    b.Property<string>("MemberEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Value")
+                        .HasColumnType("int");
+
+                    b.HasKey("RatingId");
+
+                    b.HasIndex("MemberEmail");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("MenuItemRatings");
                 });
 
             modelBuilder.Entity("WebApplication2.Models.Order", b =>
@@ -188,7 +249,6 @@ namespace WebApplication2.Migrations
                     b.HasBaseType("WebApplication2.Models.User");
 
                     b.Property<string>("PhotoURL")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -204,6 +264,44 @@ namespace WebApplication2.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("WebApplication2.Models.MenuItemComment", b =>
+                {
+                    b.HasOne("WebApplication2.Models.Member", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberEmail")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebApplication2.Models.MenuItem", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+
+                    b.Navigation("MenuItem");
+                });
+
+            modelBuilder.Entity("WebApplication2.Models.MenuItemRating", b =>
+                {
+                    b.HasOne("WebApplication2.Models.Member", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberEmail")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebApplication2.Models.MenuItem", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+
+                    b.Navigation("MenuItem");
                 });
 
             modelBuilder.Entity("WebApplication2.Models.Order", b =>

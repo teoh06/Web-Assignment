@@ -3,7 +3,7 @@
     ViewBag.Title = "Edit Menu Item";
     var categories = ViewBag.Categories as List<WebApplication2.Models.Category>;
 }
-<form asp-action="Edit" method="post">
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="MenuItemId" />
     <div class="form-group">
         <label asp-for="Name"></label>
@@ -25,15 +25,94 @@
         <input asp-for="Price" class="form-control" />
         <span asp-validation-for="Price" class="text-danger"></span>
     </div>
-    <div class="form-group">
-        <label asp-for="PhotoURL"></label>
-        <input asp-for="PhotoURL" class="form-control" />
+    <div class="form-group mb-3">
+        <label class="form-label">Image (Drag & Drop or Select)</label>
+        <div id="drop-area" class="drag-area position-relative mb-2" style="border:2px dashed #a1a1aa; border-radius:8px; min-height:150px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            <input type="file" id="imageInput" name="ImageFile" accept="image/*" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;" />
+            <div id="preview-content" style="text-align:center;width:100%;">
+                <span id="drop-text" style="color:#888;">Drag & drop an image here, or click to select.</span>
+                <img id="preview-image" src="@(string.IsNullOrEmpty(Model.PhotoURL) ? "#" : "/images/" + Model.PhotoURL)" class="preview-image mt-2" style="max-width:100%;max-height:120px;border-radius:8px;@(string.IsNullOrEmpty(Model.PhotoURL) ? "display:none;" : "")" />
+            </div>
+            <button type="button" id="deletePhoto" style="position:absolute;top:0.5rem;right:0.5rem;background:#ef4444;color:white;border:none;border-radius:50%;width:2rem;height:2rem;font-weight:bold;display:@(string.IsNullOrEmpty(Model.PhotoURL) ? "none" : "flex");align-items:center;justify-content:center;opacity:0.8;">&times;</button>
+        </div>
+        <div class="mt-2">Or enter image URL:</div>
+        <input asp-for="PhotoURL" id="photoUrlInput" class="form-control mt-2" placeholder="Optional: Enter image URL if not uploading" />
         <span asp-validation-for="PhotoURL" class="text-danger"></span>
     </div>
-
     <button type="submit" class="btn btn-primary">Save</button>
     <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
 </form>
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+            document.addEventListener('DOMContentLoaded', () => {
+            const dropArea = document.getElementById('drop-area');
+            const imageInput = document.getElementById('imageInput');
+            const dropText = document.getElementById('drop-text');
+            const previewImage = document.getElementById('preview-image');
+            const deleteBtn = document.getElementById('deletePhoto');
+            const photoUrlInput = document.getElementById('photoUrlInput');
+
+            // Initial setup to handle existing photo
+            if (previewImage.src && previewImage.src !== window.location.href + '#') {
+                dropText.style.display = 'none';
+                previewImage.style.display = '';
+                deleteBtn.style.display = 'flex';
+            } else {
+                dropText.style.display = '';
+                previewImage.style.display = 'none';
+                deleteBtn.style.display = 'none';
+            }
+
+            function showPreview(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImage.src = e.target.result;
+                    dropText.style.display = 'none';
+                    previewImage.style.display = '';
+                    deleteBtn.style.display = 'flex';
+                    photoUrlInput.value = '';
+                };
+                reader.readAsDataURL(file);
+            }
+            function clearPreview() {
+                imageInput.value = '';
+                previewImage.src = '#';
+                dropText.style.display = '';
+                previewImage.style.display = 'none';
+                deleteBtn.style.display = 'none';
+                // Also clear the PhotoURL input
+                photoUrlInput.value = '';
+            }
+
+            // Removed the redundant click handler here
+
+            ['dragenter','dragover'].forEach(ev=>dropArea.addEventListener(ev,()=>dropArea.classList.add('active')));
+            ['dragleave','drop'].forEach(ev=>dropArea.addEventListener(ev,()=>dropArea.classList.remove('active')));
+
+            dropArea.addEventListener('drop', e => {
+                e.preventDefault();
+                if(e.dataTransfer.files.length) {
+                    imageInput.files = e.dataTransfer.files;
+                    showPreview(e.dataTransfer.files[0]);
+                }
+            });
+
+            imageInput.addEventListener('change', e => {
+                if(e.target.files.length) {
+                    showPreview(e.target.files[0]);
+                } else {
+                    // If the user cancels the file selection, ensure the state is reset
+                    if (photoUrlInput.value === '') {
+                         clearPreview();
+                    }
+                }
+            });
+
+            deleteBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                clearPreview();
+            });
+        });
+    </script>
 }

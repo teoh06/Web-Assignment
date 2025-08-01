@@ -1,52 +1,65 @@
 @model WebApplication2.Models.MenuItemIndexVM
 @using System.Globalization;
+
 @{
     ViewBag.Title = "Menu";
     var isMember = User.IsInRole("Member");
     var isAdmin = User.IsInRole("Admin");
 }
-@if (User.IsInRole("Admin"))
-{
-    <p><a class="btn btn-success mb-3" asp-controller="MenuItem" asp-action="Create">+ Add New Product</a></p>
-}
 
-<h2 class="text-center">@ViewBag.Title</h2>
 
-<!-- Filters here (search + category) -->
+<div class="menu-container">
+    @if (User.IsInRole("Admin"))
+    {
+        <p><a class="btn btn-success mb-3" asp-controller="MenuItem" asp-action="Create">+ Add New Product</a></p>
+    }
 
-<table class="table table-hover">
-    <thead>
-        <tr>
-            <th>Photo</th>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Category</th>
-            <th>Price</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody id="menuItemsTableBody">
-        @if (isAdmin)
-        {
-            @await Html.PartialAsync("_AdminMenuItemsTableRows", Model.MenuItems)
-        }
-        else if (isMember)
-        {
-            @await Html.PartialAsync("_MemberMenuItemsTableRows", Model.MenuItems)
-        }
-    </tbody>
+    <!-- Filters here (search + category) -->
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                @if (isAdmin || isMember)
+                {
+                    <th>Action</th>
+                }
+            </tr>
+        </thead>
+        <tbody id="menuItemsTableBody">
+            @if (isAdmin)
+            {
+                @* The partial view _AdminMenuItemsTableRows would need to be updated to not display the Description column *@
+                @await Html.PartialAsync("_AdminMenuItemsTableRows", Model.MenuItems)
+            }
+            else if (isMember)
+            {
+                @* The partial view _MemberMenuItemsTableRows would need to be updated to not display the Description column *@
+                @await Html.PartialAsync("_MemberMenuItemsTableRows", Model.MenuItems)
+            }
+            else
+            {
+                @* The partial view _DefaultMenuItemsTableRows would need to be updated to not display the Description column *@
+                @await Html.PartialAsync("_DefaultMenuItemsTableRows", Model.MenuItems)
+            }
+        </tbody>
 
-</table>
+    </table>
+</div>
+
 
 @section Scripts {
     <script>
+        // The original script for adding to cart
         document.querySelector('.table').addEventListener('submit', function (event) {
             if (event.target.classList.contains('add-to-cart-form')) {
                 event.preventDefault();
 
                 const form = event.target;
                 const formData = new FormData(form);
-                const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const token = form.querySelector('input[name="__RequestVerificationToken"]') ?.value;
 
                 fetch(form.action, {
                     method: 'POST',
@@ -71,5 +84,3 @@
         });
     </script>
 }
-
-

@@ -1,0 +1,17 @@
+@model List<WebApplication2.Models.User>
+<h3>Manage Users</h3>
+<table class="table table-bordered">
+    <thead>
+        <tr><th>Email</th><th>Name</th><th>Role</th></tr>
+    </thead>
+    <tbody>
+    @foreach (var u in Model)
+    {
+        <tr>
+            <td>@u.Email</td>
+            <td>@u.Name</td>
+            <td>@u.Role</td>
+        </tr>
+    }
+    </tbody>
+</table>

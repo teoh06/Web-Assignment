@@ -1,4 +1,55 @@
-﻿/* Font ----------------------------------------------------------------------- */
+﻿/* Theme Variables */
+:root {
+    /* Light theme colors */
+    --bg-primary: #fff;
+    --bg-secondary: #ccc;
+    --bg-tertiary: #999;
+    --bg-accent: #666;
+    --text-primary: #333;
+    --text-secondary: #666;
+    --text-light: #fff;
+    --border-color: #333;
+    --border-light: #999;
+    --border-lighter: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --shadow-color-dark: rgba(0, 0, 0, 0.15);
+    --hover-bg: #333;
+    --input-bg: #fff;
+    --card-bg: #ffffff;
+    --nav-button-bg: #666;
+    --nav-button-text: #fff;
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --delete-btn-bg: #ff6b6b;
+    --delete-btn-hover: #ff5252;
+}
+
+/* Dark theme colors */
+html.dark-theme {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #404040;
+    --bg-accent: #505050;
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --text-light: #f0f0f0;
+    --border-color: #555;
+    --border-light: #666;
+    --border-lighter: #444;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --shadow-color-dark: rgba(0, 0, 0, 0.5);
+    --hover-bg: #606060;
+    --input-bg: #2a2a2a;
+    --card-bg: #252525;
+    --nav-button-bg: #505050;
+    --nav-button-text: #f0f0f0;
+    --danger-color: #e74c3c;
+    --danger-hover: #c0392b;
+    --delete-btn-bg: #e74c3c;
+    --delete-btn-hover: #c0392b;
+}
+
+/* Font ----------------------------------------------------------------------- */
 
 body, input, select, textarea, button {
     font: 16px Roboto, sans-serif;
@@ -11,11 +62,14 @@ body {
     height: 100vh;
     display: grid;
     grid: auto auto 1fr auto / auto;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s, color 0.3s;
 }
 
-header, 
+header,
 footer {
-    background: #ccc;
+    background: var(--bg-secondary);
     padding: 10px 50px;
 }
 
@@ -25,61 +79,78 @@ header {
     align-items: center;
 }
 
-header h1 {
-    flex: 1;
-    margin: 0;
-    padding-left: 40px;
-    background: url(/images/favicon.png) no-repeat left / 32px;
-}
+    header h1 {
+        flex: 1;
+        margin: 0;
+        padding-left: 40px;
+        background: url(/images/favicon.png) no-repeat left / 32px;
+    }
 
-header a {
-    color: inherit;
-    text-decoration: none;
-}
+    header a {
+        color: inherit;
+        text-decoration: none;
+    }
 
-header img {
-    width: 36px;
-    height: 36px;
-    border: 1px solid #999;
-    border-radius: 5px;
-}
+    header img {
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--border-light);
+        border-radius: 5px;
+    }
 
 nav {
-    background: #999;
+    background: var(--bg-tertiary);
     padding: 0 50px;
     display: flex;
 }
 
-nav a {
-    background: #666;
-    color: #fff;
-    text-decoration: none;
+    nav a, .default-button {
+        background: var(--bg-accent);
+        color: var(--text-light);
+        text-decoration: none;
+        padding: 5px 10px;
+        white-space: nowrap;
+        transition: background-color 0.2s;
+    }
+
+        nav a:hover, .default-button:hover {
+            background: var(--hover-bg);
+        }
+
+    nav b {
+        padding: 5px 10px;
+        white-space: nowrap;
+    }
+
+    nav div {
+        flex: 1;
+    }
+
+/* Theme toggle button */
+.theme-toggle {
+    background: var(--bg-accent);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
     padding: 5px 10px;
-    white-space: nowrap;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
 }
 
-nav a:hover {
-    background: #333;
-}
-
-nav b {
-    padding: 5px 10px;
-    white-space: nowrap;
-}
-
-nav div {
-    flex: 1;
-}
+    .theme-toggle:hover {
+        background: var(--hover-bg);
+    }
 
 main {
     padding: 20px 50px;
 }
 
-main h1 {
-    margin: 35px;
-    text-align: center;
-    font-family: "Victor Mono", monospace;
-}
+    main h1 {
+        margin: 35px;
+        text-align: center;
+        font-family: "Victor Mono", monospace;
+    }
 
 /* Table ---------------------------------------------------------------------- */
 
@@ -87,20 +158,20 @@ main h1 {
     border-collapse: collapse;
 }
 
-.table th, 
-.table td {
-    border: 1px solid #333;
-    padding: 5px;
-}
+    .table th,
+    .table td {
+        border: 1px solid var(--border-color);
+        padding: 5px;
+    }
 
-.table th {
-    background: #666;
-    color: #fff;
-}
+    .table th {
+        background: var(--bg-accent);
+        color: var(--text-light);
+    }
 
-.table tr:hover td {
-    background: #ccc;
-}
+    .table tr:hover td {
+        background: var(--bg-secondary);
+    }
 
 .detail th {
     text-align: left;
@@ -111,13 +182,13 @@ main h1 {
     display: block;
 }
 
-.table th a.asc::after {
-    content: ' ▴';
-}
+    .table th a.asc::after {
+        content: ' ▴';
+    }
 
-.table th a.des::after {
-    content: ' ▾';
-}
+    .table th a.des::after {
+        content: ' ▾';
+    }
 
 .table tr:has(input:checked) td {
     background: tomato;
@@ -128,7 +199,7 @@ main h1 {
 }
 
 .table .popup {
-    background: #fff;
+    background: var(--bg-primary);
     border: inherit;
     padding: inherit;
     position: absolute;
@@ -152,33 +223,33 @@ main h1 {
 
 .pagination a,
 .pagination span {
-    background: #666 !important;
-    color: #fff !important;
-    border: 1px solid #000 !important;
+    background: var(--bg-accent) !important;
+    color: var(--text-light) !important;
+    border: 1px solid var(--border-color) !important;
 }
 
-.pagination a:hover,
-.pagination span:hover {
-    background: #333 !important;
-}
+    .pagination a:hover,
+    .pagination span:hover {
+        background: var(--hover-bg) !important;
+    }
 
 .pagination .active a,
 .pagination .active span {
-    background: #333 !important;
+    background: var(--hover-bg) !important;
 }
 
 .pagination .disabled a,
 .pagination .disabled span {
-    background: #ccc !important;
+    background: var(--bg-secondary) !important;
 }
 
 /* Flash Message -------------------------------------------------------------- */
 
 .info {
     position: fixed;
-    background: #666;
-    color: #fff;
-    border: 1px solid #333;
+    background: var(--bg-accent);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
     border-radius: 5px;
     padding: 10px 20px;
     max-width: 500px;
@@ -188,15 +259,30 @@ main h1 {
     opacity: 0;
 }
 
-.info:not(:empty) {
-    animation: fade 5s;
-}
+    .info:not(:empty) {
+        animation: fade 5s;
+    }
 
 @keyframes fade {
-      0% { top: -100px; opacity: 0; }
-     10% { top:  100px; opacity: 1; }
-     90% { top:  100px; opacity: 1; }
-    100% { top: -100px; opacity: 0; }
+    0% {
+        top: -100px;
+        opacity: 0;
+    }
+
+    10% {
+        top: 100px;
+        opacity: 1;
+    }
+
+    90% {
+        top: 100px;
+        opacity: 1;
+    }
+
+    100% {
+        top: -100px;
+        opacity: 0;
+    }
 }
 
 /* Form ----------------------------------------------------------------------- */
@@ -213,35 +299,34 @@ label > * {
     place-items: center start;
 }
 
-.form > label:not(:has(*)) {
-    background: #ccc;
-    font-weight: bold;
-    padding: 5px;
-    place-self: stretch;
-}
+    .form > label:not(:has(*)) {
+        background: var(--bg-secondary);
+        font-weight: bold;
+        padding: 5px;
+        place-self: stretch;
+    }
 
-.form > section,
-.validation-summary-valid,
-.validation-summary-errors {
-    grid-column: 1 / -1;
-}
+    .form > section,
+    .validation-summary-valid,
+    .validation-summary-errors {
+        grid-column: 1 / -1;
+    }
 
-.validation-summary-valid ul,
-.validation-summary-errors ul {
-    margin: 0;
-}
+        .validation-summary-valid ul,
+        .validation-summary-errors ul {
+            margin: 0;
+        }
 
 .field-validation-error,
 .validation-summary-errors {
     color: red;
 }
 
-/* 
-    Upload --------------------------------------------------------------- */
+/* Upload --------------------------------------------------------------- */
 
-.upload img {  
+.upload img {
     display: block;
-    border: 1px solid #333;
+    border: 1px solid var(--border-color);
     width: 150px;
     height: 150px;
     object-fit: cover;
@@ -252,82 +337,73 @@ label > * {
 
 .badge {
     display: inline-block;
-    background-color: #666;
-    color: #fff;
-    border: 1px solid #333;
+    background-color: var(--bg-accent);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
     border-radius: 3px;
     min-width: 30px;
     text-align: center;
 }
 
-
-
 /* NEW ERA - 29/7/2025 */
 
 /* CSS for the menu-container with centered content and hover floating effect */
 .menu-container {
-    max-width: 600px; /* medium size */
-    margin: 40px auto; /* center horizontally with spacing */
-    padding: 30px; /* inner spacing */
-    border-radius: 15px; /* rounded corners */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* subtle shadow for depth */
-    background-color: #ffffff; /* white background for a clean look */
-    border: 1px solid #e0e0e0; /* light border for definition */
-    /* Flexbox for centering content */
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-lighter);
     display: flex;
     flex-direction: column;
-    align-items: center; /* horizontal center */
-    justify-content: center; /* vertical center if needed */
-
-    transition: all 0.3s ease; /* smooth transition */
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
 }
 
-/* Hover effect with floating translation */
-.menu-container:hover {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); /* deeper shadow on hover */
-    transform: translateY(-5px); /* floating upward */
-}
+    .menu-container:hover {
+        box-shadow: 0 8px 20px var(--shadow-color-dark);
+        transform: translateY(-5px);
+    }
 
 .browse-menu-title {
-    text-align: center; /* center text */
+    text-align: center;
 }
 
 .in-the-middle {
     display: flex;
-    align-items: center; /* center horizontally */
-    justify-content: center; /* center vertically */
+    align-items: center;
+    justify-content: center;
 }
-
 
 .home-menu-display {
     display: flex;
-    flex-wrap: wrap; /* allows wrapping to next line */
-    gap: 20px; /* spacing between items */
-    justify-content: center; /* center items horizontally */
-    align-items: stretch; /* stretch items vertically if needed */
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    align-items: stretch;
 }
 
-/* Style each item container if needed (optional) */
-.home-menu-display .card {
-    flex: 1 1 calc(25% - 20px); /* 4 items per row, minus gap */
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* center content inside card */
-    text-align: center; /* center text inside card */
-}
+    .home-menu-display .card {
+        flex: 1 1 calc((100% - 3 * 20px) / 4);
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
 
-/* Responsive adjustment for smaller screens */
 @media (max-width: 768px) {
     .home-menu-display .card {
-        flex: 1 1 calc(50% - 20px); /* 2 items per row on small screens */
+        flex: 1 1 calc((100% - 3 * 20px) / 4);
     }
 }
 
-
 /* CSS for the Home/Index page */
 .page-container {
-    background-color: #FF8F00; 
+    background-color: rgba(255, 143, 0, 0.7); /* 50% opacity */
     align-content: center;
     justify-content: center;
     border: none;
@@ -337,29 +413,24 @@ label > * {
 .nice-word {
     font-family: "Victor Mono", monospace;
     font-size: 50px;
-    cursor: pointer; /* indicates clickable */
+    cursor: pointer;
     display: inline-block;
     transition: transform 0.3s, color 0.3s;
 }
 
-    /* Pop-out effect (optional) */
     .nice-word.pop-out {
         transform: scale(1.5);
-        /* Additional styles if needed */
     }
 
-    /* Rainbow style applied after click */
     .nice-word.rainbow {
         background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
         background-size: 400% 400%;
         background-clip: text;
         -webkit-background-clip: text;
         color: transparent;
-        /* Optional: add animated shifting of colors */
         animation: rainbow-shift 3s linear infinite;
     }
 
-/* Rainbow shifting animation */
 @keyframes rainbow-shift {
     0% {
         background-position: 0% 50%;
@@ -368,4 +439,289 @@ label > * {
     100% {
         background-position: 100% 50%;
     }
+}
+
+/* Card styles for the menu items */
+.card-link-wrapper {
+    text-decoration: none;
+    color: inherit;
+}
+
+    .card-link-wrapper:hover .card {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px var(--shadow-color);
+        transition: all 0.3s ease;
+    }
+
+.menuitem-details-card {
+    box-shadow: 0 2px 8px var(--shadow-color);
+    background-color: var(--card-bg);
+}
+
+.menuitem-photo {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    border-radius: 10px 0 0 10px;
+}
+
+.rating-summary {
+    font-size: 1.2em;
+    margin-bottom: 0.5em;
+}
+
+.menuitem-comments-card {
+    box-shadow: 0 2px 8px var(--shadow-color);
+    background-color: var(--card-bg);
+}
+
+.comment-item {
+    background: var(--bg-secondary);
+    border-radius: 5px;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+}
+
+#user-rating .star {
+    transition: transform 0.1s;
+}
+
+    #user-rating .star:hover {
+        transform: scale(1.2);
+    }
+
+.card-header.bg-danger {
+    background-color: var(--danger-color) !important;
+}
+
+/* AccountDeleted - Button Styles */
+.delete-button {
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+    .delete-button:hover {
+        background-color: var(--danger-hover);
+    }
+
+/* CRUD - Create CSS */
+.create-form-container {
+    max-width: 500px;
+    margin: 20px auto;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-lighter);
+    transition: all 0.3s ease;
+}
+
+    .create-form-container:hover {
+        box-shadow: 0 8px 20px var(--shadow-color-dark);
+        transform: translateY(-2px);
+    }
+
+.create-form-title {
+    font-family: "Victor Mono", monospace;
+    font-size: 32px;
+    text-align: center;
+    margin: 0 0 30px 0;
+    color: var(--text-primary);
+}
+
+.create-form {
+    display: grid;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+    .form-group label {
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: var(--text-primary);
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 3px;
+        font-size: 16px;
+        background-color: var(--input-bg);
+        color: var(--text-primary);
+    }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--bg-accent);
+            box-shadow: 0 0 5px var(--shadow-color);
+        }
+
+.drag-area {
+    border: 2px dashed var(--border-light);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 30px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    min-height: 200px;
+    position: relative;
+    background-color: var(--bg-secondary);
+}
+
+    .drag-area.active {
+        border-color: var(--bg-accent);
+        background-color: var(--bg-tertiary);
+    }
+
+    .drag-area:hover {
+        border-color: var(--bg-accent);
+        background-color: var(--bg-tertiary);
+    }
+
+.preview-image {
+    max-width: 100%;
+    max-height: 150px;
+    object-fit: contain;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+}
+
+.hidden {
+    display: none !important;
+}
+
+#deletePhoto {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: var(--delete-btn-bg);
+    color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-weight: bold;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s;
+}
+
+    #deletePhoto:hover {
+        background-color: var(--delete-btn-hover);
+    }
+
+#preview-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+}
+
+#drop-text {
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+.url-input-label {
+    margin-top: 15px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.submit-btn {
+    background: var(--bg-accent);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    padding: 12px 20px;
+    border-radius: 3px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+}
+
+    .submit-btn:hover {
+        background: var(--hover-bg);
+    }
+
+.text-danger {
+    color: red;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.validation-summary {
+    color: red;
+    margin-bottom: 20px;
+}
+
+.file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .create-form-container {
+        margin: 10px;
+        padding: 20px;
+    }
+
+    .create-form-title {
+        font-size: 24px;
+    }
+
+    .drag-area {
+        padding: 20px;
+        min-height: 150px;
+    }
+}
+
+/* Hide / Show Toggle Eye Button */
+.password-toggle-container {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+    .password-toggle-container input {
+        width: calc(100% - 40px);
+        padding-right: 35px;
+        background-color: var(--input-bg);
+        color: var(--text-primary);
+    }
+
+.password-toggle-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 1.1em;
 }

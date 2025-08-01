@@ -3,29 +3,34 @@
     ViewBag.Title = "Categories";
 }
 
-<p><a href="@Url.Action("Create")">Create New Category</a></p>
+<main>
+    <div class="menu-container">
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.Name</td>
-                <td>
-                    <a href="@Url.Action("Edit", new { id = item.CategoryId })">Edit</a>
-                    <a href="@Url.Action("Details", new { id = item.CategoryId })">Details</a>
-                    <a href="@Url.Action("Delete", new { id = item.CategoryId })">Delete</a>
+        <p><a href="@Url.Action("Create")">Create New Category</a></p>
 
-                    @* 🔗 Link to MenuItem/Index filtered by this Category *@
-                    <a href="@Url.Action("Index", "MenuItem", new { categoryId = item.CategoryId })">Manage Products</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>  ?
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td>
+                            <a href="@Url.Action("Edit", new { id = item.CategoryId })">Edit</a>
+                            <a href="@Url.Action("Details", new { id = item.CategoryId })">Details</a>
+                            <a href="@Url.Action("Delete", new { id = item.CategoryId })">Delete</a>
+
+                            @* 🔗 Link to MenuItem/Index filtered by this Category *@
+                            <a href="@Url.Action("Index", "MenuItem", new { categoryId = item.CategoryId })">Manage Products</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</main>

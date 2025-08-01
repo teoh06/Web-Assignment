@@ -1,5 +1,6 @@
 ﻿@model IEnumerable<WebApplication2.Models.MenuItem>
-@using System.Globalization;
+@using System.Globalization
+
 @foreach (var item in Model)
 {
     <tr>
@@ -11,10 +12,5 @@
         <td>@item.Name</td>
         <td>@item.Category?.Name</td>
         <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-        <td>
-            <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.MenuItemId })">Edit</a>
-            <a class="btn btn-sm btn-danger" href="@Url.Action("Delete", new { id = item.MenuItemId })">Delete</a>
-            <a class="btn btn-sm btn-info" href="@Url.Action("Details", new { id = item.MenuItemId })">Details</a>
-        </td>
     </tr>
 }

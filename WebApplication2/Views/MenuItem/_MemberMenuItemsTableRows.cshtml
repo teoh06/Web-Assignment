@@ -4,9 +4,12 @@
 @foreach (var item in Model)
 {
     <tr>
-        <td><img src="/Images/@item.PhotoURL" alt="@item.Name" style="width: 70px; height: 70px; object-fit: cover;" /></td>
+        <td>
+            <a href="/MenuItem/Details/@item.MenuItemId">
+                <img src="/Images/@item.PhotoURL" alt="@item.Name" style="width: 70px; height: 70px; object-fit: cover;" />
+            </a>
+        </td>
         <td>@item.Name</td>
-        <td>@item.Description</td>
         <td>@item.Category?.Name</td>
         <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
         <td>

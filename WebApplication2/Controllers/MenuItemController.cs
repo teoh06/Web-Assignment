@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic; // For List<T>
 using System.Linq; // For LINQ queries like Where, OrderBy, Select
 using System.Threading.Tasks; // For async/await
 using WebApplication2.Models; // Ensure this namespace matches your DB context and models
+using WebApplication2; // For Helper
 
 namespace WebApplication2.Controllers;
 
@@ -106,11 +108,24 @@ public class MenuItemController : Controller
     [HttpPost]
     [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
-    public IActionResult Create(MenuItem menuItem)
+    public IActionResult Create(MenuItem menuItem, IFormFile ImageFile)
     {
-        Console.WriteLine("POST Create reached!");
         if (ModelState.IsValid)
         {
+            if (ImageFile != null && ImageFile.Length > 0)
+            {
+                var helper = new Helper(HttpContext.RequestServices.GetService<IWebHostEnvironment>(),
+                                       HttpContext.RequestServices.GetService<IHttpContextAccessor>(),
+                                       HttpContext.RequestServices.GetService<IConfiguration>());
+                var err = helper.ValidatePhoto(ImageFile);
+                if (!string.IsNullOrEmpty(err))
+                {
+                    ModelState.AddModelError("PhotoURL", err);
+                    ViewBag.Categories = db.Categories.ToList();
+                    return View(menuItem);
+                }
+                menuItem.PhotoURL = helper.SavePhoto(ImageFile, "images");
+            }
             db.MenuItems.Add(menuItem);
             db.SaveChanges();
             return RedirectToAction(nameof(Index));
@@ -131,26 +146,38 @@ public class MenuItemController : Controller
     // POST: /MenuItem/Edit/
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Edit(int id, MenuItem menuItem)
+    public IActionResult Edit(int id, MenuItem menuItem, IFormFile ImageFile)
     {
         if (id != menuItem.MenuItemId) return NotFound();
-
         if (ModelState.IsValid)
         {
             var existing = db.MenuItems.AsNoTracking().FirstOrDefault(m => m.MenuItemId == id);
             if (existing == null) return NotFound();
-
-            // 🛠 If no new PhotoURL is provided, keep the existing one
-            if (string.IsNullOrWhiteSpace(menuItem.PhotoURL))
+            if (ImageFile != null && ImageFile.Length > 0)
+            {
+                var helper = new Helper(HttpContext.RequestServices.GetService<IWebHostEnvironment>(),
+                                       HttpContext.RequestServices.GetService<IHttpContextAccessor>(),
+                                       HttpContext.RequestServices.GetService<IConfiguration>());
+                var err = helper.ValidatePhoto(ImageFile);
+                if (!string.IsNullOrEmpty(err))
+                {
+                    ModelState.AddModelError("PhotoURL", err);
+                    ViewBag.Categories = db.Categories.ToList();
+                    return View(menuItem);
+                }
+                // Optionally delete old photo
+                if (!string.IsNullOrEmpty(existing.PhotoURL))
+                    helper.DeletePhoto(existing.PhotoURL, "images");
+                menuItem.PhotoURL = helper.SavePhoto(ImageFile, "images");
+            }
+            else if (string.IsNullOrWhiteSpace(menuItem.PhotoURL))
             {
                 menuItem.PhotoURL = existing.PhotoURL;
             }
-
             db.Entry(menuItem).State = EntityState.Modified;
             db.SaveChanges();
             return RedirectToAction(nameof(Index));
         }
-
         ViewBag.Categories = db.Categories.ToList();
         return View(menuItem);
     }
@@ -183,7 +210,46 @@ public class MenuItemController : Controller
     {
         var menuItem = db.MenuItems.Include(m => m.Category).FirstOrDefault(m => m.MenuItemId == id);
         if (menuItem == null) return NotFound();
-        return View(menuItem);
+        var ratings = db.MenuItemRatings.Where(r => r.MenuItemId == id).ToList();
+        var comments = db.MenuItemComments.Include(c => c.Member).Where(c => c.MenuItemId == id).OrderByDescending(c => c.CommentedAt).ToList();
+        var vm = new MenuItemDetailsVM
+        {
+            MenuItem = menuItem,
+            Ratings = ratings,
+            Comments = comments
+        };
+        return View(vm);
+    }
+
+    [HttpPost]
+    public IActionResult AddRating(int menuItemId, int value)
+    {
+        if (!User.Identity.IsAuthenticated) return Unauthorized();
+        var email = User.Identity.Name;
+        var existing = db.MenuItemRatings.FirstOrDefault(r => r.MenuItemId == menuItemId && r.MemberEmail == email);
+        if (existing != null)
+        {
+            existing.Value = value;
+            existing.RatedAt = DateTime.Now;
+        }
+        else
+        {
+            db.MenuItemRatings.Add(new MenuItemRating { MenuItemId = menuItemId, Value = value, MemberEmail = email });
+        }
+        db.SaveChanges();
+        var ratings = db.MenuItemRatings.Where(r => r.MenuItemId == menuItemId).ToList();
+        return Json(new { avg = ratings.Count > 0 ? ratings.Average(r => r.Value) : 0, count = ratings.Count });
+    }
+
+    [HttpPost]
+    public IActionResult AddComment(int menuItemId, string content)
+    {
+        if (!User.Identity.IsAuthenticated) return Unauthorized();
+        var email = User.Identity.Name;
+        var comment = new MenuItemComment { MenuItemId = menuItemId, Content = content, MemberEmail = email };
+        db.MenuItemComments.Add(comment);
+        db.SaveChanges();
+        return Json(new { user = email, content, time = comment.CommentedAt });
     }
 }
 

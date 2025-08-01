@@ -55,30 +55,4 @@
             }
         }
     </script>
-    <style>
-        /* Styles for positioning the toggle icon */
-        .password-toggle-container {
-            position: relative;
-            /* Adjust width as per your form's layout.
-                       If your input takes full width, use width: 100%; */
-            display: inline-block; /* Helps with layout if input is not full width */
-            width: 100%; /* Make container take full width of its parent */
-        }
-
-            .password-toggle-container input {
-                /* Adjust input width to make space for the icon */
-                width: calc(100% - 40px); /* 100% minus space for icon and padding */
-                padding-right: 35px; /* Ensure text doesn't overlap with icon */
-            }
-
-        .password-toggle-icon {
-            position: absolute;
-            right: 10px; /* Adjust distance from the right edge */
-            top: 50%;
-            transform: translateY(-50%); /* Vertically center the icon */
-            cursor: pointer;
-            color: #888; /* Grey out the icon */
-            font-size: 1.1em; /* Adjust icon size */
-        }
-    </style>
 }
