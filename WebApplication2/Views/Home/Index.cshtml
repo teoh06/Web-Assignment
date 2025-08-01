@@ -3,16 +3,18 @@
 @using System.Globalization;
 
 @{
-    var user = db.Users.FirstOrDefault(); // gets the first user
+    ViewBag.Title = "Welcome to Food Ordering System";
+    WebApplication2.Models.Member member = null;
+    if (User.IsInRole("Member"))
+    {
+        member = db.Members.Find(User.Identity!.Name);
+    }
 }
 
-@{
-    ViewBag.Title = "Welcome to Food Ordering System";
-}
 <div class="page-container">
     <div class="menu-container">
 
-        @if (User.IsInRole("Member"))
+        @if (User.IsInRole("Member") && member != null)
         {
             <p class="nice-word">
                 Hi @member.Name
@@ -25,7 +27,7 @@
         </div>
     </div>
 
-    <h3 class="in-the-middle">Featured Menu</h3>
+    <h3 class="in-the-middle" style="font-family: 'Victor Mono', monospace;">Featured Menu</h3>
     <br>
     <div class="home-menu-display">
         @foreach (var item in Model)
@@ -48,46 +50,6 @@
     </div>
 </div>
 
-<style>
-    /* Example: style differently if title contains 'Food' */
-    .page-container {
-        background-color: #f0f8ff;/* light blue background */
-        align-content: center;
-        justify-content: center;
-    }
-
-    .nice-word {
-        font-family: "Victor Mono", monospace;
-        font-size: 50px;
-        cursor: pointer; /* indicates clickable */
-        display: inline-block;
-        transition: transform 0.3s, color 0.3s;
-    }
-
-    /* Pop-out effect (optional) */
-    .nice-word.pop-out {
-        transform: scale(1.5);
-        /* Additional styles if needed */
-    }
-
-    /* Rainbow style applied after click */
-    .nice-word.rainbow {
-        background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-        background-size: 400% 400%;
-        background-clip: text;
-        -webkit-background-clip: text;
-        color: transparent;
-        /* Optional: add animated shifting of colors */
-        animation: rainbow-shift 3s linear infinite;
-    }
-
-    /* Rainbow shifting animation */
-    @@keyframes rainbow-shift {
-        0% { background-position: 0% 50%; }
-      100% { background-position: 100% 50%; }
-    }
-</style>
-
 <script>
         document.addEventListener('DOMContentLoaded', () => {
         const word = document.querySelector('.nice-word');
@@ -103,16 +65,3 @@
         });
     });
 </script>
-
-<style>
-    .card-link-wrapper {
-        text-decoration: none; /* Remove underline from the link */
-        color: inherit; /* Inherit text color */
-    }
-
-        .card-link-wrapper:hover .card {
-            transform: translateY(-5px); /* Add a subtle lift effect on hover */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Add a shadow on hover */
-            transition: all 0.3s ease; /* Smooth transition */
-        }
-</style>

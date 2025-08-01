@@ -12,8 +12,8 @@ using WebApplication2.Models;
 namespace WebApplication2.Migrations
 {
     [DbContext(typeof(DB))]
-    [Migration("20250731130854_AddMenuItemRatingsAndComments")]
-    partial class AddMenuItemRatingsAndComments
+    [Migration("20250801032026_PhotoURLNullableTrue")]
+    partial class PhotoURLNullableTrue
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -65,7 +65,6 @@ namespace WebApplication2.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PhotoURL")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
@@ -253,7 +252,6 @@ namespace WebApplication2.Migrations
                     b.HasBaseType("WebApplication2.Models.User");
 
                     b.Property<string>("PhotoURL")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 

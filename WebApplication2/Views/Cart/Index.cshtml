@@ -1,52 +1,72 @@
-@using System.Globalization;
-
-@inject DB db
 @model List<WebApplication2.Controllers.CartItemVM>
+@using System.Globalization;
+@using Microsoft.AspNetCore.Http;
+@inject IHtmlHelper Html
+
 @{
     ViewBag.Title = "Your Cart";
-    decimal total = Model.Sum(x => x.Price * x.Quantity);
 }
+
 @if (!Model.Any())
 {
-    <p class="in-the-middle" id="emptyCartMessage">Your cart is empty.</p>
+    <p id="emptyCartMessage">Your cart is empty.</p>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Item</th>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>Subtotal</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
+    <div id="cartContent">
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>@item.Name</td>
-                    <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-                    <td>@item.Quantity</td>
-                    <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
-                    <td>
-                        <form asp-controller="Cart" asp-action="Remove" method="post" style="display:inline">
-                            <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                        </form>
+                    <th>Item</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="cartTableBody">
+                @foreach (var item in Model)
+                {
+                    <tr data-menu-item-id="@item.MenuItemId">
+                        <td>@item.Name</td>
+                        <td class="item-price" data-price="@item.Price">
+                            @item.Price.ToString("C", new CultureInfo("en-MY"))
+                        </td>
+                        <td>
+                            <input type="number"
+                                   class="item-quantity form-control"
+                                   value="@item.Quantity"
+                                   min="1" max="100" style="width:70px; display:inline-block;"
+                                   data-item-price="@item.Price"
+                                   data-menu-item-id="@item.MenuItemId" />
+                        </td>
+                        <td class="item-subtotal">
+                            @((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))
+                        </td>
+                        <td>
+                            <a href="#" class="btn btn-danger btn-sm remove-item" data-menu-item-id="@item.MenuItemId">Remove</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end"><h4>Total:</h4></td>
+                    <td id="grandTotal" colspan="2">
+                        @Model.Sum(item => item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY"))
                     </td>
                 </tr>
-            }
-        </tbody>
-    </table>
-    <h4>Total: @total.ToString("C", new CultureInfo("en-MY"))</h4>
-    <form asp-controller="Cart" asp-action="Payment" method="get">
-        <button type="submit" class="btn btn-primary">Proceed to Payment</button>
-    </form>
+            </tfoot>
+        </table>
+
+        <div class="mb-3">
+            <a asp-action="Payment" class="btn btn-success">Proceed to Payment</a>
+            <a asp-action="Clear" class="btn btn-warning">Clear Cart</a>
+        </div>
+    </div>
 }
 
-<a asp-action="Index" asp-controller="MenuItem" class="btn btn-secondary in-the-middle">Continue Shopping</a>
+<a asp-action="Index" asp-controller="MenuItem" class="btn btn-secondary">Continue Shopping</a>
 
 @section Scripts {
     <script>

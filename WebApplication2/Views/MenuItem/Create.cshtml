@@ -1,29 +1,148 @@
 @model WebApplication2.Models.MenuItem
 @{
-    ViewBag.Title = "Create Menu Item";
-    var categories = ViewBag.Categories as List<WebApplication2.Models.Category>;
+    ViewBag.Title = "Add Menu Item";
 }
-<form asp-action="Create" method="post">
-    <div class="form-group">
-        <label asp-for="Name"></label>
-        <input asp-for="Name" class="form-control" />
-        <span asp-validation-for="Name" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="CategoryId">Category</label>
-        <select asp-for="CategoryId" class="form-control" asp-items="@(new SelectList(categories, "CategoryId", "Name"))"></select>
-        <span asp-validation-for="CategoryId" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="Description"></label>
-        <textarea asp-for="Description" class="form-control"></textarea>
-        <span asp-validation-for="Description" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="Price"></label>
-        <input asp-for="Price" class="form-control" />
-        <span asp-validation-for="Price" class="text-danger"></span>
-    </div>
-    <button type="submit" class="btn btn-primary">Create</button>
-    <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
-</form>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<div class="create-form-container">
+
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="create-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+
+        <div class="form-group">
+            <label asp-for="Name">Name</label>
+            <input asp-for="Name" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Description">Description</label>
+            <input asp-for="Description" />
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Price">Price</label>
+            <input asp-for="Price" />
+            <span asp-validation-for="Price" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="CategoryId">Category</label>
+            <select asp-for="CategoryId" asp-items="@(new SelectList(ViewBag.Categories, "CategoryId", "Name"))"></select>
+            <span asp-validation-for="CategoryId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label>Image (Drag & Drop or Select)</label>
+            <div id="drop-area" class="drag-area">
+                <input type="file" id="imageInput" name="ImageFile" accept="image/*" class="file-input" />
+
+                <div id="preview-content">
+                    <span id="drop-text">Drag & drop an image here, or click to select.</span>
+                    <img id="preview-image" src="#" class="preview-image hidden" />
+                </div>
+
+                <button type="button" id="deletePhoto">&times;</button>
+            </div>
+
+            <div class="url-input-label">Or enter image URL:</div>
+            <input asp-for="PhotoURL" id="photoUrlInput" placeholder="Optional: Enter image URL if not uploading" />
+            <span asp-validation-for="PhotoURL" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="submit-btn">
+            Add Product
+        </button>
+    </form>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropArea = document.getElementById('drop-area');
+            const imageInput = document.getElementById('imageInput');
+            const dropText = document.getElementById('drop-text');
+            const previewImage = document.getElementById('preview-image');
+            const deleteBtn = document.getElementById('deletePhoto');
+            const photoUrlInput = document.getElementById('photoUrlInput');
+
+            // Set the initial state for the delete button
+            deleteBtn.style.display = 'none';
+
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            // Highlight drag area on dragenter/dragover
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.add('active'), false);
+            });
+
+            // Unhighlight drag area on dragleave/drop
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'), false);
+            });
+
+            // Handle dropped files
+            dropArea.addEventListener('drop', e => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }, false);
+
+            // Handle file selection via click
+            imageInput.addEventListener('change', (e) => {
+                const files = e.target.files;
+                handleFiles(files);
+            });
+
+            // Handle delete button click
+            deleteBtn.addEventListener('click', e => {
+                // Prevent the click event from bubbling up to the drop-area
+                e.stopPropagation();
+                clearPreview();
+            });
+
+            // Function to process and preview files
+            function handleFiles(files) {
+                if (files.length > 0) {
+                    const file = files[0];
+                    const reader = new FileReader();
+
+                    reader.onload = (e) => {
+                        previewImage.src = e.target.result;
+                        dropText.classList.add('hidden');
+                        previewImage.classList.remove('hidden');
+
+                        // Show the delete button after a successful preview
+                        deleteBtn.style.display = 'flex';
+
+                        // Clear the URL input when a file is dropped
+                        photoUrlInput.value = '';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            // Function to clear the preview and reset the state
+            function clearPreview() {
+                imageInput.value = ''; // Clear the file input
+                previewImage.src = '#'; // Clear the image source
+                dropText.classList.remove('hidden');
+                previewImage.classList.add('hidden');
+
+                // Hide the delete button when the preview is cleared
+                deleteBtn.style.display = 'none';
+            }
+        });
+    </script>
+}

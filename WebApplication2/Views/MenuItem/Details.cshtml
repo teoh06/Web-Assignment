@@ -6,10 +6,10 @@
 <div class="card mb-4 menuitem-details-card">
     <div class="row g-0">
         <div class="col-md-5">
-            <img src="/Images/@menuItem.PhotoURL" class="img-fluid rounded-start menuitem-photo" alt="@menuItem.Name">
+            <img src="/Images/@menuItem.PhotoURL" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
         </div>
         <div class="col-md-7">
-            <div class="card-body">
+            <div class="card-body m-4">
                 <h3 class="card-title">@menuItem.Name</h3>
                 <h5 class="card-subtitle mb-2 text-muted">@menuItem.Category?.Name</h5>
                 <p class="card-text">@menuItem.Description</p>
@@ -37,7 +37,7 @@
                 }
                 else
                 {
-                    <p><b>Login to order.</b></p>
+                    <p><b>Only Member can order.</b></p>
                 }
 
                 @if (User.IsInRole("Admin"))
@@ -67,7 +67,7 @@
                 <div class="mb-2 comment-item"><b>@c.Member?.Name (Foodie Voice)</b>: @c.Content <span class="text-muted small">(@c.CommentedAt.ToShortTimeString())</span></div>
             }
         </div>
-        @if (User.Identity.IsAuthenticated)
+        @if (User.Identity!.IsAuthenticated)
         {
             <form id="comment-form" onsubmit="addComment(event)">
                 <div class="input-group">
@@ -145,12 +145,3 @@ function addComment(e) {
 }
 </script>
 }
-<style>
-.menuitem-details-card { box-shadow: 0 2px 8px #ccc; }
-.menuitem-photo { width: 100%; height: 250px; object-fit: cover; border-radius: 10px 0 0 10px; }
-.rating-summary { font-size: 1.2em; margin-bottom: 0.5em; }
-.menuitem-comments-card { box-shadow: 0 2px 8px #eee; }
-.comment-item { background: #f8f8f8; border-radius: 5px; padding: 6px 10px; margin-bottom: 4px; }
-#user-rating .star { transition: transform 0.1s; }
-#user-rating .star:hover { transform: scale(1.2); }
-</style>

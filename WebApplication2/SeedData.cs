@@ -22,8 +22,7 @@ public static class SeedData
 
             var categories = new Category[]
             {
-                new Category { Name = "Burgers" },
-                new Category { Name = "Pizzas" },
+                new Category { Name = "Fast Food" },
                 new Category { Name = "Salads" },
                 new Category { Name = "Desserts" },
             };
@@ -38,7 +37,7 @@ public static class SeedData
                     Description = "Juicy beef patty, cheese, lettuce, tomato, and our special sauce.",
                     Price = 12.99M,
                     PhotoURL = "burger.jpg",
-                    CategoryId = categories.Single(c => c.Name == "Burgers").CategoryId
+                    CategoryId = categories.Single(c => c.Name == "Fast Food").CategoryId
                 },
                 new MenuItem
                 {
@@ -46,7 +45,7 @@ public static class SeedData
                     Description = "Stone-baked pizza with mozzarella, tomato, and basil.",
                     Price = 15.50M,
                     PhotoURL = "pizza.jpg",
-                    CategoryId = categories.Single(c => c.Name == "Pizzas").CategoryId
+                    CategoryId = categories.Single(c => c.Name == "Fast Food").CategoryId
                 },
                 new MenuItem
                 {
@@ -69,24 +68,23 @@ public static class SeedData
             context.SaveChanges();
 
 
-
-
-            // --- Seed Admin Account ---
             if (!context.Admins.Any())
             {
-                string adminEmail = "admin@example.com";
-                string adminName = "Admin";
-                string adminPassword = "Admin123!"; // Change after first login
-                var hp = new Helper(null, null, null); // Only for hashing
-                string hash = hp.HashPassword(adminPassword);
+                var helper = new Helper(
+                    serviceProvider.GetRequiredService<IWebHostEnvironment>(),
+                    serviceProvider.GetRequiredService<IHttpContextAccessor>(),
+                    serviceProvider.GetRequiredService<IConfiguration>());
+
                 context.Admins.Add(new Admin
                 {
-                    Email = adminEmail,
-                    Name = adminName,
-                    Hash = hash
+                    Email = "admin@email.com",
+                    Name = "Admin",
+                    Hash = helper.HashPassword("123456")
                 });
+
                 context.SaveChanges();
             }
+
         }
     }
 }

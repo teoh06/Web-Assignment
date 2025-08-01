@@ -1,0 +1,31 @@
+﻿@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<p>Welcome, @User.Identity.Name!</p>
+
+<div class="mb-4">
+    <button class="btn btn-primary" onclick="showSection('users')">Manage Users</button>
+    <button class="btn btn-success ms-3" onclick="showSection('sales')">Sales Summary</button>
+</div>
+
+<div id="section-users" class="admin-section" style="display:none;"></div>
+<div id="section-sales" class="admin-section" style="display:none;"></div>
+
+<script>
+function showSection(section) {
+    document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
+    document.getElementById('section-' + section).style.display = 'block';
+    if (section === 'users') loadSection('/Admin/ManageUsers', 'section-users');
+    if (section === 'sales') loadSection('/Admin/SalesSummary', 'section-sales');
+}
+
+function loadSection(url, target) {
+    fetch(url)
+        .then(r => r.text())
+        .then(html => { document.getElementById(target).innerHTML = html; });
+}
+// Show sales by default
+showSection('sales');
+</script>
+

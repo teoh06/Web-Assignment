@@ -62,7 +62,7 @@ public class Admin : User
 public class Member : User
 {
     [MaxLength(100)]
-    public string PhotoURL { get; set; }
+    public string? PhotoURL { get; set; }
     // Navigation property for orders
     public ICollection<Order> Orders { get; set; }
 }
@@ -71,27 +71,30 @@ public class Category
 {
     [Key]
     public int CategoryId { get; set; }
-    [Required, MaxLength(100)]
+    [Required(ErrorMessage ="Category Name is Required"), MaxLength(100)]
     public string Name { get; set; }
     // Navigation property
-    public ICollection<MenuItem> MenuItems { get; set; }
+    public ICollection<MenuItem>? MenuItems { get; set; }
 }
 
 public class MenuItem
 {
     [Key]
     public int MenuItemId { get; set; }
-    [Required, MaxLength(100)]
+    [Required(ErrorMessage = "Name is required"), MaxLength(100)]
     public string Name { get; set; }
     [MaxLength(500)]
+    [Required(ErrorMessage = "Description is required")]
     public string Description { get; set; }
     [Required]
+    [Range(0.01, 9999, ErrorMessage = "Price must be more than 0")]
     [Column(TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
-    public string PhotoURL { get; set; }
+    public string? PhotoURL { get; set; }
     // Foreign key
+    [Required(ErrorMessage = "Category is required")]
     public int CategoryId { get; set; }
-    public Category Category { get; set; }
+    public Category? Category { get; set; }
 }
 
 public class Order

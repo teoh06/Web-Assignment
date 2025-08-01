@@ -1,38 +1,47 @@
-@model List<WebApplication2.Controllers.OrderHistoryVM>
+@model WebApplication2.Controllers.OrderHistoryVM
 @using System.Globalization;
+
 @{
-    ViewBag.Title = "My Orders";
+    ViewBag.Title = "Order History";
 }
-@if (!Model.Any())
+
+<!-- Displays a message if no orders exist; 
+otherwise, lists each past order with details, 
+items, total price, and a link to view the receipt. -->
+
+@if (!Model.Orders.Any())
 {
     <p class="in-the-middle">You have no past orders.</p>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Order #</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var order in Model)
-            {
-                <tr>
-                    <td>@order.OrderId</td>
-                    <td>@order.Date.ToString("g")</td>
-                    <td>@order.Status</td>
-                    <td>@order.Total.ToString("C", new CultureInfo("en-MY"))</td>
-                    <td>
-                        <a href="@Url.Action("Receipt", "Cart", new { id = order.OrderId })" class="btn btn-sm btn-info">View Receipt</a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    @foreach (var order in Model.Orders)
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Order #@order.OrderId</strong> - @order.OrderDate.ToString("yyyy-MM-dd HH:mm")
+                <span class="badge bg-info float-end">@order.Status</span>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Items:</h5>
+                <ul class="list-group list-group-flush">
+                    @foreach (var item in order.Items)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                @if (!string.IsNullOrEmpty(item.PhotoURL))
+                                {
+                                    <img src="/Images/@item.PhotoURL" alt="@item.MenuItemName" style="width:50px; height:50px; object-fit:cover; margin-right:10px;">
+                                }
+                                @item.MenuItemName x @item.Quantity
+                            </div>
+                            <span>@((item.UnitPrice * item.Quantity).ToString("C", new CultureInfo("en-MY")))</span>
+                        </li>
+                    }
+                </ul>
+                <h4 class="text-end mt-3">Total: @order.Total.ToString("C", new CultureInfo("en-MY"))</h4>
+                 <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary float-end">View Receipt</a>
+            </div>
+        </div>
+    }
 }
-<a href="@Url.Action("Index", "MenuItem")" class="btn btn-secondary">Back to Menu</a>

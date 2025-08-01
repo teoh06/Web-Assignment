@@ -62,7 +62,6 @@ namespace WebApplication2.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PhotoURL")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
@@ -250,7 +249,6 @@ namespace WebApplication2.Migrations
                     b.HasBaseType("WebApplication2.Models.User");
 
                     b.Property<string>("PhotoURL")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 

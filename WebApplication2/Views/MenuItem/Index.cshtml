@@ -1,72 +1,86 @@
-
+@model WebApplication2.Models.MenuItemIndexVM
 @using System.Globalization;
 
-
-@model IEnumerable<WebApplication2.Models.MenuItem>
 @{
-    ViewBag.Title = "Menu Items";
+    ViewBag.Title = "Menu";
+    var isMember = User.IsInRole("Member");
+    var isAdmin = User.IsInRole("Admin");
 }
-@if (User.IsInRole("Admin"))
-{
-    <p><a href="@Url.Action("Create")">Create New Menu Item</a></p>
-}
-<table class="table">
-    <thead>
-        <tr>
-            <th></th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Price</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
+
+
+<div class="menu-container">
+    @if (User.IsInRole("Admin"))
+    {
+        <p><a class="btn btn-success mb-3" asp-controller="MenuItem" asp-action="Create">+ Add New Product</a></p>
+    }
+
+    <!-- Filters here (search + category) -->
+    <table class="table table-hover">
+        <thead>
             <tr>
-                <td style="display: flex; justify-content: center; align-items: center; height: 180px;">
-                    @if (!string.IsNullOrEmpty(item.PhotoURL))
-                    {
-                        <img src="/images/@item.PhotoURL" alt="@item.Name" class="item-photo" />
-                    }
-                </td>
-
-                <td>@item.Name</td>
-                <td>@item.Category?.Name</td>
-                <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-                <td>
-                    <a href="@Url.Action("Edit", new { id = item.MenuItemId })">Edit</a> |
-                    <a href="@Url.Action("Details", new { id = item.MenuItemId })">Details</a> |
-                    <a href="@Url.Action("Delete", new { id = item.MenuItemId })">Delete</a>
-                    @if (User.IsInRole("Member"))
-                    {
-                        <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline">
-                            <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                            <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px" />
-                            <button type="submit" class="btn btn-success btn-sm">Add to Cart</button>
-                        </form>
-                    }
-                </td>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                @if (isAdmin || isMember)
+                {
+                    <th>Action</th>
+                }
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody id="menuItemsTableBody">
+            @if (isAdmin)
+            {
+                @* The partial view _AdminMenuItemsTableRows would need to be updated to not display the Description column *@
+                @await Html.PartialAsync("_AdminMenuItemsTableRows", Model.MenuItems)
+            }
+            else if (isMember)
+            {
+                @* The partial view _MemberMenuItemsTableRows would need to be updated to not display the Description column *@
+                @await Html.PartialAsync("_MemberMenuItemsTableRows", Model.MenuItems)
+            }
+            else
+            {
+                @* The partial view _DefaultMenuItemsTableRows would need to be updated to not display the Description column *@
+                @await Html.PartialAsync("_DefaultMenuItemsTableRows", Model.MenuItems)
+            }
+        </tbody>
 
-<style>
-    /* Add this CSS to your stylesheet */
-    .item-photo {
-        height: 100px; /* increased size */
-        width: auto;
-        object-fit: cover;
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
+    </table>
+</div>
 
-    .item-photo:hover {
-        cursor: pointer;
-        transform: scale(0.9);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    }
-</style>
+
+@section Scripts {
+    <script>
+        // The original script for adding to cart
+        document.querySelector('.table').addEventListener('submit', function (event) {
+            if (event.target.classList.contains('add-to-cart-form')) {
+                event.preventDefault();
+
+                const form = event.target;
+                const formData = new FormData(form);
+                const token = form.querySelector('input[name="__RequestVerificationToken"]') ?.value;
+
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': token
+                    },
+                    body: new URLSearchParams([...formData])
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                    } else {
+                        alert(data.message || 'Failed to add to cart.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding to cart:', error);
+                    alert('Something went wrong.');
+                });
+            }
+        });
+    </script>
+}
