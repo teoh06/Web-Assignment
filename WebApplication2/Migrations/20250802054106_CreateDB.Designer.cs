@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApplication2.Models;
 
@@ -11,9 +12,11 @@ using WebApplication2.Models;
 namespace WebApplication2.Migrations
 {
     [DbContext(typeof(DB))]
-    partial class DBModelSnapshot : ModelSnapshot
+    [Migration("20250802054106_CreateDB")]
+    partial class CreateDB
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,33 +41,6 @@ namespace WebApplication2.Migrations
                     b.HasKey("CategoryId");
 
                     b.ToTable("Categories");
-                });
-
-            modelBuilder.Entity("WebApplication2.Models.MemberPhoto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MemberEmail")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("UploadDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MemberEmail");
-
-                    b.ToTable("MemberPhotos");
                 });
 
             modelBuilder.Entity("WebApplication2.Models.MenuItem", b =>
@@ -282,17 +258,6 @@ namespace WebApplication2.Migrations
                     b.HasDiscriminator().HasValue("Member");
                 });
 
-            modelBuilder.Entity("WebApplication2.Models.MemberPhoto", b =>
-                {
-                    b.HasOne("WebApplication2.Models.Member", "Member")
-                        .WithMany("MemberPhotos")
-                        .HasForeignKey("MemberEmail")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Member");
-                });
-
             modelBuilder.Entity("WebApplication2.Models.MenuItem", b =>
                 {
                     b.HasOne("WebApplication2.Models.Category", "Category")
@@ -384,8 +349,6 @@ namespace WebApplication2.Migrations
 
             modelBuilder.Entity("WebApplication2.Models.Member", b =>
                 {
-                    b.Navigation("MemberPhotos");
-
                     b.Navigation("Orders");
                 });
 #pragma warning restore 612, 618

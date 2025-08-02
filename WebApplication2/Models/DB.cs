@@ -21,6 +21,7 @@ public class DB : DbContext
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<MenuItemRating> MenuItemRatings { get; set; }
     public DbSet<MenuItemComment> MenuItemComments { get; set; }
+    public DbSet<MemberPhoto> MemberPhotos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,6 +66,19 @@ public class Member : User
     public string? PhotoURL { get; set; }
     // Navigation property for orders
     public ICollection<Order> Orders { get; set; }
+    // Navigation property for photo history
+    public ICollection<MemberPhoto> MemberPhotos { get; set; }
+}
+
+public class MemberPhoto
+{
+    public int Id { get; set; }
+    [MaxLength(100)]
+    public string MemberEmail { get; set; }
+    [ForeignKey("MemberEmail")]
+    public Member Member { get; set; }
+    public string FileName { get; set; }
+    public DateTime UploadDate { get; set; }
 }
 
 public class Category

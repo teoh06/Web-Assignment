@@ -184,56 +184,95 @@ public class AccountController : Controller
     [Authorize(Roles = "Member")]
     public IActionResult UpdateProfile()
     {
-        // Get member record based on email (PK)
-        // TODO
-        var m = db.Members.Find(User.Identity!.Name);
-        if (m == null) return RedirectToAction("Index", "Home");
+        var m = db.Members.Include(x => x.MemberPhotos)
+                      .FirstOrDefault(x => x.Email == User.Identity!.Name);
+    if (m == null) return RedirectToAction("Index", "Home");
 
-        var vm = new UpdateProfileVM
+    // Get up to 4 most recent previous photos
+    var photoHistory = m.MemberPhotos
+        .OrderByDescending(p => p.UploadDate)
+        .Take(4)
+        .Select(p => new ProfilePhotoVM
         {
-            Email = m.Email,
-            Name = m.Name,
-            PhotoURL = m.PhotoURL,
-        };
+            Id = p.Id,
+            FileName = p.FileName,
+            UploadDate = p.UploadDate
+        })
+        .ToList();
 
-        return View(vm);
+    var vm = new UpdateProfileVM
+    {
+        Email = m.Email,
+        Name = m.Name,
+        PhotoURL = m.PhotoURL,
+        PhotoHistory = photoHistory
+    };
+
+    return View(vm);
+}
+
+// POST: Account/UpdateProfile
+[Authorize(Roles = "Member")]
+[HttpPost]
+public IActionResult UpdateProfile(UpdateProfileVM vm)
+{
+    var m = db.Members.Include(x => x.MemberPhotos)
+                      .FirstOrDefault(x => x.Email == User.Identity!.Name);
+    if (m == null) return RedirectToAction("Index", "Home");
+
+    if (vm.ProfilePicture != null)
+    {
+        var err = hp.ValidatePhoto(vm.ProfilePicture);
+        if (err != "") ModelState.AddModelError("Photo", err);
     }
 
-    // POST: Account/UpdateProfile
-    [Authorize(Roles = "Member")]
-    [HttpPost]
-    public IActionResult UpdateProfile(UpdateProfileVM vm)
+    if (ModelState.IsValid)
     {
-        // Get member record based on email (PK)
-        var m = db.Members.Find(User.Identity!.Name);
-        if (m == null) return RedirectToAction("Index", "Home");
+        m.Name = vm.Name;
 
         if (vm.ProfilePicture != null)
         {
-            var err = hp.ValidatePhoto(vm.ProfilePicture);
-            if (err != "") ModelState.AddModelError("Photo", err);
-        }
-
-        if (ModelState.IsValid)
-        {
-            m.Name = vm.Name;
-
-            if (vm.ProfilePicture != null)
+            // Save current photo to history if it exists
+            if (!string.IsNullOrEmpty(m.PhotoURL))
             {
-                hp.DeletePhoto(m.PhotoURL, "photos");
-                m.PhotoURL = hp.SavePhoto(vm.ProfilePicture, "photos");
+                m.MemberPhotos.Add(new MemberPhoto
+                {
+                    MemberEmail = m.Email,
+                    FileName = m.PhotoURL,
+                    UploadDate = DateTime.Now
+                });
+                // Keep only the 4 most recent previous photos
+                var toRemove = m.MemberPhotos
+                    .OrderByDescending(p => p.UploadDate)
+                    .Skip(4)
+                    .ToList();
+                db.MemberPhotos.RemoveRange(toRemove);
             }
-
-            db.SaveChanges();
-
-            TempData["Info"] = "Profile updated.";
-            return RedirectToAction();
+            hp.DeletePhoto(m.PhotoURL, "photos");
+            m.PhotoURL = hp.SavePhoto(vm.ProfilePicture, "photos");
         }
 
-        vm.Email = m.Email;
-        vm.PhotoURL = m.PhotoURL;
-        return View(vm);
+        db.SaveChanges();
+
+        TempData["Info"] = "Profile updated.";
+        return RedirectToAction();
     }
+
+    // Repopulate photo history for redisplay
+    vm.Email = m.Email;
+    vm.PhotoURL = m.PhotoURL;
+    vm.PhotoHistory = m.MemberPhotos
+        .OrderByDescending(p => p.UploadDate)
+        .Take(4)
+        .Select(p => new ProfilePhotoVM
+        {
+            Id = p.Id,
+            FileName = p.FileName,
+            UploadDate = p.UploadDate
+        })
+        .ToList();
+    return View(vm);
+}
 
     // GET: Account/ResetPassword
     public IActionResult ResetPassword()
