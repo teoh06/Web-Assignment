@@ -164,7 +164,7 @@ main {
 }
 
     main h1 {
-        margin: 35px;
+        margin: 30px;
         text-align: center;
         font-family: "Victor Mono", monospace;
     }
@@ -749,4 +749,517 @@ label > * {
 
 .my-muted.dark-theme {
     color: var(--text-light);
+}
+
+
+/* =============================================================================
+   TIDY PROFILE UPDATE STYLES
+   ============================================================================= */
+
+/* Profile Photo Section */
+.profile-photo-wrapper {
+    text-align: center;
+    margin: 30px 0 40px 0;
+}
+
+.upload img {
+    display: block;
+    border: 3px solid var(--border-color);
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px var(--shadow-color);
+    margin: 0 auto 15px auto;
+}
+
+    .upload img:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px var(--shadow-color-dark);
+    }
+
+.profile-photo-wrapper small {
+    color: var(--text-secondary);
+    font-size: 18px;
+    margin-top: 5px;
+    font-family: "Victor Mono", monospace;
+}
+
+/* Tidy Form Layout */
+.tidy-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.form-fields {
+    margin: 0 0 15px 0;
+}
+
+.field-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 15px;
+}
+
+    .field-row label {
+        font-weight: bold;
+        color: var(--text-primary);
+        min-width: 50px;
+        text-align: right;
+        background: none;
+        padding: 0;
+    }
+
+.form-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid var(--border-lighter);
+    border-radius: 8px;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+    max-width: 300px;
+}
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--bg-accent);
+        box-shadow: 0 0 5px var(--shadow-color);
+    }
+
+.email-display {
+    flex: 1;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 2px solid var(--border-lighter);
+    border-radius: 8px;
+    padding: 12px 15px;
+    font-size: 16px;
+    max-width: 300px;
+}
+
+/* Form Buttons */
+.form-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 100px;
+}
+
+.btn-primary {
+    background: var(--bg-accent);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+}
+
+    .btn-primary:hover {
+        background: var(--hover-bg);
+        transform: translateY(-2px);
+    }
+
+.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+    .btn-secondary:hover {
+        background: var(--bg-tertiary);
+        transform: translateY(-2px);
+    }
+
+/* Enhanced Danger Zone */
+.danger-zone {
+    background: rgba(220, 53, 69, 0.05);
+    border: 2px solid rgba(220, 53, 69, 0.2);
+    border-radius: 15px;
+    padding: 25px;
+}
+
+html.dark-theme .danger-zone {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: rgba(231, 76, 60, 0.3);
+}
+
+.danger-zone h3 {
+    color: var(--danger-color);
+    margin: 0 0 15px 0;
+    font-size: 20px;
+}
+
+.danger-zone p {
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.delete-button {
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+    .delete-button:hover {
+        background-color: var(--danger-hover);
+        transform: translateY(-2px);
+    }
+
+/* Validation Errors */
+.field-validation-error {
+    color: var(--danger-color);
+    font-size: 14px;
+    margin-top: 5px;
+    margin-left: 95px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .field-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+        .field-row label {
+            text-align: left;
+            min-width: auto;
+        }
+
+    .form-input,
+    .email-display {
+        max-width: none;
+    }
+
+    .form-buttons {
+        flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+    }
+
+    .field-validation-error {
+        margin-left: 0;
+    }
+
+    .upload img {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+/* =============================================================================
+   PROFILE PHOTO HISTORY SYSTEM
+   ============================================================================= */
+
+/* Photo History Popup Overlay */
+.photo-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.photo-popup {
+    background: var(--card-bg);
+    border-radius: 15px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px var(--shadow-color-dark);
+    position: relative;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-lighter);
+}
+
+    .popup-header h3 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: 20px;
+    }
+
+.close-popup {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+    .close-popup:hover {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+/* Upload New Photo Section */
+.upload-new-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    border: 2px dashed var(--border-lighter);
+    border-radius: 10px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+    .upload-new-section:hover {
+        border-color: var(--bg-accent);
+        background: var(--bg-secondary);
+    }
+
+    .upload-new-section strong {
+        color: var(--text-primary);
+        font-size: 16px;
+    }
+
+    .upload-new-section p {
+        margin: 5px 0;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+
+/* Photo History Grid */
+.photo-history-section h4 {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.photo-history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.history-photo {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .history-photo img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 3px solid var(--border-lighter);
+        transition: all 0.3s ease;
+    }
+
+    .history-photo:hover img {
+        border-color: var(--bg-accent);
+        transform: scale(1.1);
+    }
+
+    .history-photo.selected img {
+        border-color: var(--bg-accent);
+        box-shadow: 0 0 10px var(--shadow-color-dark);
+    }
+
+.photo-date {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 5px;
+}
+
+.current-photo-indicator {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    background: #28a745;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid var(--card-bg);
+    box-shadow: 0 2px 5px var(--shadow-color);
+}
+
+/* Popup Action Buttons */
+.popup-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-lighter);
+    flex-wrap: wrap;
+}
+
+.popup-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    min-width: 100px;
+}
+
+.popup-btn-primary {
+    background: var(--bg-accent);
+    color: var(--text-light);
+}
+
+    .popup-btn-primary:hover {
+        background: var(--hover-bg);
+        transform: translateY(-2px);
+    }
+
+.popup-btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-lighter);
+}
+
+    .popup-btn-secondary:hover {
+        background: var(--bg-tertiary);
+    }
+
+.popup-btn-danger {
+    background: var(--danger-color);
+    color: white;
+}
+
+    .popup-btn-danger:hover {
+        background: var(--danger-hover);
+    }
+
+/* Feedback Notification */
+.feedback-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--bg-accent);
+    color: var(--text-light);
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    z-index: 1001;
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Enhanced Profile Photo Wrapper */
+.profile-photo-wrapper {
+    position: relative;
+}
+
+    .profile-photo-wrapper small {
+        font-size: 14px;
+        font-style: italic;
+    }
+
+/* Dark Theme Support */
+html.dark-theme .photo-popup {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+html.dark-theme .upload-new-section:hover {
+    background: var(--bg-tertiary);
+}
+
+html.dark-theme .feedback-notification {
+    background: var(--bg-accent);
+    color: var(--text-light);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .photo-popup {
+        padding: 20px;
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .photo-history-grid {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 10px;
+    }
+
+    .history-photo img {
+        width: 70px;
+        height: 70px;
+    }
+
+    .popup-actions {
+        flex-direction: column;
+    }
+
+    .popup-btn {
+        width: 100%;
+    }
+
+    .feedback-notification {
+        right: 10px;
+        left: 10px;
+        text-align: center;
+    }
 }

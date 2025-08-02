@@ -4,47 +4,336 @@
     ViewBag.Title = "Account | Update Profile";
 }
 
-<form class="form" method="post" enctype="multipart/form-data">
-    <div asp-validation-summary="ModelOnly"></div>
+<div class="menu-container">
 
-    <label asp-for="Email"></label>
-    <b>@Model.Email</b>
-    <br>
+    <form class="tidy-form" method="post" enctype="multipart/form-data">
+        <div asp-validation-summary="ModelOnly"></div>
 
-    <label asp-for="Name"></label>
-    <input asp-for="Name" autofocus>
-    <span asp-validation-for="Name"></span>
+        <!-- Profile Picture Section -->
+        <div class="profile-photo-wrapper">
+            <label class="upload" onclick="openPhotoPopup()">
+                <img src="/photos/@Model.PhotoURL" id="currentProfilePhoto">
+            </label>
+            <br><small>Click photo to change or view history</small><br>
+            <span asp-validation-for="ProfilePicture" class="field-validation-error"></span>
 
-    <label asp-for="ProfilePicture"></label>
-    <label class="upload">
-        <small>Select Profile Picture...</small>
-        <input asp-for="ProfilePicture" accept="image/jpeg, image/png, image/jpg, image/webp, image/gif, image/bmp, image/svg+xml, image/tiff" hidden>
-        <img src="/photos/@Model.PhotoURL">
-    </label>
-    <span asp-validation-for="ProfilePicture"></span>
+            <!-- Hidden inputs for photo management -->
+            <input type="hidden" id="selectedPhotoPath" name="SelectedPhotoPath" value="">
+            <input type="file" id="newPhotoInput" asp-for="ProfilePicture"
+                   accept="image/jpeg, image/png, image/jpg, image/webp, image/gif, image/bmp, image/svg+xml, image/tiff"
+                   class="hidden">
+        </div>
 
-    <section>
-        <button>Update</button>
-        <button type="reset">Reset</button>
-    </section>
-</form>
+        <!-- Form Fields -->
+        <div class="form-fields">
+            <div class="field-row">
+                <label asp-for="Email">Email</label>
+                <div class="email-display">@Model.Email</div>
+            </div>
 
-<hr />
+            <div class="field-row">
+                <label asp-for="Name">Name</label>
+                <input asp-for="Name" class="form-input" autofocus>
+                <span asp-validation-for="Name" class="field-validation-error"></span>
+            </div>
+        </div>
 
-<section class="danger-zone">
-    <h3>Delete Account</h3>
-    <p>Once you delete your account, you will receive an email to finalize the process. There is a grace period for recovery.</p>
-    <form id="deleteAccountForm" asp-controller="Account" asp-action="InitiateAccountDeletion" method="post">
-        <button class="delete-button" type="submit">Delete Your Account</button>
+        <!-- Action Buttons -->
+        <div class="form-buttons">
+            <button type="submit" class="btn-primary">Update</button>
+            <button type="reset" class="btn-secondary">Reset</button>
+        </div>
     </form>
-</section>
+
+    <hr />
+
+    <section class="danger-zone">
+        <h3>Delete Account</h3>
+        <p>Once you delete your account, you will receive an email to finalize the process. There is a grace period for recovery.</p>
+        <form id="deleteAccountForm" asp-controller="Account" asp-action="InitiateAccountDeletion" method="post">
+            <button class="delete-button" type="submit">Delete Your Account</button>
+        </form>
+    </section>
+</div>
+
+<!-- Photo History Popup -->
+<div class="photo-popup-overlay" id="photoPopup">
+    <div class="photo-popup">
+        <div class="popup-header">
+            <h3>Profile Photo</h3>
+            <button class="close-popup" onclick="closePhotoPopup()">&times;</button>
+        </div>
+
+        <!-- Upload New Photo Section -->
+        <div class="upload-new-section" onclick="document.getElementById('newPhotoInput').click()">
+            <div style="font-size: 32px; margin-bottom: 10px;">📷</div>
+            <strong>Upload New Photo</strong>
+            <p>Click to select a new image</p>
+        </div>
+
+        <!-- Photo History Section -->
+        <div class="photo-history-section">
+            <h4>📁 Previous Photos</h4>
+            <div class="photo-history-grid" id="photoHistoryGrid">
+                <!-- Photo history will be populated by JavaScript or server-side -->
+                @if (Model.PhotoHistory != null && Model.PhotoHistory.Any())
+                {
+                    @foreach (var photo in Model.PhotoHistory)
+                    {
+                        <div class="history-photo" data-photo="/photos/@photo.FileName"
+                             data-photo-id="@photo.Id" onclick="selectHistoryPhoto(this)">
+                            <img src="/photos/@photo.FileName" alt="Profile Photo">
+                            @if (photo.FileName == Model.PhotoURL)
+                            {
+                                <div class="current-photo-indicator">✓</div>
+                            }
+                            <div class="photo-date">@photo.UploadDate.ToString("MMM yyyy")</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <!-- Sample data for demonstration -->
+                    <div class="history-photo" data-photo="/photos/@Model.PhotoURL" onclick="selectHistoryPhoto(this)">
+                        <img src="/photos/@Model.PhotoURL" alt="Profile Photo">
+                        <div class="current-photo-indicator">✓</div>
+                        <div class="photo-date me-md-3">Current</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Popup Actions -->
+        <div class="popup-actions">
+            <button class="popup-btn popup-btn-primary" onclick="applySelectedPhoto()">Apply Selected</button>
+            <button class="popup-btn popup-btn-secondary" onclick="closePhotoPopup()">Cancel</button>
+            <button class="popup-btn popup-btn-danger" onclick="deleteSelectedPhoto()">Delete Photo</button>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
+        let selectedPhotoElement = null;
+        let currentPhotoPath = '/photos/@Model.PhotoURL';
+
+        function openPhotoPopup() {
+            document.getElementById('photoPopup').style.display = 'flex';
+            // Mark current photo as selected
+            markCurrentPhoto();
+        }
+
+        function closePhotoPopup() {
+            document.getElementById('photoPopup').style.display = 'none';
+            selectedPhotoElement = null;
+            clearSelections();
+        }
+
+        function markCurrentPhoto() {
+            const historyPhotos = document.querySelectorAll('.history-photo');
+            historyPhotos.forEach(photo => {
+                const indicator = photo.querySelector('.current-photo-indicator');
+                if (photo.dataset.photo === currentPhotoPath) {
+                    if (indicator) indicator.style.display = 'flex';
+                    photo.classList.add('selected');
+                    selectedPhotoElement = photo;
+                } else {
+                    if (indicator) indicator.style.display = 'none';
+                    photo.classList.remove('selected');
+                }
+            });
+        }
+
+        function selectHistoryPhoto(photoElement) {
+            clearSelections();
+            photoElement.classList.add('selected');
+            selectedPhotoElement = photoElement;
+        }
+
+        function clearSelections() {
+            document.querySelectorAll('.history-photo').forEach(photo => {
+                photo.classList.remove('selected');
+            });
+        }
+
+        function applySelectedPhoto() {
+            if (selectedPhotoElement) {
+                const newPhotoPath = selectedPhotoElement.dataset.photo;
+                const photoId = selectedPhotoElement.dataset.photoId;
+
+                // Update the preview
+                document.getElementById('currentProfilePhoto').src = newPhotoPath;
+                document.getElementById('selectedPhotoPath').value = photoId || newPhotoPath;
+                currentPhotoPath = newPhotoPath;
+
+                // Update current photo indicators
+                updateCurrentPhotoIndicators();
+
+                // Show success feedback
+                showFeedback('Profile photo updated! Remember to click "Update" to save changes.');
+            }
+            closePhotoPopup();
+        }
+
+        function updateCurrentPhotoIndicators() {
+            document.querySelectorAll('.current-photo-indicator').forEach(indicator => {
+                indicator.style.display = 'none';
+            });
+
+            if (selectedPhotoElement) {
+                const currentIndicator = selectedPhotoElement.querySelector('.current-photo-indicator');
+                if (currentIndicator) {
+                    currentIndicator.style.display = 'flex';
+                }
+            }
+        }
+
+        function deleteSelectedPhoto() {
+            if (selectedPhotoElement) {
+                const isCurrentPhoto = selectedPhotoElement.querySelector('.current-photo-indicator') &&
+                                     selectedPhotoElement.querySelector('.current-photo-indicator').style.display === 'flex';
+
+                if (isCurrentPhoto) {
+                    alert('Cannot delete the current profile photo. Please select a different photo first.');
+                    return;
+                }
+
+                if (confirm('Are you sure you want to delete this photo from your history?')) {
+                    const photoId = selectedPhotoElement.dataset.photoId;
+
+                    // Here you would make an AJAX call to delete the photo from the server
+                    // For now, just remove it from the UI
+                    selectedPhotoElement.remove();
+                    selectedPhotoElement = null;
+                    showFeedback('Photo deleted from history');
+
+                    // Optional: Make AJAX call to server
+                    // deletePhotoFromServer(photoId);
+                }
+            } else {
+                alert('Please select a photo to delete.');
+            }
+        }
+
+        // Handle new photo upload
+        document.getElementById('newPhotoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file size (e.g., max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    return;
+                }
+
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Please select a valid image file (JPEG, PNG, JPG, WebP, GIF)');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Update current photo preview
+                    document.getElementById('currentProfilePhoto').src = e.target.result;
+
+                    // Add to history grid (simulate - in real app this would be handled server-side)
+                    addPhotoToHistoryGrid(e.target.result, 'Just uploaded');
+
+                    showFeedback('New photo ready for upload! Click "Update" to save.');
+                    closePhotoPopup();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function addPhotoToHistoryGrid(photoSrc, dateText) {
+            const historyGrid = document.getElementById('photoHistoryGrid');
+            const newPhotoDiv = document.createElement('div');
+            newPhotoDiv.className = 'history-photo';
+            newPhotoDiv.dataset.photo = photoSrc;
+            newPhotoDiv.onclick = () => selectHistoryPhoto(newPhotoDiv);
+
+            newPhotoDiv.innerHTML = `
+                <img src="${photoSrc}" alt="Profile Photo">
+                <div class="current-photo-indicator">✓</div>
+                <div class="photo-date">${dateText}</div>
+            `;
+
+            // Insert at the beginning
+            historyGrid.insertBefore(newPhotoDiv, historyGrid.firstChild);
+
+            // Update current indicators
+            currentPhotoPath = photoSrc;
+            updateCurrentPhotoIndicators();
+
+            // Select the new photo
+            selectHistoryPhoto(newPhotoDiv);
+        }
+
+        function showFeedback(message) {
+            // Remove any existing feedback
+            const existingFeedback = document.querySelector('.feedback-notification');
+            if (existingFeedback) {
+                existingFeedback.remove();
+            }
+
+            // Create new feedback notification
+            const feedback = document.createElement('div');
+            feedback.className = 'feedback-notification';
+            feedback.textContent = message;
+            document.body.appendChild(feedback);
+
+            // Auto remove after 4 seconds
+            setTimeout(() => {
+                if (feedback.parentNode) {
+                    feedback.remove();
+                }
+            }, 4000);
+        }
+
+        // Delete account confirmation (existing functionality)
         document.getElementById('deleteAccountForm').addEventListener('submit', function (e) {
             if (!confirm('Do you really want to delete your account? This action will send a confirmation email to your registered address.')) {
                 e.preventDefault();
             }
+        });
+
+        // Close popup when clicking outside
+        document.getElementById('photoPopup').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePhotoPopup();
+            }
+        });
+
+        // Optional: AJAX function to delete photo from server
+        function deletePhotoFromServer(photoId) {
+            fetch('/Account/DeleteProfilePhoto', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({ photoId: photoId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFeedback('Photo permanently deleted');
+                } else {
+                    showFeedback('Error deleting photo: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFeedback('Error deleting photo');
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Any initialization code can go here
+            console.log('Profile photo history system initialized');
         });
     </script>
 }

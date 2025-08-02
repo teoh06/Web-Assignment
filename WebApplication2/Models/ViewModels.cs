@@ -84,6 +84,13 @@ public class EmailVM
     public bool IsBodyHtml { get; set; }
 }
 
+public class ProfilePhotoVM
+{
+    public int Id { get; set; }
+    public string FileName { get; set; }
+    public DateTime UploadDate { get; set; }
+}
+
 public class UpdateProfileVM
 {
     public string? Email { get; set; }
@@ -94,6 +101,9 @@ public class UpdateProfileVM
     public string? PhotoURL { get; set; }
 
     public IFormFile? ProfilePicture { get; set; }
+
+    // Add PhotoHistory property for profile photo history
+    public List<ProfilePhotoVM> PhotoHistory { get; set; } = new();
 }
 
 public class FeaturedMenuItemVM
