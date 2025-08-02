@@ -9,7 +9,7 @@
 
 @if (!Model.Any())
 {
-    <p id="emptyCartMessage">Your cart is empty.</p>
+    <p class="in-the-middle" id="emptyCartMessage">Your cart is empty.</p>
 }
 else
 {
@@ -66,7 +66,8 @@ else
     </div>
 }
 
-<a asp-action="Index" asp-controller="MenuItem" class="btn btn-secondary">Continue Shopping</a>
+<br>
+<a asp-action="Index" asp-controller="MenuItem" class="btn btn-secondary in-the-middle">Continue Shopping</a>
 
 @section Scripts {
     <script>

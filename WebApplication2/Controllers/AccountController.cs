@@ -211,68 +211,96 @@ public class AccountController : Controller
     return View(vm);
 }
 
-// POST: Account/UpdateProfile
-[Authorize(Roles = "Member")]
-[HttpPost]
-public IActionResult UpdateProfile(UpdateProfileVM vm)
-{
-    var m = db.Members.Include(x => x.MemberPhotos)
-                      .FirstOrDefault(x => x.Email == User.Identity!.Name);
-    if (m == null) return RedirectToAction("Index", "Home");
-
-    if (vm.ProfilePicture != null)
+    // POST: Account/UpdateProfile
+    [Authorize(Roles = "Member")]
+    [HttpPost]
+    public IActionResult UpdateProfile(UpdateProfileVM vm)
     {
-        var err = hp.ValidatePhoto(vm.ProfilePicture);
-        if (err != "") ModelState.AddModelError("Photo", err);
-    }
-
-    if (ModelState.IsValid)
-    {
-        m.Name = vm.Name;
+        var m = db.Members.Include(x => x.MemberPhotos)
+                          .FirstOrDefault(x => x.Email == User.Identity!.Name);
+        if (m == null) return RedirectToAction("Index", "Home");
 
         if (vm.ProfilePicture != null)
         {
-            // Save current photo to history if it exists
-            if (!string.IsNullOrEmpty(m.PhotoURL))
-            {
-                m.MemberPhotos.Add(new MemberPhoto
-                {
-                    MemberEmail = m.Email,
-                    FileName = m.PhotoURL,
-                    UploadDate = DateTime.Now
-                });
-                // Keep only the 4 most recent previous photos
-                var toRemove = m.MemberPhotos
-                    .OrderByDescending(p => p.UploadDate)
-                    .Skip(4)
-                    .ToList();
-                db.MemberPhotos.RemoveRange(toRemove);
-            }
-            hp.DeletePhoto(m.PhotoURL, "photos");
-            m.PhotoURL = hp.SavePhoto(vm.ProfilePicture, "photos");
+            var err = hp.ValidatePhoto(vm.ProfilePicture);
+            if (err != "") ModelState.AddModelError("Photo", err);
         }
 
-        db.SaveChanges();
-
-        TempData["Info"] = "Profile updated.";
-        return RedirectToAction();
-    }
-
-    // Repopulate photo history for redisplay
-    vm.Email = m.Email;
-    vm.PhotoURL = m.PhotoURL;
-    vm.PhotoHistory = m.MemberPhotos
-        .OrderByDescending(p => p.UploadDate)
-        .Take(4)
-        .Select(p => new ProfilePhotoVM
+        if (ModelState.IsValid)
         {
-            Id = p.Id,
-            FileName = p.FileName,
-            UploadDate = p.UploadDate
-        })
-        .ToList();
-    return View(vm);
-}
+            m.Name = vm.Name;
+
+            // Handle new photo upload
+            if (vm.ProfilePicture != null)
+            {
+                // Save current photo to history if it exists and is not default
+                if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg")
+                {
+                    // Only add to history if not already in history
+                    if (!m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
+                    {
+                        m.MemberPhotos.Add(new MemberPhoto
+                        {
+                            MemberEmail = m.Email,
+                            FileName = m.PhotoURL,
+                            UploadDate = DateTime.Now
+                        });
+                    }
+                    // Keep only the 4 most recent previous photos
+                    var toRemove = m.MemberPhotos
+                        .OrderByDescending(p => p.UploadDate)
+                        .Skip(4)
+                        .ToList();
+                    db.MemberPhotos.RemoveRange(toRemove);
+                }
+                hp.DeletePhoto(m.PhotoURL, "photos");
+                m.PhotoURL = hp.SavePhoto(vm.ProfilePicture, "photos");
+            }
+            // Handle selecting a previous photo
+            else if (!string.IsNullOrEmpty(Request.Form["SelectedPhotoPath"]))
+            {
+                var selectedPhotoIdStr = Request.Form["SelectedPhotoPath"].ToString();
+                if (int.TryParse(selectedPhotoIdStr, out int selectedPhotoId))
+                {
+                    var selectedPhoto = m.MemberPhotos.FirstOrDefault(p => p.Id == selectedPhotoId);
+                    if (selectedPhoto != null)
+                    {
+                        // Save current photo to history if not already in history and not default
+                        if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && !m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
+                        {
+                            m.MemberPhotos.Add(new MemberPhoto
+                            {
+                                MemberEmail = m.Email,
+                                FileName = m.PhotoURL,
+                                UploadDate = DateTime.Now
+                            });
+                        }
+                        m.PhotoURL = selectedPhoto.FileName;
+                    }
+                }
+            }
+
+            db.SaveChanges();
+
+            TempData["Info"] = "Profile updated.";
+            return RedirectToAction();
+        }
+
+        // Repopulate photo history for redisplay
+        vm.Email = m.Email;
+        vm.PhotoURL = m.PhotoURL;
+        vm.PhotoHistory = m.MemberPhotos
+            .OrderByDescending(p => p.UploadDate)
+            .Take(4)
+            .Select(p => new ProfilePhotoVM
+            {
+                Id = p.Id,
+                FileName = p.FileName,
+                UploadDate = p.UploadDate
+            })
+            .ToList();
+        return View(vm);
+    }
 
     // GET: Account/ResetPassword
     public IActionResult ResetPassword()

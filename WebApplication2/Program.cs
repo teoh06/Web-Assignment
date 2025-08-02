@@ -10,7 +10,14 @@ using WebApplication2.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add all services BEFORE building the app
 builder.Services.AddControllersWithViews();
+
+// Add localization services (moved before Build())
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddControllersWithViews()
+    .AddViewLocalization();
+
 builder.Services.AddSqlServer<DB>($@"
     Data Source=(LocalDB)\MSSQLLocalDB;
     AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
@@ -28,7 +35,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSession();
 
-
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
 builder.Services.AddTransient<IEmailService, EmailService>(serviceProvider =>
 {
@@ -41,8 +47,10 @@ builder.Services.AddTransient<IEmailService, EmailService>(serviceProvider =>
     );
 });
 
+// Build the app AFTER all services are registered
 var app = builder.Build();
 
+// Database seeding
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -57,17 +65,25 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Configure middleware pipeline
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Support localization - multi-language
+var supportedCultures = new[] { "en-US", "es", "zh-CN", "ms-MY" }; // English, Spanish, Chinese, Malay
+var localizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture(supportedCultures[0])
+    .AddSupportedCultures(supportedCultures)
+    .AddSupportedUICultures(supportedCultures);
+app.UseRequestLocalization(localizationOptions);
+
 app.MapDefaultControllerRoute();
-app.UseRequestLocalization(new RequestLocalizationOptions
-{
-    DefaultRequestCulture = new RequestCulture("en-MY"), // Sets default to English (Malaysia)
-    SupportedCultures = new[] { new CultureInfo("en-MY"), new CultureInfo("en-US") }, // List of supported cultures
-    SupportedUICultures = new[] { new CultureInfo("en-MY"), new CultureInfo("en-US") } // List of supported UI cultures
-});
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
 app.Run();
