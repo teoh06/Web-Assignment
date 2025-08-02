@@ -49,10 +49,27 @@ html.dark-theme {
     --delete-btn-hover: #c0392b;
 }
 
+html.dark-theme h1,
+html.dark-theme h2,
+html.dark-theme h3,
+html.dark-theme h4,
+html.dark-theme h5,
+html.dark-theme p,
+html.dark-theme span,
+html.dark-theme label
+{
+    color: var(--text-primary);
+}
+
+
 /* Font ----------------------------------------------------------------------- */
 
 body, input, select, textarea, button {
     font: 16px Roboto, sans-serif;
+}
+
+body .text-muted {
+    color: var(--bs-card-title-color)
 }
 
 /* Layout --------------------------------------------------------------------- */
@@ -724,4 +741,12 @@ label > * {
     cursor: pointer;
     color: var(--text-secondary);
     font-size: 1.1em;
+}
+
+.my-muted {
+    color: var(--text-primary);
+}
+
+.my-muted.dark-theme {
+    color: var(--text-light);
 }

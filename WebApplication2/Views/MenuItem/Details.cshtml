@@ -11,7 +11,7 @@
         <div class="col-md-7">
             <div class="card-body m-4">
                 <h3 class="card-title">@menuItem.Name</h3>
-                <h5 class="card-subtitle mb-2 text-muted">@menuItem.Category?.Name</h5>
+                <h5 class="card-subtitle mb-2 my-muted">@menuItem.Category?.Name</h5>
                 <p class="card-text">@menuItem.Description</p>
                 <h4 class="text-success">@menuItem.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</h4>
                 <br>
@@ -59,12 +59,12 @@
 </div>
 
 <div class="card mt-4 menuitem-comments-card">
-    <div class="card-header">Comments</div>
+    <div class="card-header my-muted">Comments</div>
     <div class="card-body">
         <div id="comments-list">
             @foreach (var c in Model.Comments)
             {
-                <div class="mb-2 comment-item"><b>@c.Member?.Name (Foodie Voice)</b>: @c.Content <span class="text-muted small">(@c.CommentedAt.ToShortTimeString())</span></div>
+                <div class="mb-2 comment-item"><b>@c.Member?.Name (Foodie Voice)</b>: @c.Content <span class="my-muted small">(@c.CommentedAt.ToShortTimeString())</span></div>
             }
         </div>
         @if (User.Identity!.IsAuthenticated)
@@ -78,7 +78,7 @@
         }
         else
         {
-            <div class="text-muted">Login to add a comment.</div>
+            <div class="my-muted">Login to add a comment.</div>
         }
     </div>
 </div>
@@ -137,7 +137,7 @@ function addComment(e) {
         .then(data => {
             var div = document.createElement('div');
             div.className = 'mb-2 comment-item';
-            div.innerHTML = `<b>You</b>: ${data.content} <span class='text-muted small'>(just now)</span>`;
+            div.innerHTML = `<b>You</b>: ${data.content} <span class='my-muted small'>(just now)</span>`;
             list.prepend(div);
             input.value = '';
         });
