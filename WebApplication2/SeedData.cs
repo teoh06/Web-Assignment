@@ -25,6 +25,7 @@ public static class SeedData
                 new Category { Name = "Fast Food" },
                 new Category { Name = "Salads" },
                 new Category { Name = "Desserts" },
+                new Category { Name = "Beverages" },
             };
             context.Categories.AddRange(categories);
             context.SaveChanges();
@@ -62,6 +63,14 @@ public static class SeedData
                     Price = 10.99M,
                     PhotoURL = "tiramisu.jpg",
                     CategoryId = categories.Single(c => c.Name == "Desserts").CategoryId
+                },
+                new MenuItem
+                {
+                    Name = "Coca-Cola",
+                    Description = "Carbonated soft drink with a cola flavor.",
+                    Price = 2.99M,
+                    PhotoURL = "cocacola.jpg",
+                    CategoryId = categories.Single(c => c.Name == "Beverages").CategoryId
                 },
             };
             context.MenuItems.AddRange(menuItems);
