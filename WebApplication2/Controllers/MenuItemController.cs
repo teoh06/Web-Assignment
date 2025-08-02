@@ -21,78 +21,80 @@ public class MenuItemController : Controller
 
     // GET: /MenuItem/Index
     // This action will handle search queries and category filters for the initial page load
-    public async Task<IActionResult> Index(string searchString, int? categoryId)
+    public IActionResult Index(string search, decimal? minPrice, decimal? maxPrice, int? categoryId)
     {
-        // Prepare the base query for menu items, including their categories
-        var menuItemsQuery = from m in db.MenuItems
-                             select m;
+        var items = db.MenuItems.Include(m => m.Category).AsQueryable();
 
-        menuItemsQuery = menuItemsQuery.Include(m => m.Category);
+        if (!string.IsNullOrWhiteSpace(search))
+            items = items.Where(m => m.Name.Contains(search));
 
-        // Apply search filter if searchString is provided
-        if (!string.IsNullOrEmpty(searchString))
-        {
-            // Case-insensitive search on MenuItem Name
-            menuItemsQuery = menuItemsQuery.Where(s => s.Name.Contains(searchString));
-        }
+        if (minPrice.HasValue)
+            items = items.Where(m => m.Price >= minPrice.Value);
 
-        // Apply category filter if categoryId is provided (and not "All Categories" which is 0)
+        if (maxPrice.HasValue)
+            items = items.Where(m => m.Price <= maxPrice.Value);
+
         if (categoryId.HasValue && categoryId.Value > 0)
+            items = items.Where(m => m.CategoryId == categoryId.Value);
+
+        // Pass current filter values to the view
+        ViewBag.CurrentSearch = search ?? "";
+        ViewBag.CurrentCategoryId = categoryId ?? 0;
+        ViewBag.CurrentMinPrice = minPrice;
+        ViewBag.CurrentMaxPrice = maxPrice;
+
+        var vm = new MenuItemIndexVM
         {
-            menuItemsQuery = menuItemsQuery.Where(m => m.CategoryId == categoryId.Value);
-        }
-
-        // Order by Name for consistent display
-        menuItemsQuery = menuItemsQuery.OrderBy(m => m.Name);
-
-        // Fetch all categories to populate the filter dropdown in the view
-        var categories = await db.Categories.OrderBy(c => c.Name).ToListAsync();
-
-        // Create a ViewModel to hold both menu items and categories, plus current filter values
-        var viewModel = new MenuItemIndexVM
-        {
-            MenuItems = await menuItemsQuery.ToListAsync(), // Execute the filtered query
-            Categories = categories,
-            SearchString = searchString, // Pass back current search string to keep input field populated
-            SelectedCategoryId = categoryId // Pass back current category ID to keep dropdown selected
+            MenuItems = items.OrderBy(m => m.Name).ToList(),
+            Categories = db.Categories.ToList()
         };
 
-        return View(viewModel);
+        return View(vm);
     }
 
-    // NEW ACTION: This action will be called by AJAX requests for filtered menu items
-    [HttpGet] // Or [HttpPost] if you prefer, but GET is common for filtering data
-    public async Task<IActionResult> GetFilteredMenuItems(string searchString, int? categoryId)
+    [HttpGet]
+    public async Task<IActionResult> GetFilteredMenuItems(string search, int? categoryId, decimal? minPrice, decimal? maxPrice)
     {
-        var menuItemsQuery = from m in db.MenuItems
-                             select m;
+        var menuItemsQuery = db.MenuItems.Include(m => m.Category).AsQueryable();
 
-        menuItemsQuery = menuItemsQuery.Include(m => m.Category);
-
-        if (!string.IsNullOrEmpty(searchString))
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            menuItemsQuery = menuItemsQuery.Where(s => s.Name.Contains(searchString));
+            menuItemsQuery = menuItemsQuery.Where(m => m.Name.Contains(search));
         }
 
+        // Apply category filter
         if (categoryId.HasValue && categoryId.Value > 0)
         {
             menuItemsQuery = menuItemsQuery.Where(m => m.CategoryId == categoryId.Value);
         }
 
+        // Apply price filters
+        if (minPrice.HasValue)
+        {
+            menuItemsQuery = menuItemsQuery.Where(m => m.Price >= minPrice.Value);
+        }
+
+        if (maxPrice.HasValue)
+        {
+            menuItemsQuery = menuItemsQuery.Where(m => m.Price <= maxPrice.Value);
+        }
+
+        // Order results
         menuItemsQuery = menuItemsQuery.OrderBy(m => m.Name);
 
-        // Select only necessary properties to send back as JSON
+        // Select only necessary properties for JSON response
         var items = await menuItemsQuery.Select(m => new
         {
             m.MenuItemId,
             m.Name,
             m.Description,
-            Price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY")), // Format price for display
-            CategoryName = m.Category.Name, // Get category name
-            PhotoURL = m.PhotoURL // Assuming PhotoURL is a string path
+            Price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY")),
+            CategoryName = m.Category.Name,
+            PhotoURL = m.PhotoURL
         }).ToListAsync();
 
-        return Json(items); // Return filtered items as JSON
+        return Json(items);
     }
 
 

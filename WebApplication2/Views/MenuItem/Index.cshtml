@@ -7,14 +7,30 @@
     var isAdmin = User.IsInRole("Admin");
 }
 
-
 <div class="menu-container">
+    <!-- Updated form with consistent parameter names and AJAX functionality -->
+    <form id="filterForm" class="form-inline mb-3" style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input type="text" name="search" id="searchInput" value="@Context.Request.Query["search"]" placeholder="Search name..." class="form-control" />
+        <select name="categoryId" id="categorySelect" class="form-control">
+            <option value="">All Categories</option>
+            @foreach (var cat in Model.Categories)
+            {
+                var isSelected = Context.Request.Query["categoryId"] == cat.CategoryId.ToString();
+                <option value="@cat.CategoryId" selected="@isSelected">@cat.Name</option>
+            }
+        </select>
+        <input type="number" name="minPrice" id="minPriceInput" value="@Context.Request.Query["minPrice"]" placeholder="Min Price" class="form-control" style="width:100px;" min="0" step="0.01" />
+        <input type="number" name="maxPrice" id="maxPriceInput" value="@Context.Request.Query["maxPrice"]" placeholder="Max Price" class="form-control" style="width:100px;" min="0" step="0.01" />
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <button type="button" id="clearFilters" class="btn btn-secondary">Clear</button>
+    </form>
+
     @if (User.IsInRole("Admin"))
     {
         <p><a class="btn btn-success mb-3" asp-controller="MenuItem" asp-action="Create">+ Add New Product</a></p>
     }
 
-    <!-- Filters here (search + category) -->
+    <!-- Results table -->
     <table class="table table-hover">
         <thead>
             <tr>
@@ -31,35 +47,149 @@
         <tbody id="menuItemsTableBody">
             @if (isAdmin)
             {
-                @* The partial view _AdminMenuItemsTableRows would need to be updated to not display the Description column *@
                 @await Html.PartialAsync("_AdminMenuItemsTableRows", Model.MenuItems)
             }
             else if (isMember)
             {
-                @* The partial view _MemberMenuItemsTableRows would need to be updated to not display the Description column *@
                 @await Html.PartialAsync("_MemberMenuItemsTableRows", Model.MenuItems)
             }
             else
             {
-                @* The partial view _DefaultMenuItemsTableRows would need to be updated to not display the Description column *@
                 @await Html.PartialAsync("_DefaultMenuItemsTableRows", Model.MenuItems)
             }
         </tbody>
-
     </table>
-</div>
 
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" style="display: none; text-align: center; padding: 20px;">
+        <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
-        // The original script for adding to cart
+        // Filter functionality
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            performFilter();
+        });
+
+        // Clear filters
+        document.getElementById('clearFilters').addEventListener('click', function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categorySelect').value = '';
+            document.getElementById('minPriceInput').value = '';
+            document.getElementById('maxPriceInput').value = '';
+            performFilter();
+        });
+
+        // Real-time filtering on input change (optional - remove if you prefer manual filtering only)
+        document.getElementById('searchInput').addEventListener('input', debounce(performFilter, 500));
+        document.getElementById('categorySelect').addEventListener('change', performFilter);
+
+        function performFilter() {
+            const search = document.getElementById('searchInput').value;
+            const categoryId = document.getElementById('categorySelect').value;
+            const minPrice = document.getElementById('minPriceInput').value;
+            const maxPrice = document.getElementById('maxPriceInput').value;
+
+            // Show loading indicator
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('menuItemsTableBody').style.opacity = '0.5';
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (categoryId) params.append('categoryId', categoryId);
+            if (minPrice) params.append('minPrice', minPrice);
+            if (maxPrice) params.append('maxPrice', maxPrice);
+
+            // Make AJAX request
+            fetch(`@Url.Action("GetFilteredMenuItems", "MenuItem")?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateTable(data);
+                })
+                .catch(error => {
+                    console.error('Error filtering menu items:', error);
+                    alert('Failed to filter menu items. Please try again.');
+                })
+                .finally(() => {
+                    // Hide loading indicator
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    document.getElementById('menuItemsTableBody').style.opacity = '1';
+                });
+        }
+
+        function updateTable(menuItems) {
+            const tbody = document.getElementById('menuItemsTableBody');
+            const isAdmin = @Json.Serialize(isAdmin);
+            const isMember = @Json.Serialize(isMember);
+
+            if (menuItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No menu items found.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            menuItems.forEach(item => {
+                // Fix image path - remove leading slash and ensure proper path
+                const imagePath = item.photoURL ? item.photoURL : 'images/default.jpg';
+                const imageUrl = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+
+                html += '<tr>';
+                // Make only the image clickable to details
+                html += `<td><a href="/MenuItem/Details/${item.menuItemId}"><img src="/Images/${imageUrl}" alt="${item.name}" style="width:60px;height:60px;object-fit:cover;cursor:pointer;" /></a></td>`;
+                // Item name is NOT clickable
+                html += `<td>${item.name}</td>`;
+                html += `<td>${item.categoryName}</td>`;
+                html += `<td>${item.price}</td>`;
+
+                if (isAdmin || isMember) {
+                    html += '<td>';
+                    if (isAdmin) {
+                        html += `<a href="/MenuItem/Edit/${item.menuItemId}" class="btn btn-sm btn-warning">Edit</a> `;
+                        html += `<a href="/MenuItem/Delete/${item.menuItemId}" class="btn btn-sm btn-danger">Delete</a>`;
+                    }
+                    if (isMember) {
+                        html += `<form class="add-to-cart-form d-inline" action="/Cart/Add" method="post">`;
+                        html += `<input type="hidden" name="__RequestVerificationToken" value="${document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''}" />`;
+                        html += `<input type="hidden" name="menuItemId" value="${item.menuItemId}" />`;
+                        html += `<input type="number" name="quantity" value="1" min="1" max="10" class="form-control d-inline-block m-1" style="width:60px;" />`;
+                        html += `<button type="submit" class="btn btn-sm btn-primary">Add to Cart</button>`;
+                        html += `</form>`;
+                    }
+                    html += '</td>';
+                }
+                html += '</tr>';
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Debounce function to limit API calls during typing
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Original cart functionality
         document.querySelector('.table').addEventListener('submit', function (event) {
             if (event.target.classList.contains('add-to-cart-form')) {
                 event.preventDefault();
 
                 const form = event.target;
                 const formData = new FormData(form);
-                const token = form.querySelector('input[name="__RequestVerificationToken"]') ?.value;
+                const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
                 fetch(form.action, {
                     method: 'POST',

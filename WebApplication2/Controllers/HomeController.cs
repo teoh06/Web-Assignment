@@ -1,4 +1,6 @@
+using Azure;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 
@@ -50,6 +52,19 @@ public class HomeController : Controller
     public IActionResult Admin()
     {
         return View();
+    }
+
+    // _Layout.cshtml - Set language
+    [HttpPost]
+    public IActionResult SetLanguage(string culture, string returnUrl)
+    {
+        Response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+            new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+        );
+
+        return LocalRedirect(returnUrl ?? "/");
     }
 }
 public class FeaturedMenuItemVM

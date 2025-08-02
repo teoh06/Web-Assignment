@@ -1,16 +1,16 @@
-﻿@model IEnumerable<WebApplication2.Models.MenuItem>
-@using System.Globalization;
+﻿@model IEnumerable<MenuItem>
+
 @foreach (var item in Model)
 {
     <tr>
         <td>
-            <a href="/MenuItem/Details/@item.MenuItemId">
-                <img src="/Images/@item.PhotoURL" alt="@item.Name" style="width: 70px; height: 70px; object-fit: cover;" />
+            <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
+                <img src="~/@(item.PhotoURL ?? "images/default.jpg")" alt="@item.Name" style="width:60px;height:60px;object-fit:cover;cursor:pointer;" />
             </a>
         </td>
         <td>@item.Name</td>
         <td>@item.Category?.Name</td>
-        <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
+        <td>@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</td>
         <td>
             <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = item.MenuItemId })">Edit</a>
             <a class="btn btn-sm btn-danger" href="@Url.Action("Delete", new { id = item.MenuItemId })">Delete</a>

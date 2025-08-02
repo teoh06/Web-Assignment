@@ -117,8 +117,6 @@ public class MenuItemIndexVM
 {
     public List<MenuItem> MenuItems { get; set; }
     public List<Category> Categories { get; set; }
-    public string SearchString { get; set; }
-    public int? SelectedCategoryId { get; set; }
 }
 public class MenuItemDetailsVM
 {
