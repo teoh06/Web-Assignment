@@ -76,3 +76,5 @@ $('.upload input').on('change', e => {
     // Trigger input validation
     $(e.target).valid();
 });
+
+

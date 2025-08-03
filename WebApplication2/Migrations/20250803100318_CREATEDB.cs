@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WebApplication2.Migrations
 {
     /// <inheritdoc />
-    public partial class PhotoURLNullableTrue : Migration
+    public partial class CREATEDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -64,6 +64,27 @@ namespace WebApplication2.Migrations
                         column: x => x.CategoryId,
                         principalTable: "Categories",
                         principalColumn: "CategoryId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MemberPhotos",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MemberEmail = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UploadDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MemberPhotos", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MemberPhotos_Users_MemberEmail",
+                        column: x => x.MemberEmail,
+                        principalTable: "Users",
+                        principalColumn: "Email",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -173,6 +194,11 @@ namespace WebApplication2.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_MemberPhotos_MemberEmail",
+                table: "MemberPhotos",
+                column: "MemberEmail");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MenuItemComments_MemberEmail",
                 table: "MenuItemComments",
                 column: "MemberEmail");
@@ -216,6 +242,9 @@ namespace WebApplication2.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "MemberPhotos");
+
             migrationBuilder.DropTable(
                 name: "MenuItemComments");
 

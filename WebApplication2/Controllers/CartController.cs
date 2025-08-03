@@ -215,44 +215,37 @@ public class CartController : Controller
         // Adjust validation for CardNumber if PaymentMethod is Cash
         if (vm.PaymentMethod == "Cash")
         {
-            // Remove validation errors related to CardNumber if Cash is selected
             ModelState.Remove(nameof(vm.CardNumber));
-            vm.CardNumber = null; // Clear card number if method is cash
+            vm.CardNumber = null;
         }
         else if (vm.PaymentMethod == "Card")
         {
-            // Ensure CardNumber is provided and valid
             if (string.IsNullOrWhiteSpace(vm.CardNumber))
             {
                 ModelState.AddModelError(nameof(vm.CardNumber), "Card number is required for card payment.");
             }
         }
 
-        // Basic validation check (including total > 0 and cart not empty)
         if (!ModelState.IsValid || vm.Total <= 0 || !cart.Any())
         {
             if (vm.Total <= 0 || !cart.Any())
             {
                 ModelState.AddModelError("", "Your cart is empty or total is zero. Cannot proceed with payment.");
             }
-            return View(vm); // Return to view with validation errors
+            return View(vm);
         }
 
-        // --- Payment Gateway Integration (Simulated) ---
-        // In a real application, you would integrate with a payment gateway here.
-        // If payment processing is successful:
-
-        // 1. Create a new Order record in the database
+        // Create a new Order record in the database
         var order = new Order
         {
-            MemberEmail = User.Identity.Name, // Assuming the user is logged in
+            MemberEmail = User.Identity.Name,
             OrderDate = DateTime.Now,
-            Status = "Paid" // Set status (e.g., "Paid", "Pending", "Processing")
+            Status = "Paid"
         };
         _db.Orders.Add(order);
-        await _db.SaveChangesAsync(); // Save to get the generated OrderId
+        await _db.SaveChangesAsync();
 
-        // 2. Add OrderItem records for each item in the cart
+        // Add OrderItem records for each item in the cart
         foreach (var item in cart)
         {
             _db.OrderItems.Add(new OrderItem
@@ -260,17 +253,24 @@ public class CartController : Controller
                 OrderId = order.OrderId,
                 MenuItemId = item.MenuItemId,
                 Quantity = item.Quantity,
-                UnitPrice = item.Price // Store the price at the time of order
+                UnitPrice = item.Price
             });
         }
         await _db.SaveChangesAsync();
 
-        // 3. Clear the user's cart from session after successful order
+        // Store payment information in TempData for the receipt
+        TempData["LastPaymentMethod"] = vm.PaymentMethod;
+        TempData["LastPhoneNumber"] = vm.PhoneNumber;
+        TempData["LastDeliveryInstructions"] = vm.DeliveryInstructions;
+        if (vm.PaymentMethod == "Card")
+        {
+            TempData["LastCardNumber"] = vm.CardNumber;
+        }
+
+        // Clear the cart
         HttpContext.Session.Remove(CartSessionKey);
         TempData["Success"] = $"Order #{order.OrderId} placed successfully! Thank you for your purchase.";
-        TempData["LastPaymentMethod"] = vm.PaymentMethod; // Store payment method for receipt
 
-        // 4. Redirect to Receipt page with the new OrderId
         return RedirectToAction("Receipt", new { id = order.OrderId });
     }
 
@@ -281,7 +281,6 @@ public class CartController : Controller
             return Unauthorized();
 
         // Retrieve the order and its items from the database
-        // Use .Include and .ThenInclude to load related data (OrderItems and their MenuItems)
         var order = await _db.Orders
                             .Include(o => o.OrderItems)
                             .ThenInclude(oi => oi.MenuItem)
@@ -290,18 +289,21 @@ public class CartController : Controller
         if (order == null)
         {
             TempData["Error"] = "Order not found or you do not have access.";
-            return RedirectToAction("MyOrders", "Account"); // Redirect to order history if not found
+            return RedirectToAction("MyOrders", "Account");
         }
 
-        // Try to get payment method from TempData (set during payment)
+        // Try to get payment method and other details from TempData
         string paymentMethod = TempData["LastPaymentMethod"] as string ?? "-";
+        string phoneNumber = TempData["LastPhoneNumber"] as string;
+        string deliveryInstructions = TempData["LastDeliveryInstructions"] as string;
+        string cardNumber = TempData["LastCardNumber"] as string;
 
         // Map database entities to the ReceiptVM for display
         var receiptItems = order.OrderItems.Select(oi => new CartItemVM
         {
             MenuItemId = oi.MenuItemId,
-            Name = oi.MenuItem.Name, // Get item name from MenuItem
-            Price = oi.UnitPrice,    // Use the UnitPrice stored in OrderItem (price at time of order)
+            Name = oi.MenuItem.Name,
+            Price = oi.UnitPrice,
             Quantity = oi.Quantity
         }).ToList();
 
@@ -313,7 +315,10 @@ public class CartController : Controller
             Total = receiptItems.Sum(item => item.Price * item.Quantity),
             PaymentMethod = paymentMethod,
             MemberEmail = order.MemberEmail,
-            Status = order.Status
+            Status = order.Status,
+            PhoneNumber = phoneNumber,
+            DeliveryInstructions = deliveryInstructions,
+            CardNumber = cardNumber
         };
 
         return View(vm);
@@ -347,7 +352,32 @@ public class PaymentVM
 
     [Display(Name = "Card Number")]
     [RegularExpression(@"^\d{16}$", ErrorMessage = "Card number must be 16 digits.")]
-    public string? CardNumber { get; set; } // Nullable to allow for Cash payment method
+    public string? CardNumber { get; set; }
+
+    [Display(Name = "Card Holder Name")]
+    [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
+    public string? CardHolderName { get; set; }
+
+    [Display(Name = "Expiry Date")]
+    [RegularExpression(@"^(0[1-9]|1[0-2])\/([0-9]{2})$", ErrorMessage = "Expiry date must be in MM/YY format")]
+    public string? ExpiryDate { get; set; }
+
+    [Display(Name = "CVV")]
+    [RegularExpression(@"^\d{3,4}$", ErrorMessage = "CVV must be 3 or 4 digits")]
+    public string? CVV { get; set; }
+
+    [Display(Name = "Billing Address")]
+    [StringLength(200, ErrorMessage = "Address cannot exceed 200 characters")]
+    public string? BillingAddress { get; set; }
+
+    [Display(Name = "Phone Number")]
+    [RegularExpression(@"^\d{10,12}$", ErrorMessage = "Please enter a valid phone number")]
+    [Required(ErrorMessage = "Phone number is required for order updates")]
+    public string PhoneNumber { get; set; }
+
+    [Display(Name = "Delivery Instructions")]
+    [StringLength(500, ErrorMessage = "Delivery instructions cannot exceed 500 characters")]
+    public string? DeliveryInstructions { get; set; }
 
     public decimal Total { get; set; } // Set by the controller based on session cart
 }
@@ -362,6 +392,11 @@ public class ReceiptVM
     public string PaymentMethod { get; set; } // Add payment method
     public string MemberEmail { get; set; }   // Add member email
     public string Status { get; set; }        // Add order status
+
+    // New fields from payment information
+    public string PhoneNumber { get; set; }
+    public string DeliveryInstructions { get; set; }
+    public string CardNumber { get; set; }  // Only last 4 digits will be displayed
 }
 
 public class OrderHistoryVM

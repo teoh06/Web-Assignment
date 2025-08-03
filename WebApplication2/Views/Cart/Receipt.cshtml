@@ -1,35 +1,164 @@
 @model WebApplication2.Controllers.ReceiptVM
 @using System.Globalization;
 @{
-    ViewBag.Title = "Receipt";
+    ViewBag.Title = "Order Receipt";
 }
-<div class="receipt-details">
-    <p>Order #: <b>@Model.OrderId</b></p>
-    <p>Date: @Model.Date.ToString("g")</p>
-    <p>Status: <b>@Model.Status</b></p>
-    <p>Paid By: <b>@Model.PaymentMethod</b></p>
-    <p>Ordered By: <b>@Model.MemberEmail</b></p>
+
+<div class="container py-4">
+    <div class="card">
+        <div class="card-body">
+            <!-- Receipt Header -->
+            <div class="text-center mb-4">
+                <h2 class="mb-0">Order Receipt</h2>
+                <small class="text-muted">Thank you for your purchase!</small>
+            </div>
+
+            <div class="row">
+                <!-- Order Information -->
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h5 class="text-muted mb-3">Order Information</h5>
+                        <div class="table-responsive">
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td class="text-muted" style="width: 40%">Order Number:</td>
+                                    <td><strong>#@Model.OrderId.ToString().PadLeft(6, '0')</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Order Date:</td>
+                                    <td>@Model.Date.ToString("dd MMM yyyy, HH:mm")</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Order Status:</td>
+                                    <td><span class="badge bg-success">@Model.Status</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Information -->
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h5 class="text-muted mb-3">Customer Information</h5>
+                        <div class="table-responsive">
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td class="text-muted" style="width: 40%">Customer Email:</td>
+                                    <td>@Model.MemberEmail</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Payment Method:</td>
+                                    <td><strong>@Model.PaymentMethod</strong></td>
+                                </tr>
+                                @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                                {
+                                    <tr>
+                                        <td class="text-muted">Phone Number:</td>
+                                        <td>@Model.PhoneNumber</td>
+                                    </tr>
+                                }
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery Instructions if any -->
+            @if (!string.IsNullOrEmpty(Model.DeliveryInstructions))
+            {
+                <div class="mb-4">
+                    <h5 class="text-muted mb-3">Delivery Instructions</h5>
+                    <p class="mb-0 p-3 bg-light rounded">@Model.DeliveryInstructions</p>
+                </div>
+            }
+
+            <!-- Order Items -->
+            <div class="mb-4">
+                <h5 class="text-muted mb-3">Order Details</h5>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td>@item.Name</td>
+                                    <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
+                                    <td>@item.Quantity</td>
+                                    <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3"><strong>Total</strong></td>
+                                <td><strong>@Model.Total.ToString("C", new CultureInfo("en-MY"))</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payment Information for Card Payments -->
+            @if (Model.PaymentMethod == "Card" && !string.IsNullOrEmpty(Model.CardNumber))
+            {
+                <div class="mb-4">
+                    <h5 class="text-muted mb-3">Payment Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-borderless table-sm">
+                            <tr>
+                                <td class="text-muted" style="width: 40%">Card Type:</td>
+                                <td>Credit/Debit Card</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Card Number:</td>
+                                <td>**** **** **** @Model.CardNumber.Substring(Math.Max(0, Model.CardNumber.Length - 4))</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            <!-- Receipt Footer -->
+            <div class="text-center mt-4 pt-4 border-top">
+                <p class="text-muted mb-2">For any questions about your order, please contact our customer service.</p>
+                <div class="mt-4">
+                    <a href="@Url.Action("Index", "MenuItem")" class="btn btn-primary me-2">Continue Shopping</a>
+                    <button onclick="window.print()" class="btn btn-outline-secondary">Print Receipt</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Item</th>
-            <th>Price</th>
-            <th>Quantity</th>
-            <th>Subtotal</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.Items)
-        {
-            <tr>
-                <td>@item.Name</td>
-                <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-                <td>@item.Quantity</td>
-                <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
-            </tr>
-        }
-    </tbody>
-</table>
-<h4>Total Paid: @Model.Total.ToString("C", new CultureInfo("en-MY"))</h4>
-<a href="@Url.Action("Index", "MenuItem")" class="btn btn-primary">Back to Menu</a>
+
+<style>
+    @@media print {
+    @@page {
+        margin: 1cm;
+    }
+    body * { visibility: hidden !important; }
+    .container, .container * { visibility: visible !important; }
+    .container {
+        position: static !important;
+        width: 17cm !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+    }
+    .navbar, .sidebar, .footer, .btn, header, nav, aside, .theme-toggle, .breadcrumb, .page-header, .alert, .user-info, .print-hide { display: none !important; }
+    .card { border: none !important; box-shadow: none !important; }
+    .table { border-color: #dee2e6 !important; }
+    .badge { border: 1px solid #198754 !important; }
+    body {
+        font-size: 12pt;
+        font-family: 'Times New Roman', Times, serif;
+    }
+}
+</style>

@@ -135,22 +135,55 @@
             return confirm("Are you sure you want to logout?");
         }
 
-        // Theme toggle functionality
-        function toggleTheme() {
-            const html = document.documentElement;
-            const isDark = html.classList.contains('dark-theme');
-            const toggleBtn = document.getElementById('themeToggle');
-
-            if (isDark) {
-                html.classList.remove('dark-theme');
-                toggleBtn.textContent = '🌙';
-                localStorage.setItem('theme', 'light');
-            } else {
-                html.classList.add('dark-theme');
-                toggleBtn.textContent = '☀️';
-                localStorage.setItem('theme', 'dark');
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+        // Get theme toggle button (assuming you have one)
+        const themeToggle = document.querySelector('.theme-toggle');
+    
+        // Check for saved theme preference or default to light mode
+        const currentTheme = localStorage.getItem('theme') || 'light';
+    
+        // Apply the current theme
+        applyTheme(currentTheme);
+    
+        // Add click event listener to theme toggle button
+        if (themeToggle) {
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = document.documentElement.classList.contains('dark-theme') ? 'dark' : 'light';
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+                applyTheme(newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
         }
+    
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
+                if (themeToggle) {
+                    themeToggle.textContent = '☀️ Light';
+                }
+            } else {
+                document.documentElement.classList.remove('dark-theme');
+                if (themeToggle) {
+                    themeToggle.textContent = '🌙 Dark';
+                }
+            }
+        
+            // Force update for any dynamically loaded content
+            updateDynamicElements();
+        }
+    
+        function updateDynamicElements() {
+            // Force update card styles
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                // Trigger a reflow to ensure styles are applied
+                card.style.display = 'none';
+                card.offsetHeight; // Trigger reflow
+                card.style.display = '';
+            });
+        }
+    });
 
         // Update toggle button icon on page load
         document.addEventListener('DOMContentLoaded', function () {
@@ -160,9 +193,10 @@
             if (savedTheme === 'dark') {
                 toggleBtn.textContent = '☀️';
             } else {
-                toggleBtn.textContent = '🌙';
+                card.classList.remove('dark-theme-card');
             }
         });
+}
     </script>
 
     <script src="/js/jquery.min.js"></script>

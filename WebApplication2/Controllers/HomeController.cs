@@ -53,19 +53,6 @@ public class HomeController : Controller
     {
         return View();
     }
-
-    // _Layout.cshtml - Set language
-    [HttpPost]
-    public IActionResult SetLanguage(string culture, string returnUrl)
-    {
-        Response.Cookies.Append(
-            CookieRequestCultureProvider.DefaultCookieName,
-            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
-            new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
-        );
-
-        return LocalRedirect(returnUrl ?? "/");
-    }
 }
 public class FeaturedMenuItemVM
 {

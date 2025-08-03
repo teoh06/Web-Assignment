@@ -47,6 +47,19 @@ builder.Services.AddTransient<IEmailService, EmailService>(serviceProvider =>
     );
 });
 
+// Supported cultures
+var supportedCultures = new[] { "en", "fr" };
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("en");
+    options.SupportedCultures = supportedCultures.Select(c => new System.Globalization.CultureInfo(c)).ToList();
+    options.SupportedUICultures = options.SupportedCultures;
+});
+builder.Services.AddControllersWithViews();
+
+
+
+
 // Build the app AFTER all services are registered
 var app = builder.Build();
 
@@ -66,20 +79,14 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure middleware pipeline
+app.UseRequestLocalization();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseSession();
+app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Support localization - multi-language
-var supportedCultures = new[] { "en-US", "es", "zh-CN", "ms-MY" }; // English, Spanish, Chinese, Malay
-var localizationOptions = new RequestLocalizationOptions()
-    .SetDefaultCulture(supportedCultures[0])
-    .AddSupportedCultures(supportedCultures)
-    .AddSupportedUICultures(supportedCultures);
-app.UseRequestLocalization(localizationOptions);
 
 app.MapDefaultControllerRoute();
 app.MapControllerRoute(

@@ -12,8 +12,8 @@ using WebApplication2.Models;
 namespace WebApplication2.Migrations
 {
     [DbContext(typeof(DB))]
-    [Migration("20250802062232_ProfileXXX")]
-    partial class ProfileXXX
+    [Migration("20250803100318_CREATEDB")]
+    partial class CREATEDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,6 +57,7 @@ namespace WebApplication2.Migrations
 
                     b.Property<string>("MemberEmail")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("UploadDate")

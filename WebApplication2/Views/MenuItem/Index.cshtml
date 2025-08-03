@@ -19,9 +19,9 @@
                 <option value="@cat.CategoryId" selected="@isSelected">@cat.Name</option>
             }
         </select>
-        <input type="number" name="minPrice" id="minPriceInput" value="@Context.Request.Query["minPrice"]" placeholder="Min Price" class="form-control" style="width:100px;" min="0" step="0.01" />
-        <input type="number" name="maxPrice" id="maxPriceInput" value="@Context.Request.Query["maxPrice"]" placeholder="Max Price" class="form-control" style="width:100px;" min="0" step="0.01" />
-        <button type="submit" class="btn btn-primary">Filter</button>
+        <input type="number" name="minPrice" id="minPriceInput" value="@Context.Request.Query["minPrice"]" placeholder="Min Price" class="form-control" style="width:120px;" min="0" step="0.01" />
+        <input type="number" name="maxPrice" id="maxPriceInput" value="@Context.Request.Query["maxPrice"]" placeholder="Max Price" class="form-control" style="width:120px;" min="0" step="0.01" />
+        <button type="submit" class="btn btn-primary" style="margin-left: 20px;">Filter</button>
         <button type="button" id="clearFilters" class="btn btn-secondary">Clear</button>
     </form>
 
@@ -141,7 +141,7 @@
 
                 html += '<tr>';
                 // Make only the image clickable to details
-                html += `<td><a href="/MenuItem/Details/${item.menuItemId}"><img src="/Images/${imageUrl}" alt="${item.name}" style="width:60px;height:60px;object-fit:cover;cursor:pointer;" /></a></td>`;
+                html += `<td><a href="/MenuItem/Details/${item.menuItemId}"><img src="/Images/${imageUrl}" alt="${item.name}" class="product-photo"" /></a></td>`;
                 // Item name is NOT clickable
                 html += `<td>${item.name}</td>`;
                 html += `<td>${item.categoryName}</td>`;
