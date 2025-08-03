@@ -22,7 +22,7 @@ public static class SeedData
 
             var categories = new Category[]
             {
-                new Category { Name = "Fast Food" },
+                new Category { Name = "Western Food" },
                 new Category { Name = "Salads" },
                 new Category { Name = "Desserts" },
                 new Category { Name = "Beverages" },
@@ -38,7 +38,7 @@ public static class SeedData
                     Description = "Juicy beef patty, cheese, lettuce, tomato, and our special sauce.",
                     Price = 12.99M,
                     PhotoURL = "burger.jpg",
-                    CategoryId = categories.Single(c => c.Name == "Fast Food").CategoryId
+                    CategoryId = categories.Single(c => c.Name == "Western Food").CategoryId
                 },
                 new MenuItem
                 {
@@ -46,7 +46,7 @@ public static class SeedData
                     Description = "Stone-baked pizza with mozzarella, tomato, and basil.",
                     Price = 15.50M,
                     PhotoURL = "pizza.jpg",
-                    CategoryId = categories.Single(c => c.Name == "Fast Food").CategoryId
+                    CategoryId = categories.Single(c => c.Name == "Western Food").CategoryId
                 },
                 new MenuItem
                 {
@@ -72,6 +72,30 @@ public static class SeedData
                     PhotoURL = "cocacola.jpg",
                     CategoryId = categories.Single(c => c.Name == "Beverages").CategoryId
                 },
+                new MenuItem
+                {
+                    Name = "Fish and Chip",
+                    Description = "Crispy battered white fish, typically cod or haddock, served with thick-cut fries.",
+                    Price = 21.90M,
+                    PhotoURL = "fish and chip.jpg",
+                    CategoryId = categories.Single(c => c.Name == "Western Food").CategoryId
+                },
+                new MenuItem
+                {
+                    Name = "Pudding",
+                    Description = "Soft, creamy dessert made from milk, sugar, and a thickening agent like cornstarch or eggs.",
+                    Price = 8.50M,
+                    PhotoURL = "pudding.jpg",
+                    CategoryId = categories.Single(c => c.Name == "Dessert").CategoryId
+                },
+                new MenuItem
+                {
+                    Name = "Iced Latte",
+                    Description = "Chilled espresso with milk and ice, perfect for a refreshing pick-me-up.",
+                    Price = 4.50M,
+                    PhotoURL = "iced latte.jpg",
+                    CategoryId = categories.Single(c => c.Name == "Beverages").CategoryId
+                }
             };
             context.MenuItems.AddRange(menuItems);
             context.SaveChanges();
