@@ -93,7 +93,10 @@
         <div></div>
 
         @* Theme Toggle Button *@
-        <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()">🌙</button>
+        <button id="themeToggle" class="theme-toggle">
+            <span class="theme-toggle-icon">🌙</span>
+            <span class="theme-toggle-text">Dark</span>
+        </button>
 
         @if (User.Identity!.IsAuthenticated)
         {
@@ -130,75 +133,6 @@
         <div id="google_translate_element" style="margin-top: 10px;"></div>
     </footer>
 
-    <script>
-        function confirmLogout() {
-            return confirm("Are you sure you want to logout?");
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-        // Get theme toggle button (assuming you have one)
-        const themeToggle = document.querySelector('.theme-toggle');
-    
-        // Check for saved theme preference or default to light mode
-        const currentTheme = localStorage.getItem('theme') || 'light';
-    
-        // Apply the current theme
-        applyTheme(currentTheme);
-    
-        // Add click event listener to theme toggle button
-        if (themeToggle) {
-            themeToggle.addEventListener('click', function() {
-                const currentTheme = document.documentElement.classList.contains('dark-theme') ? 'dark' : 'light';
-                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            
-                applyTheme(newTheme);
-                localStorage.setItem('theme', newTheme);
-            });
-        }
-    
-        function applyTheme(theme) {
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark-theme');
-                if (themeToggle) {
-                    themeToggle.textContent = '☀️ Light';
-                }
-            } else {
-                document.documentElement.classList.remove('dark-theme');
-                if (themeToggle) {
-                    themeToggle.textContent = '🌙 Dark';
-                }
-            }
-        
-            // Force update for any dynamically loaded content
-            updateDynamicElements();
-        }
-    
-        function updateDynamicElements() {
-            // Force update card styles
-            const cards = document.querySelectorAll('.card');
-            cards.forEach(card => {
-                // Trigger a reflow to ensure styles are applied
-                card.style.display = 'none';
-                card.offsetHeight; // Trigger reflow
-                card.style.display = '';
-            });
-        }
-    });
-
-        // Update toggle button icon on page load
-        document.addEventListener('DOMContentLoaded', function () {
-            const savedTheme = localStorage.getItem('theme');
-            const toggleBtn = document.getElementById('themeToggle');
-
-            if (savedTheme === 'dark') {
-                toggleBtn.textContent = '☀️';
-            } else {
-                card.classList.remove('dark-theme-card');
-            }
-        });
-}
-    </script>
-
     <script src="/js/jquery.min.js"></script>
     <script src="/js/jquery.unobtrusive-ajax.min.js"></script>
     <script src="/js/jquery.validate.min.js"></script>
@@ -207,7 +141,57 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
     <script src="/js/app.js" asp-append-version="true"></script>
-    <script src="/js/app.css" asp-append-version="true"></script>
+
+    <script>
+        function confirmLogout() {
+            return confirm("Are you sure you want to logout?");
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const themeToggleIcon = themeToggle.querySelector('.theme-toggle-icon');
+            const themeToggleText = themeToggle.querySelector('.theme-toggle-text');
+            
+            // Check for saved theme preference or default to light mode
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            
+            // Apply the current theme
+            applyTheme(currentTheme);
+            
+            // Add click event listener to theme toggle button
+            themeToggle.addEventListener('click', function() {
+                const isDarkTheme = document.documentElement.classList.contains('dark-theme');
+                const newTheme = isDarkTheme ? 'light' : 'dark';
+                applyTheme(newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+            
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                    themeToggleIcon.textContent = '☀️';
+                    themeToggleText.textContent = 'Light';
+                } else {
+                    document.documentElement.classList.remove('dark-theme');
+                    themeToggleIcon.textContent = '🌙';
+                    themeToggleText.textContent = 'Dark';
+                }
+                
+                // Force update for any dynamically loaded content
+                updateDynamicElements();
+            }
+            
+            function updateDynamicElements() {
+                // Force update card styles
+                document.querySelectorAll('.card').forEach(card => {
+                    card.style.display = 'none';
+                    card.offsetHeight; // Trigger reflow
+                    card.style.display = '';
+                });
+            }
+        });
+    </script>
+
     @RenderSection("foot", false)
     @RenderSection("Scripts", required: false)
 </body>

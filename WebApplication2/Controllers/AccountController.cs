@@ -131,7 +131,7 @@ public class AccountController : Controller
                 Email = vm.Email,
                 Hash = hp.HashPassword(vm.Password),
                 Name = vm.Name,
-                PhotoURL = vm.ProfilePicture != null ? hp.SavePhoto(vm.ProfilePicture, "photos") : "default.jpg", // Use default if not provided
+                PhotoURL = vm.ProfilePicture != null ? hp.SavePhoto(vm.ProfilePicture, "photos") : "default.png", // Use default if not provided
                 DeletionToken = "",
             });
             db.SaveChanges();
