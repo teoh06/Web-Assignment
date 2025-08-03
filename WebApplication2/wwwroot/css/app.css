@@ -49,18 +49,53 @@ html.dark-theme {
     --delete-btn-hover: #c0392b;
 }
 
-html.dark-theme h1,
-html.dark-theme h2,
-html.dark-theme h3,
-html.dark-theme h4,
-html.dark-theme h5,
-html.dark-theme p,
-html.dark-theme span,
-html.dark-theme label
-{
-    color: var(--text-primary);
-}
+    /* Enhanced dark mode text styling */
+    html.dark-theme body,
+    html.dark-theme h1,
+    html.dark-theme h2,
+    html.dark-theme h3,
+    html.dark-theme h4,
+    html.dark-theme h5,
+    html.dark-theme h6,
+    html.dark-theme p,
+    html.dark-theme span,
+    html.dark-theme div,
+    html.dark-theme td,
+    html.dark-theme th,
+    html.dark-theme a,
+    html.dark-theme label,
+    html.dark-theme .card-title,
+    html.dark-theme .card-text,
+    html.dark-theme .text-muted,
+    html.dark-theme .form-group input,
+    html.dark-theme .form-group select,
+    html.dark-theme .form-input,
+    html.dark-theme .email-display,
+    html.dark-theme .nice-word,
+    html.dark-theme .browse-menu-title,
+    html.dark-theme .create-form-title,
+    html.dark-theme .profile-photo-wrapper small,
+    html.dark-theme .popup-header h3,
+    html.dark-theme .upload-new-section strong,
+    html.dark-theme .photo-history-section h4 {
+        color: var(--text-primary) !important;
+    }
 
+    /* Ensure links and navigation adapt */
+    html.dark-theme nav a,
+    html.dark-theme .default-button,
+    html.dark-theme .theme-toggle,
+    html.dark-theme .submit-btn,
+    html.dark-theme .btn-primary,
+    html.dark-theme .popup-btn-primary,
+    html.dark-theme .card-footer .fw-bold {
+        color: var(--text-light) !important;
+    }
+
+    /* Override Bootstrap or custom classes that might set dark colors */
+    html.dark-theme .text-dark {
+        color: var(--text-primary) !important;
+    }
 
 /* Font ----------------------------------------------------------------------- */
 
@@ -68,9 +103,9 @@ body, input, select, textarea, button {
     font: 16px Roboto, sans-serif;
 }
 
-body .text-muted {
-    color: var(--bs-card-title-color)
-}
+    body .text-muted {
+        color: var(--text-secondary); /* Updated to use variable */
+    }
 
 /* Layout --------------------------------------------------------------------- */
 
@@ -147,7 +182,7 @@ nav {
 .theme-toggle {
     background: var(--bg-accent);
     color: var(--text-light);
-    border: 1px solid var(--border-color);
+    border: none;
     padding: 5px 10px;
     border-radius: 3px;
     cursor: pointer;
@@ -234,6 +269,15 @@ main {
 
 .table tr:hover .popup {
     display: block;
+}
+
+.product-photo {
+    width: 100px;
+    height: 100px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    object-fit: cover;
+    cursor: pointer;
 }
 
 /* Pager ---------------------------------------------------------------------- */
@@ -366,7 +410,7 @@ label > * {
 
 /* CSS for the menu-container with centered content and hover floating effect */
 .menu-container {
-    max-width: 600px;
+    max-width: 800px;
     margin: 40px auto;
     padding: 30px;
     border-radius: 15px;
@@ -747,10 +791,9 @@ label > * {
     color: var(--text-primary);
 }
 
-.my-muted.dark-theme {
-    color: var(--text-light);
-}
-
+    .my-muted.dark-theme {
+        color: var(--text-light);
+    }
 
 /* =============================================================================
    TIDY PROFILE UPDATE STYLES
@@ -853,7 +896,7 @@ label > * {
 
 .btn-primary,
 .btn-secondary {
-    padding: 12px 25px;
+    padding: 7px 14px;
     border: none;
     border-radius: 8px;
     font-size: 16px;
@@ -1263,3 +1306,230 @@ html.dark-theme .feedback-notification {
         text-align: center;
     }
 }
+
+/* =============================================================================
+   BOOTSTRAP CARD THEME OVERRIDE
+   ============================================================================= */
+
+/* Light theme card styles */
+.card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-lighter) !important;
+    color: var(--text-primary) !important;
+    transition: all 0.3s ease;
+}
+
+.card-header {
+    background-color: var(--bg-secondary) !important;
+    border-bottom: 1px solid var(--border-lighter) !important;
+    color: var(--text-primary) !important;
+}
+
+.card-body {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+.card-footer {
+    background-color: var(--bg-secondary) !important;
+    border-top: 1px solid var(--border-lighter) !important;
+    color: var(--text-primary) !important;
+}
+
+.card-title {
+    color: var(--text-primary) !important;
+}
+
+.card-text {
+    color: var(--text-secondary) !important;
+}
+
+/* Card hover effects */
+.card:hover {
+    box-shadow: 0 4px 15px var(--shadow-color-dark) !important;
+    transform: translateY(-2px);
+}
+
+/* Special handling for danger cards */
+.card-header.bg-danger {
+    background-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+/* Dark theme specific overrides */
+html.dark-theme .card {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark-theme .card-header {
+    background-color: var(--bg-secondary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+html.dark-theme .card-body {
+    background-color: var(--card-bg) !important;
+}
+
+html.dark-theme .card-footer {
+    background-color: var(--bg-secondary) !important;
+    border-top-color: var(--border-color) !important;
+}
+
+html.dark-theme .card-title {
+    color: var(--text-primary) !important;
+}
+
+html.dark-theme .card-text {
+    color: var(--text-secondary) !important;
+}
+
+/* Featured menu specific card styling */
+.home-menu-display .card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-lighter) !important;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+    .home-menu-display .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px var(--shadow-color-dark) !important;
+    }
+
+.home-menu-display .card-img-top {
+    border-bottom: 1px solid var(--border-lighter);
+    transition: transform 0.3s ease;
+}
+
+.home-menu-display .card:hover .card-img-top {
+    transform: scale(1.05);
+}
+
+/* MenuItem details card styling */
+.menuitem-details-card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-lighter) !important;
+    color: var(--text-primary) !important;
+}
+
+.menuitem-comments-card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-lighter) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Card link wrapper - ensure proper inheritance */
+.card-link-wrapper {
+    text-decoration: none !important;
+    color: inherit !important;
+}
+
+    .card-link-wrapper:hover {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
+
+/* Override any Bootstrap text colors in cards */
+html.dark-theme .card .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.card .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+/* Ensure card content respects theme */
+html.dark-theme .card h1,
+html.dark-theme .card h2,
+html.dark-theme .card h3,
+html.dark-theme .card h4,
+html.dark-theme .card h5,
+html.dark-theme .card h6,
+html.dark-theme .card p,
+html.dark-theme .card span,
+html.dark-theme .card div {
+    color: var(--text-primary) !important;
+}
+
+/* Special styling for featured menu price display */
+.card-footer .fw-bold {
+    color: var(--text-primary) !important;
+    font-size: 1.1em;
+}
+
+html.dark-theme .card-footer .fw-bold {
+    color: var(--text-light) !important;
+}
+
+/* =============================================================================
+   ADDITIONAL BOOTSTRAP OVERRIDES FOR THEME CONSISTENCY
+   ============================================================================= */
+
+/* Form controls in cards */
+.card .form-control {
+    background-color: var(--input-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+    .card .form-control:focus {
+        background-color: var(--input-bg) !important;
+        border-color: var(--bg-accent) !important;
+        color: var(--text-primary) !important;
+        box-shadow: 0 0 5px var(--shadow-color) !important;
+    }
+
+/* Buttons in cards */
+.card .btn-primary {
+    background-color: var(--bg-accent) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-light) !important;
+}
+
+    .card .btn-primary:hover {
+        background-color: var(--hover-bg) !important;
+    }
+
+.card .btn-secondary {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+    .card .btn-secondary:hover {
+        background-color: var(--bg-tertiary) !important;
+    }
+
+/* List groups in cards */
+.card .list-group-item {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-lighter) !important;
+    color: var(--text-primary) !important;
+}
+
+html.dark-theme .card .list-group-item {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Tables in cards */
+.card .table, .table-hover {
+    color: var(--text-primary) !important;
+}
+
+    .card .table th, .table-hover th {
+        background-color: var(--bg-accent) !important;
+        color: var(--text-light) !important;
+        border-color: var(--border-color) !important;
+    }
+
+    .card .table td, .table-hover td {
+        border-color: var(--border-lighter) !important;
+        background-color: var(--card-bg) !important;
+    }
+
+    .card .table tr:hover td, .table-hover:hover td {
+        background-color: var(--bg-secondary) !important;
+    }

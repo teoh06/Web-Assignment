@@ -51,7 +51,7 @@ else
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="3" class="text-end"><h4>Total:</h4></td>
+                    <td colspan="3" class="text-end"><h4 style="color: black; margin-top: 10px;">Total:</h4></td>
                     <td id="grandTotal" colspan="2">
                         @Model.Sum(item => item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY"))
                     </td>
@@ -168,10 +168,13 @@ else
                 }
             });
 
-            // --- Event Listener for Remove Item (AJAX) ---
-            cartTableBody.addEventListener('click', function(event) {
-                if (event.target.classList.contains('remove-item')) {
-                    event.preventDefault(); // Prevent default link behavior
+                    // --- Event Listener for Remove Item (AJAX) ---
+        cartTableBody.addEventListener('click', function(event) {
+            if (event.target.classList.contains('remove-item')) {
+                event.preventDefault(); // Prevent default link behavior
+
+                // Add a confirmation dialog
+                if (confirm('Are you sure you want to remove this item?')) {
                     const menuItemId = event.target.dataset.menuItemId;
                     const rowToRemove = event.target.closest('tr'); // Get the parent <tr> element
 
@@ -195,7 +198,6 @@ else
                                 rowToRemove.remove(); // Remove row from DOM
                             }
                             updateDisplayTotals(); // Recalculate and update grand total
-
                         } else {
                             console.error('Failed to remove item:', data.message);
                             alert('Failed to remove item: ' + data.message);
@@ -206,7 +208,8 @@ else
                         alert('An error occurred while removing item. Please try again. ' + error.message);
                     });
                 }
-            });
+            }
+        });
 
             // Initial calculation and display update on page load
             updateDisplayTotals();

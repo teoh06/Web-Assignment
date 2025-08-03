@@ -4,40 +4,137 @@
 @{
     ViewBag.Title = "Payment";
 }
-<form asp-action="Payment" method="post">
-    <div class="mb-3">
-        <label for="PaymentMethod">Payment Method</label>
-        <select asp-for="PaymentMethod" class="form-control" required>
-            <option value="">Select...</option>
-            <option>Cash</option>
-            <option>Card</option>
-        </select>
-    </div>
-    <div class="mb-3" id="card-fields" style="display:none">
-        <label for="CardNumber">Card Number</label>
-        <input asp-for="CardNumber" class="form-control" maxlength="16" pattern="\d{16}" />
-        <span asp-validation-for="CardNumber" class="text-danger"></span>
-    </div>
-    <div class="mb-3">
-        <label>Total</label>
-        <input type="text" class="form-control" value="@Model.Total.ToString("C", new CultureInfo("en-MY"))" readonly />
-    </div>
-    <button type="submit" class="btn btn-success">Pay & Place Order</button>
-    <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
-</form>
+
+<div class="container py-4">
+    <h2 class="mb-4">Payment Details</h2>
+    <form asp-action="Payment" method="post" class="needs-validation" novalidate>
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">Contact Information</h5>
+                        <div class="mb-3">
+                            <label asp-for="PhoneNumber" class="form-label"></label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="Enter your phone number" required />
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="DeliveryInstructions" class="form-label"></label>
+                            <textarea asp-for="DeliveryInstructions" class="form-control" rows="3" 
+                                    placeholder="Add any special delivery instructions here"></textarea>
+                            <span asp-validation-for="DeliveryInstructions" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">Payment Information</h5>
+                        <div class="mb-4">
+                            <label asp-for="PaymentMethod" class="form-label"></label>
+                            <select asp-for="PaymentMethod" class="form-select" required>
+                                <option value="">Select payment method...</option>
+                                <option value="Card">Credit/Debit Card</option>
+                                <option value="Cash">Cash on Delivery</option>
+                            </select>
+                            <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                        </div>
+
+                        <div id="card-fields" style="display:none">
+                            <div class="mb-3">
+                                <label asp-for="CardHolderName" class="form-label"></label>
+                                <input asp-for="CardHolderName" class="form-control" placeholder="Name on card" />
+                                <span asp-validation-for="CardHolderName" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="CardNumber" class="form-label"></label>
+                                <input asp-for="CardNumber" class="form-control" placeholder="1234 5678 9012 3456" 
+                                       maxlength="16" pattern="\d{16}" />
+                                <span asp-validation-for="CardNumber" class="text-danger"></span>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="ExpiryDate" class="form-label"></label>
+                                    <input asp-for="ExpiryDate" class="form-control" placeholder="MM/YY" maxlength="5" />
+                                    <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="CVV" class="form-label"></label>
+                                    <input asp-for="CVV" class="form-control" placeholder="123" maxlength="4" />
+                                    <span asp-validation-for="CVV" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="BillingAddress" class="form-label"></label>
+                                <textarea asp-for="BillingAddress" class="form-control" rows="3" 
+                                        placeholder="Enter your billing address"></textarea>
+                                <span asp-validation-for="BillingAddress" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-4">Order Summary</h5>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Total</span>
+                            <strong>@Model.Total.ToString("C", new CultureInfo("en-MY"))</strong>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 mb-2">Pay & Place Order</button>
+                        <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">Back to Cart</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
 
 @section Scripts {
     <script>
-            document.querySelector('[name="PaymentMethod"]').addEventListener('change', function() {
-            var cardFields = document.getElementById('card-fields');
-            if (this.value === 'Card') {
-                cardFields.style.display = '';
-                // Enable validation if needed
-                document.querySelector('[name="CardNumber"]').required = true;
-            } else {
-                cardFields.style.display = 'none';
-                // Disable validation
-                document.querySelector('[name="CardNumber"]').required = false;
+        document.addEventListener('DOMContentLoaded', function () {
+            const paymentMethodSelect = document.querySelector('[name="PaymentMethod"]');
+            const cardFields = document.getElementById('card-fields');
+            const cardInputs = cardFields.querySelectorAll('input, textarea');
+
+            function toggleCardFields() {
+                const isCard = paymentMethodSelect.value === 'Card';
+                cardFields.style.display = isCard ? 'block' : 'none';
+                
+                cardInputs.forEach(input => {
+                    input.required = isCard;
+                    if (!isCard) {
+                        input.value = '';
+                    }
+                });
+            }
+
+            paymentMethodSelect.addEventListener('change', toggleCardFields);
+
+            // Format expiry date input
+            const expiryInput = document.querySelector('[name="ExpiryDate"]');
+            if (expiryInput) {
+                expiryInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length >= 2) {
+                        value = value.substring(0, 2) + '/' + value.substring(2);
+                    }
+                    e.target.value = value.substring(0, 5);
+                });
+            }
+
+            // Add spacing to card number input
+            const cardNumberInput = document.querySelector('[name="CardNumber"]');
+            if (cardNumberInput) {
+                cardNumberInput.addEventListener('input', function(e) {
+                    e.target.value = e.target.value.replace(/\D/g, '');
+                });
             }
         });
     </script>

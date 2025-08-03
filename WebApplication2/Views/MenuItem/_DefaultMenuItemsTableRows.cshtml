@@ -5,7 +5,7 @@
     <tr>
         <td>
             <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
-                <img src="~/@(item.PhotoURL ?? "images/default.jpg")" alt="@item.Name" style="width:60px;height:60px;object-fit:cover;cursor:pointer;" />
+                <img src="~/images/@(item.PhotoURL ?? "images/default.jpg")" alt="@item.Name" class="product-photo"/>
             </a>
         </td>
         <td>@item.Name</td>
