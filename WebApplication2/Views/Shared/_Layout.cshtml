@@ -17,7 +17,7 @@
 
     <!-- Immediate theme application to prevent flashing -->
     <script>
-        (function() {
+        (function () {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'dark') {
                 document.documentElement.classList.add('dark-theme');
@@ -30,6 +30,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="/css/app.css" asp-append-version="true">
     @RenderSection("head", false)
+
+    <!-- Google Translate -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'en,ms,zh-CN',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </head>
 
 <body>
@@ -109,8 +121,13 @@
     </main>
 
     <footer>
-        Developed by <b>BAE SUZY</b> &middot;
-        Copyrighted &copy; @DateTime.Today.Year
+        <div>
+            Developed by <b>BAE SUZY</b> &middot;
+            Copyrighted &copy; @DateTime.Today.Year
+        </div>
+
+        <!-- Google Translate Widget placed here -->
+        <div id="google_translate_element" style="margin-top: 10px;"></div>
     </footer>
 
     <script>
@@ -136,7 +153,7 @@
         }
 
         // Update toggle button icon on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const savedTheme = localStorage.getItem('theme');
             const toggleBtn = document.getElementById('themeToggle');
 
@@ -156,6 +173,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
     <script src="/js/app.js" asp-append-version="true"></script>
+    <script src="/js/app.css" asp-append-version="true"></script>
     @RenderSection("foot", false)
     @RenderSection("Scripts", required: false)
 </body>
