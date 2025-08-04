@@ -22,6 +22,10 @@
     --danger-hover: #c82333;
     --delete-btn-bg: #ff6b6b;
     --delete-btn-hover: #ff5252;
+    --success-color: #28a745;
+    --success-hover: #218838;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
 }
 
 /* Dark theme colors */
@@ -47,6 +51,10 @@ html.dark-theme {
     --danger-hover: #c0392b;
     --delete-btn-bg: #e74c3c;
     --delete-btn-hover: #c0392b;
+    --success-color: #28a745;
+    --success-hover: #1e7e34;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
 }
 
     /* Enhanced dark mode text styling */
@@ -117,6 +125,7 @@ body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     transition: background-color 0.3s, color 0.3s;
+    line-height: 1.6;
 }
 
 header,
@@ -135,7 +144,7 @@ header {
         flex: 1;
         margin: 0;
         padding-left: 40px;
-        background: url(/images/favicon.png) no-repeat left / 32px;
+        background: url(/images/quickbite.png) no-repeat left / 32px;
     }
 
     header a {
@@ -147,7 +156,7 @@ header {
         width: 36px;
         height: 36px;
         border: 1px solid var(--border-light);
-        border-radius: 5px;
+        border-radius: 20px;
     }
 
 nav {
@@ -349,7 +358,7 @@ main {
 /* Form ----------------------------------------------------------------------- */
 
 label > * {
-    vertical-align: text-top;
+    margin-right: 5px;
 }
 
 .form {
@@ -1533,3 +1542,402 @@ html.dark-theme .card .list-group-item {
     .card .table tr:hover td, .table-hover:hover td {
         background-color: var(--bg-secondary) !important;
     }
+
+
+/* Privacy Policy Section */
+
+/* Privacy Policy Container */
+.privacy-container {
+    background-color: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px var(--shadow-color);
+    padding: 50px;
+    margin-bottom: 30px;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-lighter);
+}
+
+    .privacy-container:hover {
+        box-shadow: 0 15px 40px var(--shadow-color-dark);
+        transform: translateY(-5px);
+    }
+
+/* Header Section */
+.privacy-header {
+    text-align: center;
+    margin-bottom: 50px;
+    position: relative;
+}
+
+@@keyframes titleGlow {
+    from {
+        filter: brightness(1);
+    }
+
+    to {
+        filter: brightness(1.2);
+    }
+}
+
+.privacy-subtitle {
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+}
+
+.last-updated {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 15px 25px;
+    border-radius: 50px;
+    display: inline-block;
+    font-weight: 600;
+    box-shadow: 0 4px 10px var(--shadow-color);
+}
+
+/* Table of Contents */
+.toc-container {
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 40px;
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+.toc-title {
+    font-family: "Victor Mono", monospace;
+    font-size: 1.8rem;
+    margin: 0 0 25px 0;
+    color: var(--text-primary);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.toc-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc-item {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 15px 20px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+    box-shadow: 0 3px 10px var(--shadow-color);
+}
+
+    .toc-item:hover {
+        transform: translateX(10px);
+        border-color: var(--bg-accent);
+        box-shadow: 0 5px 20px var(--shadow-color-dark);
+    }
+
+    .toc-item a {
+        text-decoration: none;
+        color: var(--text-primary);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .toc-item i {
+        color: var(--bg-accent);
+        width: 20px;
+    }
+
+/* Content Sections */
+.privacy-section {
+    margin-bottom: 50px;
+    padding: 30px;
+    background: var(--card-bg);
+    border-radius: 15px;
+    box-shadow: 0 5px 15px var(--shadow-color);
+    border-left: 5px solid var(--bg-accent);
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+    .privacy-section.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .privacy-section:hover {
+        box-shadow: 0 8px 25px var(--shadow-color-dark);
+        transform: translateY(-3px);
+    }
+
+.section-title {
+    font-family: "Victor Mono", monospace;
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+    .section-title i {
+        color: var(--bg-accent);
+        font-size: 1.5rem;
+    }
+
+.section-content p {
+    margin-bottom: 20px;
+    line-height: 1.8;
+    font-size: 1.1rem;
+}
+
+.section-content ul {
+    margin: 20px 0;
+    padding-left: 25px;
+}
+
+.section-content li {
+    margin-bottom: 10px;
+    line-height: 1.7;
+}
+
+/* Interactive Elements */
+.interactive-card {
+    background: linear-gradient(135deg, var(--info-color), #20c997);
+    color: white;
+    padding: 25px;
+    border-radius: 15px;
+    margin: 30px 0;
+    box-shadow: 0 10px 30px rgba(23, 162, 184, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .interactive-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 15px 40px rgba(23, 162, 184, 0.4);
+    }
+
+.data-types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.data-type-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-lighter);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+    .data-type-card:hover {
+        border-color: var(--bg-accent);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px var(--shadow-color-dark);
+    }
+
+    .data-type-card i {
+        font-size: 3rem;
+        color: var(--bg-accent);
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .data-type-card h4 {
+        margin: 0 0 10px 0;
+        color: var(--text-primary);
+    }
+
+    .data-type-card p {
+        color: var(--text-secondary);
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+/* Rights Checklist */
+.rights-checklist {
+    background: var(--bg-secondary);
+    border-radius: 15px;
+    padding: 30px;
+    margin: 30px 0;
+}
+
+.rights-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--border-lighter);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+    .rights-item:last-child {
+        border-bottom: none;
+    }
+
+    .rights-item:hover {
+        background: var(--card-bg);
+        margin: 0 -20px;
+        padding: 15px 20px;
+        border-radius: 10px;
+    }
+
+.rights-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--bg-accent);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--success-color);
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .rights-checkbox.checked {
+        background: var(--success-color);
+        color: white;
+        border-color: var(--success-color);
+    }
+
+.rights-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+/* Contact Section */
+.contact-card {
+    background: linear-gradient(135deg, var(--success-color), #20c997);
+    color: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    margin: 40px 0;
+    box-shadow: 0 15px 40px rgba(40, 167, 69, 0.3);
+}
+
+.contact-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    margin-top: 30px;
+}
+
+.contact-method {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+    .contact-method:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-5px);
+    }
+
+    .contact-method i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+/* Progress Bar */
+.reading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--success-color), var(--info-color));
+    z-index: 1000;
+    transition: width 0.1s ease;
+}
+
+/* Scroll to Top Button */
+.scroll-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: var(--bg-accent);
+    color: var(--text-light);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px var(--shadow-color);
+}
+
+    .scroll-to-top.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .scroll-to-top:hover {
+        background: var(--hover-bg);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px var(--shadow-color-dark);
+    }
+
+/* Responsive Design */
+@@media (max-width: 768px) {
+    main {
+        padding: 20px;
+    }
+
+    .privacy-container {
+        padding: 30px 20px;
+    }
+
+    .toc-list {
+        grid-template-columns: 1fr;
+    }
+
+    .data-types-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .contact-info {
+        grid-template-columns: 1fr;
+    }
+
+    header, nav {
+        padding: 10px 20px;
+    }
+}
+
+/* Dark theme specific adjustments */
+html.dark-theme .privacy-title {
+    background: linear-gradient(135deg, var(--text-light), var(--text-primary));
+    background-clip: text;
+    -webkit-background-clip: text;
+}
+
+html.dark-theme .interactive-card {
+    box-shadow: 0 10px 30px rgba(23, 162, 184, 0.2);
+}
+
+html.dark-theme .contact-card {
+    box-shadow: 0 15px 40px rgba(40, 167, 69, 0.2);
+}

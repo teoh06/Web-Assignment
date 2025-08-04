@@ -53,7 +53,14 @@ public class CartController : Controller
         else
         {
             // Add new item to cart
-            cart.Add(new CartItemVM { MenuItemId = menuItemId, Name = menuItem.Name, Price = menuItem.Price, Quantity = quantity });
+            cart.Add(new CartItemVM 
+            { 
+                MenuItemId = menuItemId, 
+                Name = menuItem.Name, 
+                Price = menuItem.Price, 
+                Quantity = quantity,
+                PhotoURL = menuItem.PhotoURL ?? "default.jpg"  // Add photo URL with fallback
+            });
         }
 
         // Save updated cart back to session
@@ -341,6 +348,7 @@ public class CartItemVM
     public string Name { get; set; }
     public decimal Price { get; set; }
     public int Quantity { get; set; }
+    public string PhotoURL { get; set; }  // Added for displaying item images
 }
 
 // ViewModel for the payment page

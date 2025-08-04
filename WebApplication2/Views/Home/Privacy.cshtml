@@ -1,0 +1,441 @@
+﻿@{
+    ViewBag.Title = "Privacy Policy";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Victor+Mono:wght@400;600;700&family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        main {
+            padding: 40px 50px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<!-- Privacy Policy Contents -->
+<body>
+    <!-- Reading Progress Bar -->
+    <div class="reading-progress" id="progressBar"></div>
+
+    <!-- Main Content -->
+    <main>
+        <div class="privacy-container">
+            <!-- Header Section -->
+            <div class="privacy-header">
+                <p class="privacy-subtitle">Your privacy matters to us. Learn how we protect and use your information.</p>
+                <div class="last-updated">
+                    <i class="fas fa-calendar-alt"></i>
+                    Last Updated: August 2025
+                </div>
+            </div>
+
+            <!-- Table of Contents -->
+            <div class="toc-container">
+                <h2 class="toc-title">
+                    <i class="fas fa-list"></i>
+                    Quick Navigation
+                </h2>
+                <ul class="toc-list">
+                    <li class="toc-item" onclick="scrollToSection('introduction')">
+                        <a href="#introduction">
+                            <i class="fas fa-info-circle"></i>
+                            Introduction
+                        </a>
+                    </li>
+                    <li class="toc-item" onclick="scrollToSection('data-collection')">
+                        <a href="#data-collection">
+                            <i class="fas fa-database"></i>
+                            Data We Collect
+                        </a>
+                    </li>
+                    <li class="toc-item" onclick="scrollToSection('data-usage')">
+                        <a href="#data-usage">
+                            <i class="fas fa-cogs"></i>
+                            How We Use Data
+                        </a>
+                    </li>
+                    <li class="toc-item" onclick="scrollToSection('data-sharing')">
+                        <a href="#data-sharing">
+                            <i class="fas fa-share-alt"></i>
+                            Data Sharing
+                        </a>
+                    </li>
+                    <li class="toc-item" onclick="scrollToSection('your-rights')">
+                        <a href="#your-rights">
+                            <i class="fas fa-shield-alt"></i>
+                            Your Rights
+                        </a>
+                    </li>
+                    <li class="toc-item" onclick="scrollToSection('contact')">
+                        <a href="#contact">
+                            <i class="fas fa-envelope"></i>
+                            Contact Us
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Introduction Section -->
+            <section class="privacy-section" id="introduction">
+                <h2 class="section-title">
+                    <i class="fas fa-info-circle"></i>
+                    Introduction
+                </h2>
+                <div class="section-content">
+                    <p>Welcome to QuickBite! We're committed to protecting your privacy and ensuring you have a positive experience on our platform. This Privacy Policy explains how we collect, use, and safeguard your personal information when you use our food ordering service.</p>
+                    <div class="interactive-card" onclick="toggleCard(this)">
+                        <h4><i class="fas fa-lightbulb"></i> Why This Matters</h4>
+                        <p>Your trust is essential to our business. We believe in transparency about our data practices and your control over your personal information.</p>
+                    </div>
+                    <p>By using QuickBite, you agree to the collection and use of information in accordance with this policy. We will not use or share your information with anyone except as described in this Privacy Policy.</p>
+                </div>
+            </section>
+
+            <!-- Data Collection Section -->
+            <section class="privacy-section" id="data-collection">
+                <h2 class="section-title">
+                    <i class="fas fa-database"></i>
+                    Information We Collect
+                </h2>
+                <div class="section-content">
+                    <p>We collect several types of information to provide and improve our service to you:</p>
+                    <div class="data-types-grid">
+                        <div class="data-type-card" onclick="highlightCard(this)">
+                            <i class="fas fa-user"></i>
+                            <h4>Personal Information</h4>
+                            <p>Name, email, phone number, delivery address</p>
+                        </div>
+                        <div class="data-type-card" onclick="highlightCard(this)">
+                            <i class="fas fa-credit-card"></i>
+                            <h4>Payment Data</h4>
+                            <p>Credit card details, billing information (securely encrypted)</p>
+                        </div>
+                        <div class="data-type-card" onclick="highlightCard(this)">
+                            <i class="fas fa-shopping-cart"></i>
+                            <h4>Order History</h4>
+                            <p>Food preferences, order frequency, favorite restaurants</p>
+                        </div>
+                        <div class="data-type-card" onclick="highlightCard(this)">
+                            <i class="fas fa-mobile-alt"></i>
+                            <h4>Device Information</h4>
+                            <p>IP address, browser type, operating system, app usage</p>
+                        </div>
+                        <div class="data-type-card" onclick="highlightCard(this)">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <h4>Location Data</h4>
+                            <p>GPS coordinates for accurate delivery (with your permission)</p>
+                        </div>
+                        <div class="data-type-card" onclick="highlightCard(this)">
+                            <i class="fas fa-star"></i>
+                            <h4>Reviews & Ratings</h4>
+                            <p>Restaurant reviews, food ratings, feedback comments</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Usage Section -->
+            <section class="privacy-section" id="data-usage">
+                <h2 class="section-title">
+                    <i class="fas fa-cogs"></i>
+                    How We Use Your Information
+                </h2>
+                <div class="section-content">
+                    <p>We use the collected information for various purposes:</p>
+                    <ul>
+                        <li><strong>Order Processing:</strong> To process and deliver your food orders efficiently</li>
+                        <li><strong>Account Management:</strong> To create and maintain your user account</li>
+                        <li><strong>Customer Support:</strong> To provide customer service and resolve issues</li>
+                        <li><strong>Personalization:</strong> To recommend restaurants and dishes based on your preferences</li>
+                        <li><strong>Communication:</strong> To send order updates, promotions, and important notices</li>
+                        <li><strong>Analytics:</strong> To improve our service quality and user experience</li>
+                        <li><strong>Security:</strong> To prevent fraud and ensure platform security</li>
+                        <li><strong>Legal Compliance:</strong> To comply with applicable laws and regulations</li>
+                    </ul>
+                    <div class="interactive-card" onclick="toggleCard(this)">
+                        <h4><i class="fas fa-robot"></i> AI & Machine Learning</h4>
+                        <p>We use AI to provide better food recommendations, optimize delivery routes, and predict demand patterns to ensure fresh food availability.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Sharing Section -->
+            <section class="privacy-section" id="data-sharing">
+                <h2 class="section-title">
+                    <i class="fas fa-share-alt"></i>
+                    When We Share Information
+                </h2>
+                <div class="section-content">
+                    <p>We respect your privacy and limit data sharing to these specific situations:</p>
+                    <ul>
+                        <li><strong>Restaurant Partners:</strong> Order details and delivery information to fulfill your orders</li>
+                        <li><strong>Delivery Partners:</strong> Contact and location information for successful delivery</li>
+                        <li><strong>Payment Processors:</strong> Billing information to process payments securely</li>
+                        <li><strong>Service Providers:</strong> Trusted third parties who help us operate our platform</li>
+                        <li><strong>Legal Requirements:</strong> When required by law or to protect our legal rights</li>
+                        <li><strong>Business Transfers:</strong> In case of merger, acquisition, or sale of assets</li>
+                    </ul>
+                    <div class="interactive-card" onclick="toggleCard(this)">
+                        <h4><i class="fas fa-lock"></i> We Never Sell Your Data</h4>
+                        <p>We do not sell, rent, or trade your personal information to third parties for marketing purposes. Your data is used solely to enhance your QuickBite experience.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Your Rights Section -->
+            <section class="privacy-section" id="your-rights">
+                <h2 class="section-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Your Privacy Rights
+                </h2>
+                <div class="section-content">
+                    <p>You have important rights regarding your personal information:</p>
+                    <div class="rights-checklist">
+                        <div class="rights-item" onclick="toggleRightCheck(this)">
+                            <div class="rights-checkbox" id="right1">✓</div>
+                            <div class="rights-text">
+                                <strong>Access:</strong> Request a copy of all personal data we have about you
+                            </div>
+                        </div>
+                        <div class="rights-item" onclick="toggleRightCheck(this)">
+                            <div class="rights-checkbox" id="right2">✓</div>
+                            <div class="rights-text">
+                                <strong>Correction:</strong> Update or correct inaccurate personal information
+                            </div>
+                        </div>
+                        <div class="rights-item" onclick="toggleRightCheck(this)">
+                            <div class="rights-checkbox" id="right3">✓</div>
+                            <div class="rights-text">
+                                <strong>Deletion:</strong> Request deletion of your personal data (right to be forgotten)
+                            </div>
+                        </div>
+                        <div class="rights-item" onclick="toggleRightCheck(this)">
+                            <div class="rights-checkbox" id="right4">✓</div>
+                            <div class="rights-text">
+                                <strong>Objection:</strong> Object to the processing of your data for certain purposes
+                            </div>
+                        </div>
+                        <div class="rights-item" onclick="toggleRightCheck(this)">
+                            <div class="rights-checkbox" id="right5">✓</div>
+                            <div class="rights-text">
+                                <strong>Portability:</strong> Receive your data in a machine-readable format
+                            </div>
+                        </div>
+                        <div class="rights-item" onclick="toggleRightCheck(this)">
+                            <div class="rights-checkbox" id="right6">✓</div>
+                            <div class="rights-text">
+                                <strong>Consent:</strong> Withdraw your consent for data processing at any time
+                            </div>
+                        </div>
+                    </div>
+                    <p>To exercise any of these rights, please contact us using the methods listed below.</p>
+                </div>
+            </section>
+
+            <!-- Contact Section -->
+            <section class="privacy-section" id="contact">
+                <h2 class="section-title">
+                    <i class="fas fa-envelope"></i>
+                    Contact Us
+                </h2>
+                <div class="section-content">
+                    <p>If you have any questions or concerns about this Privacy Policy, please don't hesitate to contact our dedicated privacy team.</p>
+                    <div class="contact-card">
+                        <h3>We're Here to Help</h3>
+                        <p>Your inquiries are important to us. We will respond as quickly as possible.</p>
+                        <div class="contact-info">
+                            <div class="contact-method">
+                                <i class="fas fa-envelope-open-text"></i>
+                                <h4>Email</h4>
+                                <p style="word-break: break-word;">bait2173.email@@gmail.com</p>
+                            </div>
+                            <div class="contact-method">
+                                <i class="fas fa-phone-alt"></i>
+                                <h4>Phone</h4>
+                                <p>012-345-6789</p>
+                            </div>
+                            <div class="contact-method">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <h4>Address</h4>
+                                <p>123 QuickBite Lane, Digital City, DC 666</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-to-top" id="scrollToTop">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <script>
+        // Check for theme preference on load
+        function checkTheme() {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const currentTheme = localStorage.getItem('theme');
+
+            if (currentTheme === 'dark' || (currentTheme === null && prefersDark)) {
+                document.documentElement.classList.add('dark-theme');
+                document.getElementById('themeIcon').classList.replace('fa-moon', 'fa-sun');
+            } else {
+                document.documentElement.classList.remove('dark-theme');
+                document.getElementById('themeIcon').classList.replace('fa-sun', 'fa-moon');
+            }
+        }
+        window.addEventListener('DOMContentLoaded', checkTheme);
+
+        // Toggle theme and save preference
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark-theme');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
+            const themeIcon = document.getElementById('themeIcon');
+            if (isDark) {
+                themeIcon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                themeIcon.classList.replace('fa-sun', 'fa-moon');
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `<span>${message}</span>`;
+            container.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+                notification.addEventListener('transitionend', () => notification.remove());
+            }, 5000);
+        }
+
+        // Smooth scroll to section
+        function scrollToSection(id) {
+            const section = document.getElementById(id);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Scroll to top button functionality
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Highlight card on click
+        function highlightCard(card) {
+            document.querySelectorAll('.data-type-card').forEach(c => c.style.transform = '');
+            card.style.transform = 'scale(1.1) translateY(-10px)';
+        }
+
+        // Toggle interactive card content
+        function toggleCard(card) {
+            const content = card.querySelector('p');
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = 'block';
+            } else {
+                content.style.display = 'none';
+            }
+        }
+
+        // Toggle right checklist checkbox
+        function toggleRightCheck(item) {
+            const checkbox = item.querySelector('.rights-checkbox');
+            checkbox.classList.toggle('checked');
+        }
+
+        window.addEventListener('scroll', () => {
+            // Reading Progress Bar
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('progressBar').style.width = scrolled + '%';
+
+            // Scroll to Top Button
+            const scrollToTopBtn = document.getElementById('scrollToTop');
+            if (winScroll > 300) {
+                scrollToTopBtn.classList.add('visible');
+            } else {
+                scrollToTopBtn.classList.remove('visible');
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const scrollToTopBtn = document.getElementById('scrollToTop');
+            scrollToTopBtn.addEventListener('click', scrollToTop);
+
+            // Animate sections on scroll
+            const sections = document.querySelectorAll('.privacy-section');
+            const observerOptions = {
+                root: null,
+                threshold: 0.1,
+            };
+
+            const sectionObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                sectionObserver.observe(section);
+            });
+
+            // Initialize rights checkboxes as checked
+            document.querySelectorAll('.rights-checkbox').forEach(checkbox => {
+                checkbox.classList.add('checked');
+            });
+
+            // Add keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    // Close any open tooltips or notifications
+                    document.querySelectorAll('[style*="position: fixed"]').forEach(el => {
+                        if (el.id !== 'progressBar' && el.id !== 'scrollToTop') {
+                            el.remove();
+                        }
+                    });
+                }
+
+                if (e.key === 'Home' && e.ctrlKey) {
+                    e.preventDefault();
+                    scrollToTop();
+                }
+            });
+
+            // Add smooth hover effects for all interactive elements
+            document.querySelectorAll('.toc-item, .data-type-card, .rights-item, .contact-method').forEach(element => {
+                element.addEventListener('mouseenter', function() {
+                    this.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                });
+            });
+
+            console.log('🍕 QuickBite Privacy Policy loaded successfully!');
+        });
+    </script>
+</body>
+</html>

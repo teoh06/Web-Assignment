@@ -23,6 +23,8 @@ builder.Services.AddSqlServer<DB>($@"
     AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
 ");
 builder.Services.AddScoped<Helper>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<WebApplication2.Services.RecaptchaHelper>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

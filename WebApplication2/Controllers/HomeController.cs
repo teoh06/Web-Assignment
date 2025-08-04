@@ -53,6 +53,12 @@ public class HomeController : Controller
     {
         return View();
     }
+
+    // GET: Home/Privacy
+    public IActionResult Privacy()
+    {
+        return View();
+    }
 }
 public class FeaturedMenuItemVM
 {

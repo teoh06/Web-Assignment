@@ -2,6 +2,7 @@
 
 @{
     ViewBag.Title = "Account | Register";
+    var siteKey = ViewBag.SiteKey as string;
 }
 
 <form asp-action="Register" method="post" enctype="multipart/form-data" class="form">
@@ -43,13 +44,18 @@
     </label>
     <span asp-validation-for="ProfilePicture"></span>
 
+    <br>
     <section>
+        <div class="g-recaptcha" data-sitekey="@siteKey"></div>
+        <br>
         <button>Register</button>
         <button type="reset">Reset</button>
     </section>
+    <br>
 </form>
 
 @section Scripts {
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <script>
         // The same reusable function as in Login.cshtml
         function togglePasswordVisibility(inputId, iconSpan) {

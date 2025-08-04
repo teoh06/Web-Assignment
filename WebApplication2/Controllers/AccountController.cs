@@ -8,6 +8,8 @@ using System; // Make sure this is included for Guid and DateTime
 using System.Diagnostics;
 using System.Linq; // Make sure this is included for Any and Where
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
 
 namespace WebApplication2.Controllers;
 
@@ -15,50 +17,93 @@ public class AccountController : Controller
 {
     private readonly DB db;
     private readonly Helper hp;
-    private readonly IEmailService _emailService; // Add this private field
+    private readonly IEmailService _emailService;
+    private readonly RecaptchaHelper _recaptcha;
 
-    // Modify constructor to accept IEmailService
-    public AccountController(DB db, Helper hp, IEmailService emailService)
+    private const int MaxFailedAttempts = 3;
+    private const int BlockMinutes = 5;
+
+    public AccountController(DB db, Helper hp, IEmailService emailService, RecaptchaHelper recaptcha)
     {
         this.db = db;
         this.hp = hp;
-        this._emailService = emailService; // Assign the injected service
+        this._emailService = emailService;
+        this._recaptcha = recaptcha;
     }
 
     // GET: Account/Login
     public IActionResult Login()
     {
+        ViewBag.SiteKey = HttpContext.RequestServices.GetService<IConfiguration>()?["GoogleReCaptcha:SiteKey"];
         return View();
     }
 
     // POST: Account/Login
     [HttpPost]
-    public IActionResult Login(LoginVM vm, string? returnURL)
+    public async Task<IActionResult> Login(LoginVM vm, string? returnURL)
     {
+        var recaptchaToken = Request.Form["g-recaptcha-response"];
+        if (!await _recaptcha.VerifyAsync(recaptchaToken))
+        {
+            ModelState.AddModelError("", "reCAPTCHA validation failed. Please try again.");
+        }
+
+        // --- Temporary login blocking logic ---
+        string failKey = $"LoginFail_{vm.Email}";
+        string blockKey = $"LoginBlock_{vm.Email}";
+        int failCount = HttpContext.Session.GetInt32(failKey) ?? 0;
+        DateTime? blockUntil = null;
+        var blockUntilStr = HttpContext.Session.GetString(blockKey);
+        if (!string.IsNullOrEmpty(blockUntilStr) && DateTime.TryParse(blockUntilStr, out var dt))
+            blockUntil = dt;
+
+        if (blockUntil.HasValue && blockUntil.Value > DateTime.UtcNow)
+        {
+            var mins = (int)(blockUntil.Value - DateTime.UtcNow).TotalMinutes + 1;
+            ModelState.AddModelError("", $"Too many failed attempts. Login blocked for {mins} more minute(s).");
+            return View(vm);
+        }
+
         // (1) Get user (admin or member) record based on email (PK)
         var u = db.Users.Find(vm.Email);
 
         // (2) Custom validation -> verify password
         if (u == null || !hp.VerifyPassword(u.Hash, vm.Password))
         {
-            ModelState.AddModelError("", "Login credentials not matched.");
+            failCount++;
+            HttpContext.Session.SetInt32(failKey, failCount);
+            if (failCount >= MaxFailedAttempts)
+            {
+                var until = DateTime.UtcNow.AddMinutes(BlockMinutes);
+                HttpContext.Session.SetString(blockKey, until.ToString("o"));
+                ModelState.AddModelError("", $"Too many failed attempts. Login blocked for {BlockMinutes} minutes.");
+                return View(vm);
+            }
+            ModelState.AddModelError("", $"Login credentials not matched. ({failCount}/{MaxFailedAttempts})");
         }
-
-        
         else if (u.IsPendingDeletion) // Add this condition
         {
             ModelState.AddModelError("", "This account is pending deletion. Please check your email for restoration options.");
         }
-        
 
         if (ModelState.IsValid)
         {
             TempData["Info"] = "Login successfully.";
-
-            // (3) Sign in
-            hp.SignIn(u.Email, u.Role, vm.RememberMe);
-
-            // (4) Handle return URL
+            // --- Enhanced Remember Me: set persistent cookie ---
+            var claims = new List<Claim> {
+                new Claim(ClaimTypes.Name, u.Email),
+                new Claim(ClaimTypes.Role, u.Role)
+            };
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = vm.RememberMe,
+                ExpiresUtc = vm.RememberMe ? DateTimeOffset.UtcNow.AddDays(14) : (DateTimeOffset?)null
+            };
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
+            // Reset fail count on success
+            HttpContext.Session.Remove(failKey);
+            HttpContext.Session.Remove(blockKey);
             if (string.IsNullOrEmpty(returnURL))
             {
                 if (u is Admin)
@@ -104,13 +149,20 @@ public class AccountController : Controller
     // GET: Account/Register
     public IActionResult Register()
     {
+        ViewBag.SiteKey = HttpContext.RequestServices.GetService<IConfiguration>()?["GoogleReCaptcha:SiteKey"];
         return View();
     }
 
     // POST: Account/Register
     [HttpPost]
-    public IActionResult Register(RegisterVM vm)
+    public async Task<IActionResult> Register(RegisterVM vm)
     {
+        var recaptchaToken = Request.Form["g-recaptcha-response"];
+        if (!await _recaptcha.VerifyAsync(recaptchaToken))
+        {
+            ModelState.AddModelError("", "reCAPTCHA validation failed. Please try again.");
+        }
+
         if (ModelState.IsValid("Email") &&
             db.Users.Any(u => u.Email == vm.Email))
         {

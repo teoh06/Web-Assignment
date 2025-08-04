@@ -13,7 +13,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewBag.Title</title>
-    <link rel="shortcut icon" href="/images/favicon.png">
+    <link rel="shortcut icon" href="/images/quickbite.png">
 
     <!-- Immediate theme application to prevent flashing -->
     <script>
@@ -41,6 +41,7 @@
             }, 'google_translate_element');
         }
     </script>
+
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </head>
 
@@ -48,7 +49,11 @@
     <div class="info">@Html.Raw(TempData["Info"])</div>
 
     <header>
-        <h1><a href="/">Food Ordering System</a></h1>
+        <!-- Logo -->
+        <h1 style="font-family: 'Brush Script MT', cursive; font-style: italic;">
+            <a href="/" style="text-decoration: none; color: inherit; margin-left: 8px;">QuickBite</a>
+        </h1>
+
         @* User name and role *@
         @if (User.Identity!.IsAuthenticated)
         {
@@ -101,7 +106,7 @@
         @if (User.Identity!.IsAuthenticated)
         {
             <form asp-controller="Account" asp-action="Logout" method="post" onsubmit="return confirmLogout();">
-                <button type="submit" class="default-button" style="border: none;">Logout</button>
+                <button type="submit" class="default-button" style="border: none; line-height: 1.6;">Logout</button>
             </form>
 
             <a href="/Account/UpdatePassword">Update Password</a>
@@ -112,7 +117,7 @@
             <a href="/Account/Register">Register</a>
             <a href="/Account/ResetPassword">Reset Password</a>
         }
-        @if (User.IsInRole("Member"))
+        @if (User.IsInRole("Member"))   
         {
             <a href="/Account/UpdateProfile">Update Profile</a>
         }
@@ -125,8 +130,9 @@
 
     <footer>
         <div>
-            Developed by <b>BAE SUZY</b> &middot;
-            Copyrighted &copy; @DateTime.Today.Year
+            Developed by <b>QuickBite</b> &middot;
+            Copyrighted &copy; @DateTime.Today.Year &middot;
+            <a href="/Home/Privacy" style="text-decoration: none; color: var(--text-primary);">Privacy Policy</a>
         </div>
 
         <!-- Google Translate Widget placed here -->
