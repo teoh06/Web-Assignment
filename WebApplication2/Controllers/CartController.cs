@@ -247,7 +247,8 @@ public class CartController : Controller
         {
             MemberEmail = User.Identity.Name,
             OrderDate = DateTime.Now,
-            Status = "Paid"
+            Status = "Paid",
+            PaymentMethod = vm.PaymentMethod // Store payment method persistently
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync();
@@ -299,8 +300,8 @@ public class CartController : Controller
             return RedirectToAction("MyOrders", "Account");
         }
 
-        // Try to get payment method and other details from TempData
-        string paymentMethod = TempData["LastPaymentMethod"] as string ?? "-";
+        // Use payment method from order entity
+        string paymentMethod = order.PaymentMethod ?? TempData["LastPaymentMethod"] as string ?? "-";
         string phoneNumber = TempData["LastPhoneNumber"] as string;
         string deliveryInstructions = TempData["LastDeliveryInstructions"] as string;
         string cardNumber = TempData["LastCardNumber"] as string;
