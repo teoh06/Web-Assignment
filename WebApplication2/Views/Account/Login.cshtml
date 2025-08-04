@@ -2,6 +2,7 @@
 
 @{
     ViewBag.Title = "Account | Login";
+    var siteKey = ViewBag.SiteKey as string;
 }
 
 <form class="form" method="post">
@@ -26,18 +27,30 @@
     </label>
     <br>
 
+    <br>
     <section>
+        @if (!string.IsNullOrEmpty(siteKey))
+        {
+            <div class="g-recaptcha" data-sitekey="@siteKey"></div>
+        }
+        <br>
         <button>Login</button>
         <button type="reset">Reset</button>
+        <br>
     </section>
 </form>
 
+<br>
 <p>
     [ <a href="/Account/Register">Register</a> |
     <a href="/Account/ResetPassword">Reset Password</a> ]
 </p>
 
 @section Scripts {
+    @if (!string.IsNullOrEmpty(siteKey))
+    {
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    }
     <script>
         // Reusable function to toggle password visibility
         function togglePasswordVisibility(inputId, iconSpan) {
