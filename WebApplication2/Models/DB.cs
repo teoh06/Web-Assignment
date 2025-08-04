@@ -122,6 +122,8 @@ public class Order
     public DateTime OrderDate { get; set; } = DateTime.Now;
     public string Status { get; set; } // e.g., Pending, Preparing, Served
     public ICollection<OrderItem> OrderItems { get; set; }
+    // Add persistent payment method
+    public string PaymentMethod { get; set; } // Cash, Card, etc.
 }
 
 public class OrderItem
