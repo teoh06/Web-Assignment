@@ -37,18 +37,15 @@
         </div>
 
         <div class="form-group">
-            <label>Image (Drag & Drop or Select)</label>
+            <label>Images (Drag & Drop or Select Multiple)</label>
             <div id="drop-area" class="drag-area">
-                <input type="file" id="imageInput" name="ImageFile" accept="image/*" class="file-input" />
-
+                <input type="file" id="imageInput" name="ImageFiles" accept="image/*" class="file-input" multiple />
                 <div id="preview-content">
-                    <span id="drop-text">Drag & drop an image here, or click to select.</span>
-                    <img id="preview-image" src="#" class="preview-image hidden" />
+                    <span id="drop-text">Drag & drop images here, or click to select.</span>
+                    <div id="preview-images" class="preview-images"></div>
                 </div>
-
-                <button type="button" id="deletePhoto">&times;</button>
+                <button type="button" id="deletePhotos" style="display:none;">Delete All</button>
             </div>
-
             <div class="url-input-label">Or enter image URL:</div>
             <input asp-for="PhotoURL" id="photoUrlInput" placeholder="Optional: Enter image URL if not uploading" />
             <span asp-validation-for="PhotoURL" class="text-danger"></span>
@@ -62,85 +59,74 @@
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
+    <link href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet" />
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const dropArea = document.getElementById('drop-area');
             const imageInput = document.getElementById('imageInput');
             const dropText = document.getElementById('drop-text');
-            const previewImage = document.getElementById('preview-image');
-            const deleteBtn = document.getElementById('deletePhoto');
+            const previewImages = document.getElementById('preview-images');
+            const deleteBtn = document.getElementById('deletePhotos');
             const photoUrlInput = document.getElementById('photoUrlInput');
+            let imageFiles = [];
 
-            // Set the initial state for the delete button
             deleteBtn.style.display = 'none';
 
-            // Prevent default drag behaviors
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, e => {
                     e.preventDefault();
                     e.stopPropagation();
                 }, false);
             });
-
-            // Highlight drag area on dragenter/dragover
             ['dragenter', 'dragover'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => dropArea.classList.add('active'), false);
             });
-
-            // Unhighlight drag area on dragleave/drop
             ['dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'), false);
             });
-
-            // Handle dropped files
             dropArea.addEventListener('drop', e => {
                 const dt = e.dataTransfer;
-                const files = dt.files;
-                handleFiles(files);
+                handleFiles(dt.files);
             }, false);
-
-            // Handle file selection via click
             imageInput.addEventListener('change', (e) => {
-                const files = e.target.files;
-                handleFiles(files);
+                handleFiles(e.target.files);
             });
-
-            // Handle delete button click
             deleteBtn.addEventListener('click', e => {
-                // Prevent the click event from bubbling up to the drop-area
                 e.stopPropagation();
-                clearPreview();
+                clearPreviews();
             });
-
-            // Function to process and preview files
             function handleFiles(files) {
-                if (files.length > 0) {
-                    const file = files[0];
-                    const reader = new FileReader();
-
-                    reader.onload = (e) => {
-                        previewImage.src = e.target.result;
-                        dropText.classList.add('hidden');
-                        previewImage.classList.remove('hidden');
-
-                        // Show the delete button after a successful preview
-                        deleteBtn.style.display = 'flex';
-
-                        // Clear the URL input when a file is dropped
-                        photoUrlInput.value = '';
-                    };
-                    reader.readAsDataURL(file);
+                imageFiles = Array.from(files);
+                previewImages.innerHTML = '';
+                if (imageFiles.length > 0) {
+                    dropText.classList.add('hidden');
+                    deleteBtn.style.display = 'flex';
+                    imageFiles.forEach((file, idx) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.className = 'preview-image';
+                            img.style.maxWidth = '120px';
+                            img.style.margin = '4px';
+                            img.setAttribute('data-idx', idx);
+                            // TODO: Add cropper/rotate/flip controls here
+                            previewImages.appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                    photoUrlInput.value = '';
+                } else {
+                    dropText.classList.remove('hidden');
+                    deleteBtn.style.display = 'none';
                 }
             }
-
-            // Function to clear the preview and reset the state
-            function clearPreview() {
-                imageInput.value = ''; // Clear the file input
-                previewImage.src = '#'; // Clear the image source
+            function clearPreviews() {
+                imageInput.value = '';
+                imageFiles = [];
+                previewImages.innerHTML = '';
                 dropText.classList.remove('hidden');
-                previewImage.classList.add('hidden');
-
-                // Hide the delete button when the preview is cleared
                 deleteBtn.style.display = 'none';
             }
         });

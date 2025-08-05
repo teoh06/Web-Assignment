@@ -1,4 +1,5 @@
-@using System.Globalization;
+﻿@using System.Globalization;
+@using WebApplication2.Controllers;
 
 @model WebApplication2.Controllers.PaymentVM
 @{
@@ -13,6 +14,15 @@
                 <div class="card mb-4">
                     <div class="card-body">
                         <h5 class="card-title mb-4">Contact Information</h5>
+                        <div class="mb-3">
+                            <label asp-for="DeliveryOption" class="form-label"></label>
+                            <select asp-for="DeliveryOption" class="form-select" required>
+                                <option value="" disabled selected>Select delivery option...</option>
+                                <option value="Delivery">Delivery</option>
+                                <option value="Pickup">Pickup</option>
+                            </select>
+                            <span asp-validation-for="DeliveryOption" class="text-danger"></span>
+                        </div>
                         <div class="mb-3">
                             <label asp-for="PhoneNumber" class="form-label"></label>
                             <input asp-for="PhoneNumber" class="form-control" placeholder="Enter your phone number" required />
@@ -87,6 +97,53 @@
                             <span>Total</span>
                             <strong>@Model.Total.ToString("C", new CultureInfo("en-MY"))</strong>
                         </div>
+                        <!-- To show personalizations, pass cart items to the view and enumerate them here -->
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th class="w-50">Item</th>
+                                    <th class="w-25 text-end">Price</th>
+                                    <th class="w-25 text-end">Quantity</th>
+                                    <th class="w-25 text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cartTableBody">
+                                @foreach (var item in Model.CartItems)
+                                {
+                                    <tr data-menu-item-id="@item.MenuItemId">
+                                        <td>
+                                            <h6 class="mb-0">@item.Name</h6>
+                                            @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
+                                            {
+                                                var personalizations = item.SelectedPersonalizations.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                                if (personalizations.Length > 1)
+                                                {
+                                                    <div class="small text-muted">Personalizations:</div>
+                                                    <ul>
+                                                        @foreach (var personalization in personalizations)
+                                                        {
+                                                            <li>@personalization.Trim()</li>
+                                                        }
+                                                    </ul>
+                                                }
+                                                else
+                                                {
+                                                    <div class="small text-muted">Personalization: @item.SelectedPersonalizations</div>
+                                                }
+                                            }
+                                        </td>
+                                        <td class="text-end item-price" data-price="@item.Price">
+                                            @item.Price.ToString("C", new CultureInfo("en-MY"))
+                                        </td>
+                                        <td class="text-end">@item.Quantity</td>
+                                        <td class="text-end">
+                                            @((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+
                         <button type="submit" class="btn btn-success w-100 mb-2">Pay & Place Order</button>
                         <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">Back to Cart</a>
                     </div>

@@ -12,8 +12,8 @@ using WebApplication2.Models;
 namespace WebApplication2.Migrations
 {
     [DbContext(typeof(DB))]
-    [Migration("20250804140255_UpdateOrderHistory")]
-    partial class UpdateOrderHistory
+    [Migration("20250805153417_ProfileUpdate")]
+    partial class ProfileUpdate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -136,6 +136,32 @@ namespace WebApplication2.Migrations
                     b.ToTable("MenuItemComments");
                 });
 
+            modelBuilder.Entity("WebApplication2.Models.MenuItemImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UploadDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("MenuItemImages");
+                });
+
             modelBuilder.Entity("WebApplication2.Models.MenuItemRating", b =>
                 {
                     b.Property<int>("RatingId")
@@ -213,6 +239,10 @@ namespace WebApplication2.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<string>("SelectedPersonalizations")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -223,6 +253,29 @@ namespace WebApplication2.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("WebApplication2.Models.PersonalizationOption", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("PersonalizationOptions");
                 });
 
             modelBuilder.Entity("WebApplication2.Models.User", b =>
@@ -330,6 +383,17 @@ namespace WebApplication2.Migrations
                     b.Navigation("MenuItem");
                 });
 
+            modelBuilder.Entity("WebApplication2.Models.MenuItemImage", b =>
+                {
+                    b.HasOne("WebApplication2.Models.MenuItem", "MenuItem")
+                        .WithMany("MenuItemImages")
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MenuItem");
+                });
+
             modelBuilder.Entity("WebApplication2.Models.MenuItemRating", b =>
                 {
                     b.HasOne("WebApplication2.Models.Member", "Member")
@@ -379,9 +443,25 @@ namespace WebApplication2.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("WebApplication2.Models.PersonalizationOption", b =>
+                {
+                    b.HasOne("WebApplication2.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("WebApplication2.Models.Category", b =>
                 {
                     b.Navigation("MenuItems");
+                });
+
+            modelBuilder.Entity("WebApplication2.Models.MenuItem", b =>
+                {
+                    b.Navigation("MenuItemImages");
                 });
 
             modelBuilder.Entity("WebApplication2.Models.Order", b =>

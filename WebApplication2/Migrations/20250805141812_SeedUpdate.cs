@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WebApplication2.Migrations
 {
     /// <inheritdoc />
-    public partial class CREATEDB : Migration
+    public partial class SeedUpdate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -68,6 +68,26 @@ namespace WebApplication2.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PersonalizationOptions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PersonalizationOptions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PersonalizationOptions_Categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "CategoryId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MemberPhotos",
                 columns: table => new
                 {
@@ -96,7 +116,8 @@ namespace WebApplication2.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MemberEmail = table.Column<string>(type: "nvarchar(100)", nullable: false),
                     OrderDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -174,7 +195,8 @@ namespace WebApplication2.Migrations
                     OrderId = table.Column<int>(type: "int", nullable: false),
                     MenuItemId = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    SelectedPersonalizations = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -237,6 +259,11 @@ namespace WebApplication2.Migrations
                 name: "IX_Orders_MemberEmail",
                 table: "Orders",
                 column: "MemberEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PersonalizationOptions_CategoryId",
+                table: "PersonalizationOptions",
+                column: "CategoryId");
         }
 
         /// <inheritdoc />
@@ -253,6 +280,9 @@ namespace WebApplication2.Migrations
 
             migrationBuilder.DropTable(
                 name: "OrderItems");
+
+            migrationBuilder.DropTable(
+                name: "PersonalizationOptions");
 
             migrationBuilder.DropTable(
                 name: "MenuItems");

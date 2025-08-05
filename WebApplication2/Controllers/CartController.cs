@@ -23,7 +23,7 @@ public class CartController : Controller
     // POST: /Cart/Add (Modified to return JSON for AJAX calls from MenuItem/Index)
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Add(int menuItemId, int quantity)
+    public IActionResult Add(int menuItemId, int quantity, string? SelectedPersonalizations)
     {
         // Basic authorization check
         if (!User.IsInRole("Member"))
@@ -43,7 +43,8 @@ public class CartController : Controller
 
         // Retrieve or initialize the cart from session
         var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
-        var existing = cart.FirstOrDefault(x => x.MenuItemId == menuItemId);
+        // Find existing item with same MenuItemId and same SelectedPersonalizations
+        var existing = cart.FirstOrDefault(x => x.MenuItemId == menuItemId && (x.SelectedPersonalizations ?? "") == (SelectedPersonalizations ?? ""));
 
         if (existing != null)
         {
@@ -59,7 +60,8 @@ public class CartController : Controller
                 Name = menuItem.Name, 
                 Price = menuItem.Price, 
                 Quantity = quantity,
-                PhotoURL = menuItem.PhotoURL ?? "default.jpg"  // Add photo URL with fallback
+                PhotoURL = menuItem.PhotoURL ?? "default.jpg",
+                SelectedPersonalizations = SelectedPersonalizations
             });
         }
 
@@ -162,7 +164,7 @@ public class CartController : Controller
             return RedirectToAction("Index"); // Redirect if cart is empty
         }
 
-        var vm = new PaymentVM { Total = total };
+        var vm = new PaymentVM { Total = total, CartItems = cart };
         return View(vm);
     }
 
@@ -197,7 +199,8 @@ public class CartController : Controller
                     MenuItemName = oi.MenuItem?.Name, // Use null-conditional operator for safety
                     Quantity = oi.Quantity,
                     UnitPrice = oi.UnitPrice,
-                    PhotoURL = oi.MenuItem?.PhotoURL // Optional: Photo for history
+                    PhotoURL = oi.MenuItem?.PhotoURL, // Optional: Photo for history
+                    SelectedPersonalizations = oi.SelectedPersonalizations // Map personalization to VM
                 }).ToList(),
                 Total = order.OrderItems.Sum(oi => oi.UnitPrice * oi.Quantity) // Calculate total
             };
@@ -218,6 +221,7 @@ public class CartController : Controller
         // Security: Re-calculate total from session on the server to prevent client-side tampering
         var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
         vm.Total = cart.Sum(item => item.Price * item.Quantity);
+        vm.CartItems = cart;
 
         // Adjust validation for CardNumber if PaymentMethod is Cash
         if (vm.PaymentMethod == "Cash")
@@ -261,15 +265,17 @@ public class CartController : Controller
                 OrderId = order.OrderId,
                 MenuItemId = item.MenuItemId,
                 Quantity = item.Quantity,
-                UnitPrice = item.Price
+                UnitPrice = item.Price,
+                SelectedPersonalizations = item.SelectedPersonalizations // Save personalization to DB
             });
         }
         await _db.SaveChangesAsync();
 
-        // Store payment information in TempData for the receipt
+        // Store payment and delivery information in TempData for the receipt
         TempData["LastPaymentMethod"] = vm.PaymentMethod;
         TempData["LastPhoneNumber"] = vm.PhoneNumber;
         TempData["LastDeliveryInstructions"] = vm.DeliveryInstructions;
+        TempData["LastDeliveryOption"] = vm.DeliveryOption;
         if (vm.PaymentMethod == "Card")
         {
             TempData["LastCardNumber"] = vm.CardNumber;
@@ -305,6 +311,7 @@ public class CartController : Controller
         string phoneNumber = TempData["LastPhoneNumber"] as string;
         string deliveryInstructions = TempData["LastDeliveryInstructions"] as string;
         string cardNumber = TempData["LastCardNumber"] as string;
+        string deliveryOption = TempData["LastDeliveryOption"] as string;
 
         // Map database entities to the ReceiptVM for display
         var receiptItems = order.OrderItems.Select(oi => new CartItemVM
@@ -312,7 +319,8 @@ public class CartController : Controller
             MenuItemId = oi.MenuItemId,
             Name = oi.MenuItem.Name,
             Price = oi.UnitPrice,
-            Quantity = oi.Quantity
+            Quantity = oi.Quantity,
+            SelectedPersonalizations = oi.SelectedPersonalizations // Ensure this is mapped if present in your OrderItem entity
         }).ToList();
 
         var vm = new ReceiptVM
@@ -326,7 +334,8 @@ public class CartController : Controller
             Status = order.Status,
             PhoneNumber = phoneNumber,
             DeliveryInstructions = deliveryInstructions,
-            CardNumber = cardNumber
+            CardNumber = cardNumber,
+            DeliveryOption = deliveryOption
         };
 
         return View(vm);
@@ -350,6 +359,7 @@ public class CartItemVM
     public decimal Price { get; set; }
     public int Quantity { get; set; }
     public string PhotoURL { get; set; }  // Added for displaying item images
+    public string? SelectedPersonalizations { get; set; } // Comma-separated personalization option names
 }
 
 // ViewModel for the payment page
@@ -388,7 +398,12 @@ public class PaymentVM
     [StringLength(500, ErrorMessage = "Delivery instructions cannot exceed 500 characters")]
     public string? DeliveryInstructions { get; set; }
 
+    [Display(Name = "Delivery Option")]
+    [Required(ErrorMessage = "Please select a delivery option.")]
+    public string DeliveryOption { get; set; } // "Delivery" or "Pickup"
+
     public decimal Total { get; set; } // Set by the controller based on session cart
+    public List<CartItemVM> CartItems { get; set; } = new List<CartItemVM>(); // Add this property
 }
 
 // ViewModel for the receipt page
@@ -406,6 +421,7 @@ public class ReceiptVM
     public string PhoneNumber { get; set; }
     public string DeliveryInstructions { get; set; }
     public string CardNumber { get; set; }  // Only last 4 digits will be displayed
+    public string DeliveryOption { get; set; } // Add delivery option
 }
 
 public class OrderHistoryVM
@@ -428,4 +444,5 @@ public class OrderItemVM // A ViewModel for items within an order history record
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; } // Price at the time of order
     public string PhotoURL { get; set; } // Optional: for displaying item photos in history
+    public string? SelectedPersonalizations { get; set; } // Add this property for personalization display
 }

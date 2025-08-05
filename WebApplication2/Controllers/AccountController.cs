@@ -272,23 +272,78 @@ public class AccountController : Controller
                           .FirstOrDefault(x => x.Email == User.Identity!.Name);
         if (m == null) return RedirectToAction("Index", "Home");
 
+        // Validate regular photo upload
         if (vm.ProfilePicture != null)
         {
             var err = hp.ValidatePhoto(vm.ProfilePicture);
-            if (err != "") ModelState.AddModelError("Photo", err);
+            if (err != "") ModelState.AddModelError("ProfilePicture", err);
         }
 
         if (ModelState.IsValid)
         {
             m.Name = vm.Name;
 
-            // Handle new photo upload
-            if (vm.ProfilePicture != null)
+            // Handle processed image data (from cropper)
+            if (!string.IsNullOrEmpty(vm.ProcessedImageData))
+            {
+                try
+                {
+                    // Save current photo to history if it exists and is not default
+                    if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
+                    {
+                        if (!m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
+                        {
+                            m.MemberPhotos.Add(new MemberPhoto
+                            {
+                                MemberEmail = m.Email,
+                                FileName = m.PhotoURL,
+                                UploadDate = DateTime.Now
+                            });
+                        }
+                    }
+
+                    // Delete old photo file
+                    if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
+                    {
+                        hp.DeletePhoto(m.PhotoURL, "photos");
+                    }
+
+                    // Convert base64 to image and save
+                    string newFileName = SaveBase64Image(vm.ProcessedImageData, "photos");
+                    m.PhotoURL = newFileName;
+
+                    // Keep only the 4 most recent previous photos
+                    var toRemove = m.MemberPhotos
+                        .OrderByDescending(p => p.UploadDate)
+                        .Skip(4)
+                        .ToList();
+                    db.MemberPhotos.RemoveRange(toRemove);
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("ProcessedImageData", "Error processing image: " + ex.Message);
+                    // Repopulate photo history for redisplay
+                    vm.Email = m.Email;
+                    vm.PhotoURL = m.PhotoURL;
+                    vm.PhotoHistory = m.MemberPhotos
+                        .OrderByDescending(p => p.UploadDate)
+                        .Take(4)
+                        .Select(p => new ProfilePhotoVM
+                        {
+                            Id = p.Id,
+                            FileName = p.FileName,
+                            UploadDate = p.UploadDate
+                        })
+                        .ToList();
+                    return View(vm);
+                }
+            }
+            // Handle new photo upload (regular file upload)
+            else if (vm.ProfilePicture != null)
             {
                 // Save current photo to history if it exists and is not default
-                if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg")
+                if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
                 {
-                    // Only add to history if not already in history
                     if (!m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
                     {
                         m.MemberPhotos.Add(new MemberPhoto
@@ -305,20 +360,21 @@ public class AccountController : Controller
                         .ToList();
                     db.MemberPhotos.RemoveRange(toRemove);
                 }
+
                 hp.DeletePhoto(m.PhotoURL, "photos");
                 m.PhotoURL = hp.SavePhoto(vm.ProfilePicture, "photos");
             }
             // Handle selecting a previous photo
-            else if (!string.IsNullOrEmpty(Request.Form["SelectedPhotoPath"]))
+            else if (!string.IsNullOrEmpty(vm.SelectedPhotoPath))
             {
-                var selectedPhotoIdStr = Request.Form["SelectedPhotoPath"].ToString();
-                if (int.TryParse(selectedPhotoIdStr, out int selectedPhotoId))
+                if (int.TryParse(vm.SelectedPhotoPath, out int selectedPhotoId))
                 {
                     var selectedPhoto = m.MemberPhotos.FirstOrDefault(p => p.Id == selectedPhotoId);
                     if (selectedPhoto != null)
                     {
                         // Save current photo to history if not already in history and not default
-                        if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && !m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
+                        if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png" &&
+                            !m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
                         {
                             m.MemberPhotos.Add(new MemberPhoto
                             {
@@ -334,7 +390,7 @@ public class AccountController : Controller
 
             db.SaveChanges();
 
-            TempData["Info"] = "Profile updated.";
+            TempData["Info"] = "Profile updated successfully.";
             return RedirectToAction();
         }
 
@@ -353,6 +409,44 @@ public class AccountController : Controller
             .ToList();
         return View(vm);
     }
+
+    // Helper method to save base64 image
+    private string SaveBase64Image(string base64Data, string folder)
+    {
+        try
+        {
+            // Remove data:image/jpeg;base64, prefix if present
+            if (base64Data.Contains(","))
+            {
+                base64Data = base64Data.Split(',')[1];
+            }
+
+            // Convert base64 to byte array
+            byte[] imageBytes = Convert.FromBase64String(base64Data);
+
+            // Generate unique filename
+            string fileName = Guid.NewGuid().ToString("n") + ".jpg";
+            string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", folder);
+
+            // Ensure directory exists
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            string filePath = Path.Combine(uploadsFolder, fileName);
+
+            // Save the file
+            System.IO.File.WriteAllBytes(filePath, imageBytes);
+
+            return fileName;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Failed to save processed image: " + ex.Message);
+        }
+    }
+
 
     // GET: Account/ResetPassword
     public IActionResult ResetPassword()

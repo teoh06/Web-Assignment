@@ -1,12 +1,34 @@
 @model WebApplication2.Models.Category
+@using WebApplication2.Models;
 @{
     ViewBag.Title = "Category Details";
+    var db = Context.RequestServices.GetService(typeof(DB)) as DB;
+    var options = db.PersonalizationOptions.Where(o => o.CategoryId == Model.CategoryId).ToList();
 }
 <div>
     <h4>Name: @Model.Name</h4>
     <a href="@Url.Action("Edit", new { id = Model.CategoryId })" class="btn btn-primary">Edit</a>
     <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
 </div>
+<hr />
+<h5>Personalization Options</h5>
+<ul>
+    @foreach (var opt in options)
+    {
+        <li>
+            @opt.Name
+            <form method="post" asp-action="RemovePersonalizationOption" asp-controller="Category" style="display:inline">
+                <input type="hidden" name="optionId" value="@opt.Id" />
+                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+            </form>
+        </li>
+    }
+</ul>
+<form method="post" asp-action="AddPersonalizationOption" asp-controller="Category">
+    <input type="hidden" name="categoryId" value="@Model.CategoryId" />
+    <input type="text" name="name" placeholder="New option (e.g. Less ice)" required maxlength="100" />
+    <button type="submit" class="btn btn-sm btn-success">Add Option</button>
+</form>
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
 }

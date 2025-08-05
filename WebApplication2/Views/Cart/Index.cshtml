@@ -46,6 +46,24 @@
                                     </td>
                                     <td>
                                         <h6 class="mb-0">@item.Name</h6>
+                                        @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
+                                        {
+                                            var personalizations = item.SelectedPersonalizations.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                            if (personalizations.Length > 1)
+                                            {
+                                                <div class="small text-muted">Personalizations:</div>
+                                                <ul>
+                                                    @foreach (var personalization in personalizations)
+                                                    {
+                                                        <li>@personalization.Trim()</li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <div class="small text-muted">Personalization: @item.SelectedPersonalizations</div>
+                                            }
+                                        }
                                     </td>
                                     <td class="text-end item-price" data-price="@item.Price">
                                         @item.Price.ToString("C", new CultureInfo("en-MY"))

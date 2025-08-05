@@ -1,12 +1,36 @@
 ﻿@model WebApplication2.Models.MenuItemDetailsVM
+@using WebApplication2.Models;
 @{
     ViewBag.Title = "Menu Item Details";
     var menuItem = Model.MenuItem;
+    var db = Context.RequestServices.GetService(typeof(DB)) as DB;
+    var options = db.PersonalizationOptions.Where(o => o.CategoryId == menuItem.CategoryId).ToList();
 }
 <div class="card mb-4 menuitem-details-card">
     <div class="row g-0">
         <div class="col-md-5">
-            <img src="/Images/@menuItem.PhotoURL" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
+            <div id="menuitem-gallery" class="swiper-container">
+                <div class="swiper-wrapper">
+                    @if (menuItem.MenuItemImages != null && menuItem.MenuItemImages.Count > 0)
+                    {
+                        foreach (var img in menuItem.MenuItemImages)
+                        {
+                            <div class="swiper-slide">
+                                <img src="/images/@img.FileName" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
+                            </div>
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(menuItem.PhotoURL))
+                    {
+                        <div class="swiper-slide">
+                            <img src="/images/@menuItem.PhotoURL" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
+                        </div>
+                    }
+                </div>
+                <div class="swiper-pagination"></div>
+                <div class="swiper-button-prev"></div>
+                <div class="swiper-button-next"></div>
+            </div>
         </div>
         <div class="col-md-7">
             <div class="card-body m-4">
@@ -33,7 +57,7 @@
                             <span class="star" data-value="@i" style="font-size:1.5em; cursor:pointer; color:gold;">☆</span>
                         }
                     </span>
-                    </div>
+                </div>
                 }
                 else
                 {
@@ -47,10 +71,25 @@
                 <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
                 @if (User.IsInRole("Member"))
                 {
-                    <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline">
+                    <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline" id="addToCartForm">
                         <input type="hidden" name="menuItemId" value="@menuItem.MenuItemId" />
                         <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px" />
-                        <button type="submit" class="btn btn-success">Add to Cart</button>
+                        @if (options.Any())
+                        {
+                            <div class="mb-2">
+                                <label>Personalization:</label>
+                                <div>
+                                    @foreach (var opt in options)
+                                    {
+                                        <label class="me-2">
+                                            <input type="checkbox" name="personalizations" value="@opt.Name" /> @opt.Name
+                                        </label>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        <input type="hidden" name="SelectedPersonalizations" id="SelectedPersonalizations" />
+                        <button type="submit" class="btn btn-success" onclick="collectPersonalizations(event)">Add to Cart</button>
                     </form>
                 }
             </div>
@@ -84,7 +123,22 @@
 </div>
 
 @section Scripts {
+<script src="https://unpkg.com/swiper@10/swiper-bundle.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/swiper@10/swiper-bundle.min.css" />
 <script>
+    var swiper = new Swiper('#menuitem-gallery', {
+        loop: true,
+        pagination: {
+            el: '.swiper-pagination',
+            clickable: true,
+        },
+        navigation: {
+            nextEl: '.swiper-button-next',
+            prevEl: '.swiper-button-prev',
+        },
+        slidesPerView: 1,
+        spaceBetween: 10,
+    });
 function toggleFavorite(btn) {
     var icon = document.getElementById('fav-icon');
     if (icon.textContent === '♡') {
@@ -143,5 +197,37 @@ function addComment(e) {
         });
     }
 }
+
+function collectPersonalizations(e) {
+    var checked = Array.from(document.querySelectorAll('input[name="personalizations"]:checked')).map(x => x.value);
+    document.getElementById('SelectedPersonalizations').value = checked.join(',');
+}
+
+document.getElementById('addToCartForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    collectPersonalizations(e);
+    var form = e.target;
+    var formData = new FormData(form);
+    var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'RequestVerificationToken': token
+        },
+        body: new URLSearchParams([...formData])
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert(data.message || 'Failed to add to cart.');
+        }
+    })
+    .catch(error => {
+        console.error('Error adding to cart:', error);
+        alert('Something went wrong.');
+    });
+})
 </script>
 }

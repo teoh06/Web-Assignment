@@ -22,6 +22,8 @@ public class DB : DbContext
     public DbSet<MenuItemRating> MenuItemRatings { get; set; }
     public DbSet<MenuItemComment> MenuItemComments { get; set; }
     public DbSet<MemberPhoto> MemberPhotos { get; set; }
+    public DbSet<PersonalizationOption> PersonalizationOptions { get; set; } // Added DbSet for PersonalizationOption
+    public DbSet<MenuItemImage> MenuItemImages { get; set; } // Added DbSet for MenuItemImage
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -109,6 +111,7 @@ public class MenuItem
     [Required(ErrorMessage = "Category is required")]
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
+    public ICollection<MenuItemImage> MenuItemImages { get; set; } // Multiple images
 }
 
 public class Order
@@ -139,6 +142,8 @@ public class OrderItem
     [Required]
     [Column(TypeName = "decimal(18,2)")]
     public decimal UnitPrice { get; set; }
+    [MaxLength(500)]
+    public string? SelectedPersonalizations { get; set; } // Comma-separated option names
 }
 
 public class MenuItemRating
@@ -171,6 +176,28 @@ public class MenuItemComment
     [Required, MaxLength(500)]
     public string Content { get; set; }
     public DateTime CommentedAt { get; set; } = DateTime.Now;
+}
+
+public class PersonalizationOption
+{
+    [Key]
+    public int Id { get; set; }
+    public int CategoryId { get; set; }
+    [ForeignKey("CategoryId")]
+    public Category Category { get; set; }
+    [Required, MaxLength(100)]
+    public string Name { get; set; }
+}
+
+public class MenuItemImage
+{
+    public int Id { get; set; }
+    public int MenuItemId { get; set; }
+    [ForeignKey("MenuItemId")]
+    public MenuItem MenuItem { get; set; }
+    [MaxLength(100)]
+    public string FileName { get; set; }
+    public DateTime UploadDate { get; set; }
 }
 
 // SmtpSetting class does NOT have a [Key] attribute because it's a keyless entity
