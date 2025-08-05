@@ -90,4 +90,29 @@ public class CategoryController : Controller
         if (category == null) return NotFound();
         return View(category);
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult AddPersonalizationOption(int categoryId, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || categoryId <= 0)
+            return RedirectToAction("Details", new { id = categoryId });
+        db.PersonalizationOptions.Add(new PersonalizationOption { CategoryId = categoryId, Name = name.Trim() });
+        db.SaveChanges();
+        return RedirectToAction("Details", new { id = categoryId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult RemovePersonalizationOption(int optionId)
+    {
+        var opt = db.PersonalizationOptions.Find(optionId);
+        if (opt != null)
+        {
+            db.PersonalizationOptions.Remove(opt);
+            db.SaveChanges();
+            return RedirectToAction("Details", new { id = opt.CategoryId });
+        }
+        return RedirectToAction("Index");
+    }
 }
