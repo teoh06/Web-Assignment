@@ -31,9 +31,17 @@
             <input type="file" id="imageInput" name="ImageFiles" accept="image/*" multiple style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;" />
             <div id="preview-content" style="text-align:center;width:100%;">
                 <span id="drop-text" style="color:#888;">Drag & drop images here, or click to select.</span>
-                <div id="preview-images" class="preview-images mt-2"></div>
+                <div id="preview-images" class="preview-images mt-2">
+                    @if (Model.MenuItemImages != null && Model.MenuItemImages.Any())
+                    {
+                        foreach (var img in Model.MenuItemImages)
+                        {
+                            <img src="/images/@img.FileName" class="preview-image" style="max-width:120px;margin:4px;" alt="Menu Item Image" />
+                        }
+                    }
+                </div>
             </div>
-            <button type="button" id="deletePhotos" style="position:absolute;top:0.5rem;right:0.5rem;background:#ef4444;color:white;border:none;border-radius:50%;width:2rem;height:2rem;font-weight:bold;display:none;align-items:center;justify-content:center;opacity:0.8;">&times;</button>
+            <button type="button" id="deletePhotos" style="position:absolute;top:0.5rem;right:0.5rem;background:#ef4444;color:white;border:none;border-radius:50%;width:2rem;height:2rem;font-weight:bold;display:@(Model.MenuItemImages != null && Model.MenuItemImages.Any() ? "flex" : "none");align-items:center;justify-content:center;opacity:0.8;">&times;</button>
         </div>
         <div class="mt-2">Or enter image URL:</div>
         <input asp-for="PhotoURL" id="photoUrlInput" class="form-control mt-2" placeholder="Optional: Enter image URL if not uploading" />
@@ -42,10 +50,9 @@
     <button type="submit" class="btn btn-primary">Save</button>
     <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
 </form>
+
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
-    <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
-    <link href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet" />
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const dropArea = document.getElementById('drop-area');
@@ -56,20 +63,10 @@
             const photoUrlInput = document.getElementById('photoUrlInput');
             let imageFiles = [];
 
-            // Show existing images from Model.MenuItemImages
-            previewImages.innerHTML = '';
-            if (Model.MenuItemImages != null && Model.MenuItemImages.Count > 0) {
+            // Hide drop text if there are existing images
+            if (previewImages.children.length > 0) {
                 dropText.classList.add('hidden');
                 deleteBtn.style.display = 'flex';
-                Model.MenuItemImages.forEach(function(img, idx) {
-                    var imageTag = document.createElement('img');
-                    imageTag.src = '/images/' + img.FileName;
-                    imageTag.className = 'preview-image';
-                    imageTag.style.maxWidth = '120px';
-                    imageTag.style.margin = '4px';
-                    imageTag.setAttribute('data-idx', idx);
-                    previewImages.appendChild(imageTag);
-                });
             }
 
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -78,26 +75,31 @@
                     e.stopPropagation();
                 }, false);
             });
+
             ['dragenter', 'dragover'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => dropArea.classList.add('active'), false);
             });
+
             ['dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'), false);
             });
+
             dropArea.addEventListener('drop', e => {
                 const dt = e.dataTransfer;
                 handleFiles(dt.files);
-            }, false);
+            });
+
             imageInput.addEventListener('change', (e) => {
                 handleFiles(e.target.files);
             });
+
             deleteBtn.addEventListener('click', e => {
                 e.stopPropagation();
                 clearPreviews();
             });
+
             function handleFiles(files) {
                 imageFiles = Array.from(files);
-                previewImages.innerHTML = '';
                 if (imageFiles.length > 0) {
                     dropText.classList.add('hidden');
                     deleteBtn.style.display = 'flex';
@@ -109,18 +111,14 @@
                             img.className = 'preview-image';
                             img.style.maxWidth = '120px';
                             img.style.margin = '4px';
-                            img.setAttribute('data-idx', idx);
-                            // TODO: Add cropper/rotate/flip controls here
                             previewImages.appendChild(img);
                         };
                         reader.readAsDataURL(file);
                     });
                     photoUrlInput.value = '';
-                } else {
-                    dropText.classList.remove('hidden');
-                    deleteBtn.style.display = 'none';
                 }
             }
+
             function clearPreviews() {
                 imageInput.value = '';
                 imageFiles = [];

@@ -93,26 +93,26 @@ public class CategoryController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult AddPersonalizationOption(int categoryId, string name)
+    public IActionResult AddPersonalizationOption(int categoryId, string optionName)
     {
-        if (string.IsNullOrWhiteSpace(name) || categoryId <= 0)
-            return RedirectToAction("Details", new { id = categoryId });
-        db.PersonalizationOptions.Add(new PersonalizationOption { CategoryId = categoryId, Name = name.Trim() });
-        db.SaveChanges();
-        return RedirectToAction("Details", new { id = categoryId });
+        if (!string.IsNullOrWhiteSpace(optionName) && categoryId > 0)
+        {
+            db.PersonalizationOptions.Add(new PersonalizationOption { CategoryId = categoryId, Name = optionName.Trim() });
+            db.SaveChanges();
+        }
+        return RedirectToAction("Edit", new { id = categoryId });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult RemovePersonalizationOption(int optionId)
+    public IActionResult RemovePersonalizationOption(int optionId, int categoryId)
     {
-        var opt = db.PersonalizationOptions.Find(optionId);
+        var opt = db.PersonalizationOptions.FirstOrDefault(o => o.Id == optionId && o.CategoryId == categoryId);
         if (opt != null)
         {
             db.PersonalizationOptions.Remove(opt);
             db.SaveChanges();
-            return RedirectToAction("Details", new { id = opt.CategoryId });
         }
-        return RedirectToAction("Index");
+        return RedirectToAction("Edit", new { id = categoryId });
     }
 }

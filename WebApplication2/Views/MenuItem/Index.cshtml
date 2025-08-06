@@ -45,17 +45,38 @@
             </tr>
         </thead>
         <tbody id="menuItemsTableBody">
-            @if (isAdmin)
+            @foreach (var item in Model.MenuItems)
             {
-                @await Html.PartialAsync("_AdminMenuItemsTableRows", Model.MenuItems)
-            }
-            else if (isMember)
-            {
-                @await Html.PartialAsync("_MemberMenuItemsTableRows", Model.MenuItems)
-            }
-            else
-            {
-                @await Html.PartialAsync("_DefaultMenuItemsTableRows", Model.MenuItems)
+                <tr>
+                    <td>
+                        <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
+                            <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" class="product-photo" />
+                        </a>
+                    </td>
+                    <td>@item.Name</td>
+                    <td>@item.Category?.Name</td>
+                    <td>@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</td>
+                    @if (isAdmin || isMember)
+                    {
+                        <td>
+                            @if (isAdmin)
+                            {
+                                <a class="btn btn-sm btn-warning" asp-controller="MenuItem" asp-action="Edit" asp-route-id="@item.MenuItemId">Edit</a>
+                                <a class="btn btn-sm btn-danger" asp-controller="MenuItem" asp-action="Delete" asp-route-id="@item.MenuItemId">Delete</a>
+                                <a class="btn btn-sm btn-info" asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">Details</a>
+                            }
+                            else if (isMember)
+                            {
+                                <form asp-controller="Cart" asp-action="Add" method="post" class="add-to-cart-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                                    <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px;" class="form-control d-inline-block" />
+                                    <button type="submit" class="btn btn-primary btn-sm mt-1">Add to Cart</button>
+                                </form>
+                            }
+                        </td>
+                    }
+                </tr>
             }
         </tbody>
     </table>
@@ -81,7 +102,7 @@
             document.getElementById('searchInput').value = '';
             document.getElementById('categorySelect').value = '';
             document.getElementById('minPriceInput').value = '';
-            document.getElementById('maxPriceInput').value = '';
+            document.getElementById(' SavemaxPriceInput').value = '';
             performFilter();
         });
 

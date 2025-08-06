@@ -1569,7 +1569,7 @@ html.dark-theme .card .list-group-item {
     position: relative;
 }
 
-@@keyframes titleGlow {
+@keyframes titleGlow {
     from {
         filter: brightness(1);
     }
@@ -1901,7 +1901,7 @@ html.dark-theme .card .list-group-item {
     }
 
 /* Responsive Design */
-@@media (max-width: 768px) {
+@media (max-width: 768px) {
     main {
         padding: 20px;
     }
@@ -1941,3 +1941,320 @@ html.dark-theme .interactive-card {
 html.dark-theme .contact-card {
     box-shadow: 0 15px 40px rgba(40, 167, 69, 0.2);
 }
+
+/* Category Index Page */
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.category-title {
+    font-family: "Victor Mono", monospace;
+    font-size: 2.5rem;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.create-link {
+    background-color: var(--success-color);
+    color: var(--text-light);
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.create-link:hover {
+    background-color: var(--success-hover);
+    transform: translateY(-2px);
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    list-style: none;
+    padding: 0;
+}
+
+.category-card {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px var(--shadow-color);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.category-card:hover {
+    box-shadow: 0 8px 15px var(--shadow-color-dark);
+    transform: translateY(-5px);
+}
+
+.category-image-container {
+    width: 100%;
+    height: 150px;
+    overflow: hidden;
+}
+
+.category-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.category-card:hover .category-image {
+    transform: scale(1.1);
+}
+
+.category-card-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.category-name {
+    font-family: "Victor Mono", monospace;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin: 0 0 10px 0;
+}
+
+.category-card-actions {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-lighter);
+}
+
+.card-action-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.edit-btn {
+    background-color: var(--info-color);
+    color: var(--text-light);
+}
+
+.edit-btn:hover {
+    background-color: #1a7e8f;
+    transform: translateY(-2px);
+}
+
+.details-btn {
+    background-color: var(--bg-tertiary);
+    color: var(--text-light);
+}
+
+.details-btn:hover {
+    background-color: #555;
+    transform: translateY(-2px);
+}
+
+.delete-btn {
+    background-color: var(--danger-color);
+    color: var(--text-light);
+}
+
+.delete-btn:hover {
+    background-color: var(--danger-hover);
+    transform: translateY(-2px);
+}
+
+/* Specific view styles for forms and details */
+.page-header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: var(--text-primary);
+}
+
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 30px;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    transition: all 0.3s ease;
+}
+
+.form-container:hover {
+    box-shadow: 0 8px 20px var(--shadow-color-dark);
+}
+
+.form-field {
+    margin-bottom: 20px;
+}
+
+.form-field label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: var(--text-primary);
+}
+
+.form-field input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-lighter);
+    border-radius: 5px;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    transition: border-color 0.3s ease;
+}
+
+.form-field input[type="text"]:focus {
+    border-color: var(--bg-accent);
+    outline: none;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.back-link {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.back-link:hover {
+    background-color: var(--bg-tertiary);
+    transform: translateY(-2px);
+}
+
+.save-btn {
+    padding: 10px 20px;
+    background-color: var(--success-color);
+    color: var(--text-light);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.save-btn:hover {
+    background-color: var(--success-hover);
+    transform: translateY(-2px);
+}
+
+.delete-card {
+    background-color: var(--card-bg);
+    border: 2px solid var(--danger-color);
+    border-radius: 10px;
+    padding: 25px;
+    text-align: center;
+    max-width: 500px;
+    margin: 50px auto;
+}
+
+.delete-card h3 {
+    color: var(--danger-color);
+    margin-bottom: 15px;
+}
+
+.delete-card p {
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+}
+
+.delete-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.delete-confirm-btn {
+    background-color: var(--danger-color);
+    color: var(--text-light);
+    border: none;
+    padding: 12px 25px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.delete-confirm-btn:hover {
+    background-color: var(--danger-hover);
+    transform: translateY(-2px);
+}
+
+.details-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 30px;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.details-name {
+    font-family: "Victor Mono", monospace;
+    font-size: 2.5rem;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.details-info {
+    margin-top: 20px;
+    padding-left: 20px;
+    border-left: 3px solid var(--bg-accent);
+}
+
+.details-options {
+    margin-top: 30px;
+}
+
+.options-list {
+    list-style: none;
+    padding: 0;
+}
+
+.option-item {
+    background-color: var(--bg-secondary);
+    border-radius: 5px;
+    padding: 12px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.option-actions {
+    display: flex;
+    gap: 10px;
+}
+
