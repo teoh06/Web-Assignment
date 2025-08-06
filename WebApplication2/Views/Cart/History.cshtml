@@ -11,7 +11,11 @@ items, total price, and a link to view the receipt,
 with two orders side by side per row. -->
 @if (!Model.Orders.Any())
 {
-    <p class="in-the-middle">You have no past orders.</p>
+    <div class="text-center empty-cart container py-4">
+        <i class="fas fa-solid fa-clipboard-list fa-3x mb-3"></i>
+        <p class="in-the-middle lead">You have no past orders.</p>
+        <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary">Start Shopping</a>
+    </div>
 }
 else
 {

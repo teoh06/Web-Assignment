@@ -2,15 +2,19 @@
 @{
     ViewBag.Title = "Delete Category";
 }
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <h4>@Model.Name</h4>
-    <form asp-action="Delete" method="post">
-        <input type="hidden" asp-for="CategoryId" />
-        <button type="submit" class="btn btn-danger">Delete</button>
-        <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
-    </form>
-</div>
-@section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
-}
+
+<main>
+    <div class="delete-card">
+        <h3>Are you sure you want to delete this category?</h3>
+        <p>This action is permanent and cannot be undone.</p>
+        <p><strong>Category Name:</strong> @Model.Name</p>
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="CategoryId" />
+            <div class="delete-actions">
+                <button type="submit" class="delete-confirm-btn">Delete</button>
+                <a asp-action="Index" class="back-link">Cancel</a>
+            </div>
+        </form>
+    </div>
+</main>

@@ -4,33 +4,39 @@
 }
 
 <main>
-    <div class="menu-container">
-
-        <p><a href="@Url.Action("Create")">Create New Category</a></p>
-
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr>
-                        <td>@item.Name</td>
-                        <td>
-                            <a href="@Url.Action("Edit", new { id = item.CategoryId })">Edit</a>
-                            <a href="@Url.Action("Details", new { id = item.CategoryId })">Details</a>
-                            <a href="@Url.Action("Delete", new { id = item.CategoryId })">Delete</a>
-
-                            @* 🔗 Link to MenuItem/Index filtered by this Category *@
-                            <a href="@Url.Action("Index", "MenuItem", new { categoryId = item.CategoryId })">Manage Products</a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+    <div class="category-header">
+        <h1 class="category-title">Manage Categories</h1>
+        <a asp-action="Create" class="create-link"><i class="fas fa-plus"></i> Create New Category</a>
     </div>
+
+    @if (Model.Any())
+    {
+        <ul class="category-grid">
+            @foreach (var item in Model)
+            {
+                <li class="category-card">
+                    <div class="category-card-content">
+                        <h2 class="category-name">@item.Name</h2>
+                        <div class="category-card-actions">
+                            <a asp-action="Edit" asp-route-id="@item.CategoryId" class="card-action-btn edit-btn">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a asp-action="Details" asp-route-id="@item.CategoryId" class="card-action-btn details-btn">
+                                <i class="fas fa-info-circle"></i> Details
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@item.CategoryId" class="card-action-btn delete-btn">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="text-center mt-5">
+            <p class="text-muted">No categories found. Start by creating a new one!</p>
+        </div>
+    }
 </main>
