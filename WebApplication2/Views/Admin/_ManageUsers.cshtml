@@ -1,17 +1,51 @@
 @model List<WebApplication2.Models.User>
+
 <h3>Manage Users</h3>
+
 <table class="table table-bordered">
     <thead>
-        <tr><th>Email</th><th>Name</th><th>Role</th></tr>
+        <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
     </thead>
     <tbody>
-    @foreach (var u in Model)
-    {
-        <tr>
-            <td>@u.Email</td>
-            <td>@u.Name</td>
-            <td>@u.Role</td>
-        </tr>
-    }
+        @foreach (var u in Model)
+        {
+            <tr>
+                <td>@u.Email</td>
+                <td>@u.Name</td>
+                <td>@u.Role</td>
+                <td>
+                    @if (u.IsPendingDeletion)
+                    {
+                        <span class="text-danger">Pending Deletion</span>
+                    }
+                    else
+                    {
+                        <span class="text-success">Active</span>
+                    }
+                </td>
+                <td>
+                    @if (!u.IsPendingDeletion)
+                    {
+                        <form asp-controller="Account" asp-action="Delete" method="post" style="display:inline">
+                            <input type="hidden" name="email" value="@u.Email" />
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this user?')">Delete</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-controller="Account" asp-action="Restore" method="post" style="display:inline">
+                            <input type="hidden" name="token" value="@u.DeletionToken" />
+                            <button type="submit" class="btn btn-success btn-sm">Restore</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
     </tbody>
 </table>

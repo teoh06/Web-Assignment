@@ -16,13 +16,14 @@
     <link rel="shortcut icon" href="/images/quickbite.png">
 
     <!-- Immediate theme application to prevent flashing -->
-    <script>
-        (function () {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                document.documentElement.classList.add('dark-theme');
-            }
-        })();
+   <script>
+    (function () {
+        const themeCookie = document.cookie.split('; ').find(row => row.startsWith('theme='));
+        const savedTheme = themeCookie ? themeCookie.split('=')[1] : null;
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark-theme');
+        }
+    })();
     </script>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
@@ -181,25 +182,35 @@
             return confirm("Are you sure you want to logout?");
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const themeToggle = document.getElementById('themeToggle');
             const themeToggleIcon = themeToggle.querySelector('.theme-toggle-icon');
             const themeToggleText = themeToggle.querySelector('.theme-toggle-text');
-            
-            // Check for saved theme preference or default to light mode
-            const currentTheme = localStorage.getItem('theme') || 'light';
-            
-            // Apply the current theme
-            applyTheme(currentTheme);
-            
-            // Add click event listener to theme toggle button
-            themeToggle.addEventListener('click', function() {
+
+            // Helper to get cookie
+            function getCookie(name) {
+                const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                return match ? match[2] : null;
+            }
+
+            // Helper to set cookie
+            function setCookie(name, value, days = 365) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                document.cookie = `${name}=${value}; expires=${date.toUTCString()}; path=/`;
+            }
+
+            // Apply the theme from cookie or default to light
+            const savedTheme = getCookie("theme") || "light";
+            applyTheme(savedTheme);
+
+            themeToggle.addEventListener('click', function () {
                 const isDarkTheme = document.documentElement.classList.contains('dark-theme');
-                const newTheme = isDarkTheme ? 'light' : 'dark';
+                const newTheme = isDarkTheme ? "light" : "dark";
                 applyTheme(newTheme);
-                localStorage.setItem('theme', newTheme);
+                setCookie("theme", newTheme);
             });
-            
+
             function applyTheme(theme) {
                 if (theme === 'dark') {
                     document.documentElement.classList.add('dark-theme');
@@ -210,21 +221,17 @@
                     themeToggleIcon.textContent = '🌙';
                     themeToggleText.textContent = 'Dark';
                 }
-                
-                // Force update for any dynamically loaded content
-                updateDynamicElements();
-            }
-            
-            function updateDynamicElements() {
-                // Force update card styles
+
+                // Optional: trigger visual refresh for dynamic content
                 document.querySelectorAll('.card').forEach(card => {
                     card.style.display = 'none';
-                    card.offsetHeight; // Trigger reflow
+                    card.offsetHeight; // trigger reflow
                     card.style.display = '';
                 });
             }
         });
     </script>
+
 
     @RenderSection("foot", false)
     @RenderSection("Scripts", required: false)
