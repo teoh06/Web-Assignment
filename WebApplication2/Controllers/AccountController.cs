@@ -613,7 +613,7 @@ public class AccountController : Controller
 
             TempData["Info"] = "User marked for deletion.";
         }
-        return RedirectToAction("ManageUsers", "Admin");
+        return RedirectToAction("", "Admin");
     }
 
     [HttpPost]
@@ -629,7 +629,7 @@ public class AccountController : Controller
 
             TempData["Info"] = "User restored.";
         }
-        return RedirectToAction("ManageUsers", "Admin");
+        return RedirectToAction("", "Admin");
     }
 
 

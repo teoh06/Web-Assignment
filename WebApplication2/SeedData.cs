@@ -24,7 +24,7 @@ public static class SeedData
 
             context.Admins.Add(new Admin
             {
-                Email = "admin@email.com",
+                Email = "admin@gmail.com",
                 Name = "Admin",
                 Hash = helper.HashPassword("123456")
             });
