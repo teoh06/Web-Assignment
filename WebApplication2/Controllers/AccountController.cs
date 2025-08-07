@@ -8,6 +8,8 @@ using System; // Make sure this is included for Guid and DateTime
 using System.Diagnostics;
 using System.Linq; // Make sure this is included for Any and Where
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
 
 namespace WebApplication2.Controllers;
 
@@ -15,50 +17,93 @@ public class AccountController : Controller
 {
     private readonly DB db;
     private readonly Helper hp;
-    private readonly IEmailService _emailService; // Add this private field
+    private readonly IEmailService _emailService;
+    private readonly RecaptchaHelper _recaptcha;
 
-    // Modify constructor to accept IEmailService
-    public AccountController(DB db, Helper hp, IEmailService emailService)
+    private const int MaxFailedAttempts = 3;
+    private const int BlockMinutes = 5;
+
+    public AccountController(DB db, Helper hp, IEmailService emailService, RecaptchaHelper recaptcha)
     {
         this.db = db;
         this.hp = hp;
-        this._emailService = emailService; // Assign the injected service
+        this._emailService = emailService;
+        this._recaptcha = recaptcha;
     }
 
     // GET: Account/Login
     public IActionResult Login()
     {
+        ViewBag.SiteKey = HttpContext.RequestServices.GetService<IConfiguration>()?["GoogleReCaptcha:SiteKey"];
         return View();
     }
 
     // POST: Account/Login
     [HttpPost]
-    public IActionResult Login(LoginVM vm, string? returnURL)
+    public async Task<IActionResult> Login(LoginVM vm, string? returnURL)
     {
+        var recaptchaToken = Request.Form["g-recaptcha-response"];
+        if (!await _recaptcha.VerifyAsync(recaptchaToken))
+        {
+            ModelState.AddModelError("", "reCAPTCHA validation failed. Please try again.");
+        }
+
+        // --- Temporary login blocking logic ---
+        string failKey = $"LoginFail_{vm.Email}";
+        string blockKey = $"LoginBlock_{vm.Email}";
+        int failCount = HttpContext.Session.GetInt32(failKey) ?? 0;
+        DateTime? blockUntil = null;
+        var blockUntilStr = HttpContext.Session.GetString(blockKey);
+        if (!string.IsNullOrEmpty(blockUntilStr) && DateTime.TryParse(blockUntilStr, out var dt))
+            blockUntil = dt;
+
+        if (blockUntil.HasValue && blockUntil.Value > DateTime.UtcNow)
+        {
+            var mins = (int)(blockUntil.Value - DateTime.UtcNow).TotalMinutes + 1;
+            ModelState.AddModelError("", $"Too many failed attempts. Login blocked for {mins} more minute(s).");
+            return View(vm);
+        }
+
         // (1) Get user (admin or member) record based on email (PK)
         var u = db.Users.Find(vm.Email);
 
         // (2) Custom validation -> verify password
         if (u == null || !hp.VerifyPassword(u.Hash, vm.Password))
         {
-            ModelState.AddModelError("", "Login credentials not matched.");
+            failCount++;
+            HttpContext.Session.SetInt32(failKey, failCount);
+            if (failCount >= MaxFailedAttempts)
+            {
+                var until = DateTime.UtcNow.AddMinutes(BlockMinutes);
+                HttpContext.Session.SetString(blockKey, until.ToString("o"));
+                ModelState.AddModelError("", $"Too many failed attempts. Login blocked for {BlockMinutes} minutes.");
+                return View(vm);
+            }
+            ModelState.AddModelError("", $"Login credentials not matched. ({failCount}/{MaxFailedAttempts})");
         }
-
-        
         else if (u.IsPendingDeletion) // Add this condition
         {
             ModelState.AddModelError("", "This account is pending deletion. Please check your email for restoration options.");
         }
-        
 
         if (ModelState.IsValid)
         {
             TempData["Info"] = "Login successfully.";
-
-            // (3) Sign in
-            hp.SignIn(u.Email, u.Role, vm.RememberMe);
-
-            // (4) Handle return URL
+            // --- Enhanced Remember Me: set persistent cookie ---
+            var claims = new List<Claim> {
+                new Claim(ClaimTypes.Name, u.Email),
+                new Claim(ClaimTypes.Role, u.Role)
+            };
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = vm.RememberMe,
+                ExpiresUtc = vm.RememberMe ? DateTimeOffset.UtcNow.AddDays(14) : (DateTimeOffset?)null
+            };
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
+            // Reset fail count on success
+            HttpContext.Session.Remove(failKey);
+            HttpContext.Session.Remove(blockKey);
             if (string.IsNullOrEmpty(returnURL))
             {
                 if (u is Admin)
@@ -104,13 +149,20 @@ public class AccountController : Controller
     // GET: Account/Register
     public IActionResult Register()
     {
+        ViewBag.SiteKey = HttpContext.RequestServices.GetService<IConfiguration>()?["GoogleReCaptcha:SiteKey"];
         return View();
     }
 
     // POST: Account/Register
     [HttpPost]
-    public IActionResult Register(RegisterVM vm)
+    public async Task<IActionResult> Register(RegisterVM vm)
     {
+        var recaptchaToken = Request.Form["g-recaptcha-response"];
+        if (!await _recaptcha.VerifyAsync(recaptchaToken))
+        {
+            ModelState.AddModelError("", "reCAPTCHA validation failed. Please try again.");
+        }
+
         if (ModelState.IsValid("Email") &&
             db.Users.Any(u => u.Email == vm.Email))
         {
@@ -220,23 +272,78 @@ public class AccountController : Controller
                           .FirstOrDefault(x => x.Email == User.Identity!.Name);
         if (m == null) return RedirectToAction("Index", "Home");
 
+        // Validate regular photo upload
         if (vm.ProfilePicture != null)
         {
             var err = hp.ValidatePhoto(vm.ProfilePicture);
-            if (err != "") ModelState.AddModelError("Photo", err);
+            if (err != "") ModelState.AddModelError("ProfilePicture", err);
         }
 
         if (ModelState.IsValid)
         {
             m.Name = vm.Name;
 
-            // Handle new photo upload
-            if (vm.ProfilePicture != null)
+            // Handle processed image data (from cropper)
+            if (!string.IsNullOrEmpty(vm.ProcessedImageData))
+            {
+                try
+                {
+                    // Save current photo to history if it exists and is not default
+                    if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
+                    {
+                        if (!m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
+                        {
+                            m.MemberPhotos.Add(new MemberPhoto
+                            {
+                                MemberEmail = m.Email,
+                                FileName = m.PhotoURL,
+                                UploadDate = DateTime.Now
+                            });
+                        }
+                    }
+
+                    // Delete old photo file
+                    if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
+                    {
+                        hp.DeletePhoto(m.PhotoURL, "photos");
+                    }
+
+                    // Convert base64 to image and save
+                    string newFileName = SaveBase64Image(vm.ProcessedImageData, "photos");
+                    m.PhotoURL = newFileName;
+
+                    // Keep only the 4 most recent previous photos
+                    var toRemove = m.MemberPhotos
+                        .OrderByDescending(p => p.UploadDate)
+                        .Skip(4)
+                        .ToList();
+                    db.MemberPhotos.RemoveRange(toRemove);
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("ProcessedImageData", "Error processing image: " + ex.Message);
+                    // Repopulate photo history for redisplay
+                    vm.Email = m.Email;
+                    vm.PhotoURL = m.PhotoURL;
+                    vm.PhotoHistory = m.MemberPhotos
+                        .OrderByDescending(p => p.UploadDate)
+                        .Take(4)
+                        .Select(p => new ProfilePhotoVM
+                        {
+                            Id = p.Id,
+                            FileName = p.FileName,
+                            UploadDate = p.UploadDate
+                        })
+                        .ToList();
+                    return View(vm);
+                }
+            }
+            // Handle new photo upload (regular file upload)
+            else if (vm.ProfilePicture != null)
             {
                 // Save current photo to history if it exists and is not default
-                if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg")
+                if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
                 {
-                    // Only add to history if not already in history
                     if (!m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
                     {
                         m.MemberPhotos.Add(new MemberPhoto
@@ -253,20 +360,21 @@ public class AccountController : Controller
                         .ToList();
                     db.MemberPhotos.RemoveRange(toRemove);
                 }
+
                 hp.DeletePhoto(m.PhotoURL, "photos");
                 m.PhotoURL = hp.SavePhoto(vm.ProfilePicture, "photos");
             }
             // Handle selecting a previous photo
-            else if (!string.IsNullOrEmpty(Request.Form["SelectedPhotoPath"]))
+            else if (!string.IsNullOrEmpty(vm.SelectedPhotoPath))
             {
-                var selectedPhotoIdStr = Request.Form["SelectedPhotoPath"].ToString();
-                if (int.TryParse(selectedPhotoIdStr, out int selectedPhotoId))
+                if (int.TryParse(vm.SelectedPhotoPath, out int selectedPhotoId))
                 {
                     var selectedPhoto = m.MemberPhotos.FirstOrDefault(p => p.Id == selectedPhotoId);
                     if (selectedPhoto != null)
                     {
                         // Save current photo to history if not already in history and not default
-                        if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && !m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
+                        if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png" &&
+                            !m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
                         {
                             m.MemberPhotos.Add(new MemberPhoto
                             {
@@ -282,7 +390,7 @@ public class AccountController : Controller
 
             db.SaveChanges();
 
-            TempData["Info"] = "Profile updated.";
+            TempData["Info"] = "Profile updated successfully.";
             return RedirectToAction();
         }
 
@@ -301,6 +409,44 @@ public class AccountController : Controller
             .ToList();
         return View(vm);
     }
+
+    // Helper method to save base64 image
+    private string SaveBase64Image(string base64Data, string folder)
+    {
+        try
+        {
+            // Remove data:image/jpeg;base64, prefix if present
+            if (base64Data.Contains(","))
+            {
+                base64Data = base64Data.Split(',')[1];
+            }
+
+            // Convert base64 to byte array
+            byte[] imageBytes = Convert.FromBase64String(base64Data);
+
+            // Generate unique filename
+            string fileName = Guid.NewGuid().ToString("n") + ".jpg";
+            string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", folder);
+
+            // Ensure directory exists
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            string filePath = Path.Combine(uploadsFolder, fileName);
+
+            // Save the file
+            System.IO.File.WriteAllBytes(filePath, imageBytes);
+
+            return fileName;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Failed to save processed image: " + ex.Message);
+        }
+    }
+
 
     // GET: Account/ResetPassword
     public IActionResult ResetPassword()

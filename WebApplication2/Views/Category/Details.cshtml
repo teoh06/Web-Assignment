@@ -1,12 +1,49 @@
 @model WebApplication2.Models.Category
+@using WebApplication2.Models;
 @{
     ViewBag.Title = "Category Details";
+    var db = Context.RequestServices.GetService(typeof(DB)) as DB;
+    var options = db.PersonalizationOptions.Where(o => o.CategoryId == Model.CategoryId).ToList();
 }
-<div>
-    <h4>Name: @Model.Name</h4>
-    <a href="@Url.Action("Edit", new { id = Model.CategoryId })" class="btn btn-primary">Edit</a>
-    <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
-</div>
-@section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
-}
+
+<main>
+    <div class="details-container">
+        <div class="details-header">
+            <h1 class="details-name">@Model.Name</h1>
+            <div class="details-actions">
+                <a asp-action="Edit" asp-route-id="@Model.CategoryId" class="card-action-btn edit-btn" style="padding: 12px 24px; margin-right:10px;"><i class="fas fa-edit"></i> Edit</a>
+                <a asp-action="Index" class="back-link">Back to List</a>
+            </div>
+        </div>
+
+        <div class="details-info">
+            <p><strong>Category ID:</strong> @Model.CategoryId</p>
+            <p><strong>Category Name:</strong> @Model.Name</p>
+        </div>
+
+        @if (options.Any())
+        {
+            <div class="details-options">
+                <h2 class="section-title">Personalization Options</h2>
+                <ul class="options-list">
+                    @foreach (var opt in options)
+                    {
+                        <li class="option-item">
+                            <span>@opt.Name</span>
+                            <form method="post" asp-action="RemovePersonalizationOption" asp-controller="Category" style="display:inline">
+                                <input type="hidden" name="optionId" value="@opt.Id" />
+                                <button type="submit" class="card-action-btn delete-btn">Remove</button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        else
+        {
+            <div class="details-options">
+                <p class="text-muted">No personalization options found for this category.</p>
+            </div>
+        }
+    </div>
+</main>

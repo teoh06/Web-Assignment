@@ -1,4 +1,5 @@
 @model WebApplication2.Controllers.ReceiptVM
+@using WebApplication2.Models;
 @using System.Globalization;
 @{
     ViewBag.Title = "Order Receipt";
@@ -31,6 +32,10 @@
                                 <tr>
                                     <td class="text-muted">Order Status:</td>
                                     <td><span class="badge bg-success">@Model.Status</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Delivery Option:</td>
+                                    <td><strong>@Model.DeliveryOption</strong></td>
                                 </tr>
                             </table>
                         </div>
@@ -89,8 +94,28 @@
                         <tbody>
                             @foreach (var item in Model.Items)
                             {
-                                <tr>
-                                    <td>@item.Name</td>
+                                <tr data-menu-item-id="@item.MenuItemId">
+                                    <td>
+                                        @item.Name
+                                        @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
+                                        {
+                                            var personalizations = item.SelectedPersonalizations.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                            if (personalizations.Length > 1)
+                                            {
+                                                <div class="small text-muted">Personalizations:</div>
+                                                <ul>
+                                                    @foreach (var personalization in personalizations)
+                                                    {
+                                                        <li>@personalization.Trim()</li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <div class="small text-muted">Personalization: @item.SelectedPersonalizations</div>
+                                            }
+                                        }
+                                    </td>
                                     <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
                                     <td>@item.Quantity</td>
                                     <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>

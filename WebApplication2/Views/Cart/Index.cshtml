@@ -1,4 +1,4 @@
-@model List<WebApplication2.Controllers.CartItemVM>
+﻿@model List<WebApplication2.Controllers.CartItemVM>
 @using System.Globalization;
 @using Microsoft.AspNetCore.Http;
 @inject IHtmlHelper Html
@@ -7,92 +7,144 @@
     ViewBag.Title = "Your Cart";
 }
 
-@if (!Model.Any())
-{
-    <p class="in-the-middle" id="emptyCartMessage">Your cart is empty.</p>
-}
-else
-{
-    <div id="cartContent">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Price</th>
-                    <th>Quantity</th>
-                    <th>Subtotal</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="cartTableBody">
-                @foreach (var item in Model)
-                {
-                    <tr data-menu-item-id="@item.MenuItemId">
-                        <td>@item.Name</td>
-                        <td class="item-price" data-price="@item.Price">
-                            @item.Price.ToString("C", new CultureInfo("en-MY"))
-                        </td>
-                        <td>
-                            <input type="number"
-                                   class="item-quantity form-control"
-                                   value="@item.Quantity"
-                                   min="1" max="100" style="width:70px; display:inline-block;"
-                                   data-item-price="@item.Price"
-                                   data-menu-item-id="@item.MenuItemId" />
-                        </td>
-                        <td class="item-subtotal">
-                            @((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))
-                        </td>
-                        <td>
-                            <a href="#" class="btn btn-danger btn-sm remove-item" data-menu-item-id="@item.MenuItemId">Remove</a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="3" class="text-end"><h4 style="color: black; margin-top: 10px;">Total:</h4></td>
-                    <td id="grandTotal" colspan="2">
-                        @Model.Sum(item => item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY"))
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
-
-        <div class="mb-3">
-            <a asp-action="Payment" class="btn btn-success">Proceed to Payment</a>
-            <a asp-action="Clear" class="btn btn-warning">Clear Cart</a>
+<div class="container py-4">
+    @if (!Model.Any())
+    {
+        <div class="text-center empty-cart">
+            <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+            <p class="lead" id="emptyCartMessage">Your cart is empty</p>
+            <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary">Start Shopping</a>
         </div>
-    </div>
-}
+    }
+    else
+    {
+        <div class="card" id="cartContent">
+            <div class="card-header">
+                <h4 class="mb-0">Shopping Cart</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 100px">Photo</th>
+                                <th>Item</th>
+                                <th class="text-end">Price</th>
+                                <th style="width: 150px" class="text-center">Quantity</th>
+                                <th class="text-end">Subtotal</th>
+                                <th style="width: 50px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartTableBody">
+                            @foreach (var item in Model)
+                            {
+                                <tr data-menu-item-id="@item.MenuItemId">
+                                    <td>
+                                        <img src="/Images/@(item.PhotoURL ?? "default.jpg")" 
+                                             class="cart-item-image" 
+                                             alt="@item.Name" />
+                                    </td>
+                                    <td>
+                                        <h6 class="mb-0">@item.Name</h6>
+                                        @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
+                                        {
+                                            var personalizations = item.SelectedPersonalizations.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                            if (personalizations.Length > 1)
+                                            {
+                                                <div class="small text-muted">Personalizations:</div>
+                                                <ul>
+                                                    @foreach (var personalization in personalizations)
+                                                    {
+                                                        <li>@personalization.Trim()</li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <div class="small text-muted">Personalization: @item.SelectedPersonalizations</div>
+                                            }
+                                        }
+                                    </td>
+                                    <td class="text-end item-price" data-price="@item.Price">
+                                        @item.Price.ToString("C", new CultureInfo("en-MY"))
+                                    </td>
+                                    <td>
+                                        <div class="quantity-control">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary quantity-btn" 
+                                                    onclick="updateQuantity(this, -1)">−</button>
+                                            <input type="number"
+                                                   class="item-quantity form-control"
+                                                   value="@item.Quantity"
+                                                   min="1" max="100"
+                                                   data-item-price="@item.Price"
+                                                   data-menu-item-id="@item.MenuItemId" />
+                                            <button type="button" class="btn btn-sm btn-outline-secondary quantity-btn" 
+                                                    onclick="updateQuantity(this, 1)">+</button>
+                                        </div>
+                                    </td>
+                                    <td class="text-end item-subtotal">
+                                        @((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-link text-danger remove-item" 
+                                                data-menu-item-id="@item.MenuItemId">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
 
-<br>
-<a asp-action="Index" asp-controller="MenuItem" class="btn btn-secondary in-the-middle">Continue Shopping</a>
+                <div class="cart-summary mt-4">
+                    <div class="row">
+                        <div class="col-md-4 offset-md-8">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Order Summary</h5>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span>Total</span>
+                                        <strong id="grandTotal">
+                                            @Model.Sum(item => item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY"))
+                                        </strong>
+                                    </div>
+                                    <a asp-action="Payment" class="btn btn-success w-100 mb-2">Proceed to Payment</a>
+                                    <button onclick="clearCart()" class="btn btn-outline-danger w-100">Clear Cart</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a asp-action="Index" asp-controller="MenuItem" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Continue Shopping
+            </a>
+        </div>
+    }
+</div>
 
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const cartTableBody = document.getElementById('cartTableBody');
             const grandTotalElement = document.getElementById('grandTotal');
-            const cartContentDiv = document.getElementById('cartContent'); // To hide/show cart section
-            const emptyCartMessage = document.getElementById('emptyCartMessage'); // To show message
+            const cartContentDiv = document.getElementById('cartContent');
+            const emptyCartMessage = document.getElementById('emptyCartMessage');
 
-            // Currency formatter for Malaysian Ringgit (adjust locale if needed)
             const currencyFormatter = new Intl.NumberFormat('en-MY', {
                 style: 'currency',
                 currency: 'MYR'
             });
 
-            // Function to get Anti-Forgery Token
             function getAntiForgeryToken() {
-                // This assumes your _Layout.cshtml or page has an input for the token.
-                // Common ways: <input type="hidden" name="__RequestVerificationToken" value="YOUR_TOKEN_HERE">
-                // or if it's within a form generated by ASP.NET Core:
                 const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
                 return tokenInput ? tokenInput.value : '';
             }
 
-            // Function to update individual subtotals and the grand total on the client-side
             function updateDisplayTotals() {
                 let currentGrandTotal = 0;
                 document.querySelectorAll('#cartTableBody tr').forEach(row => {
@@ -107,35 +159,41 @@ else
                 });
                 grandTotalElement.textContent = currencyFormatter.format(currentGrandTotal);
 
-                // Show/hide empty cart message based on cart content
                 if (cartTableBody.children.length === 0) {
-                    if (cartContentDiv) cartContentDiv.style.display = 'none';
-                    if (emptyCartMessage) emptyCartMessage.style.display = 'block';
-                } else {
-                    if (cartContentDiv) cartContentDiv.style.display = 'block';
-                    if (emptyCartMessage) emptyCartMessage.style.display = 'none';
+                    location.reload(); // Refresh to show empty cart message
                 }
             }
 
-            // --- Event Listener for Quantity Changes ---
+            window.updateQuantity = function(button, change) {
+                const container = button.closest('.quantity-control');
+                const input = container.querySelector('.item-quantity');
+                let newValue = parseInt(input.value) + change;
+                
+                // Ensure within bounds
+                newValue = Math.max(1, Math.min(100, newValue));
+                input.value = newValue;
+                
+                // Trigger input event to update cart
+                const event = new Event('input', { bubbles: true });
+                input.dispatchEvent(event);
+            };
+
             cartTableBody.addEventListener('input', function(event) {
                 if (event.target.classList.contains('item-quantity')) {
                     const input = event.target;
                     const menuItemId = input.dataset.menuItemId;
                     let newQuantity = parseInt(input.value);
 
-                    // Basic client-side validation for quantity
                     if (isNaN(newQuantity) || newQuantity < 1) {
                         newQuantity = 1;
-                        input.value = 1; // Correct the input display immediately
+                        input.value = 1;
                     }
                     if (newQuantity > 100) {
                         newQuantity = 100;
-                        input.value = 100; // Correct the input display immediately
+                        input.value = 100;
                     }
 
-                    // Perform AJAX call to update the cart on the server
-                    fetch('/Cart/UpdateQuantity', { // Adjust URL if your CartController is not at /Cart
+                    fetch('/Cart/UpdateQuantity', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -145,74 +203,149 @@ else
                     })
                     .then(response => {
                         if (!response.ok) {
-                            // If server response is not OK, attempt to parse JSON for error message
-                            return response.json().then(error => { throw new Error(error.message || `Server error: ${response.status} ${response.statusText}`); });
-                        }
-                        return response.json(); // Parse the JSON response
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            // Server updated successfully, now update client-side display
-                            updateDisplayTotals();
-                            console.log('Cart quantity updated successfully on server.');
-                        } else {
-                            console.error('Failed to update cart:', data.message);
-                            alert('Failed to update quantity: ' + data.message);
-                            // Optionally, revert input.value or show a more prominent error message
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error during quantity update fetch:', error);
-                        alert('An error occurred while updating quantity. Please try again. ' + error.message);
-                    });
-                }
-            });
-
-                    // --- Event Listener for Remove Item (AJAX) ---
-        cartTableBody.addEventListener('click', function(event) {
-            if (event.target.classList.contains('remove-item')) {
-                event.preventDefault(); // Prevent default link behavior
-
-                // Add a confirmation dialog
-                if (confirm('Are you sure you want to remove this item?')) {
-                    const menuItemId = event.target.dataset.menuItemId;
-                    const rowToRemove = event.target.closest('tr'); // Get the parent <tr> element
-
-                    fetch('/Cart/RemoveItem', { // New AJAX endpoint for removing
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': getAntiForgeryToken()
-                        },
-                        body: JSON.stringify({ menuItemId: menuItemId }) // Only need menuItemId for removal
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.json().then(error => { throw new Error(error.message || `Server error: ${response.status} ${response.statusText}`); });
+                            return response.json().then(error => { throw new Error(error.message || `Server error: ${response.status}`); });
                         }
                         return response.json();
                     })
                     .then(data => {
                         if (data.success) {
-                            if (rowToRemove) {
-                                rowToRemove.remove(); // Remove row from DOM
-                            }
-                            updateDisplayTotals(); // Recalculate and update grand total
+                            updateDisplayTotals();
                         } else {
-                            console.error('Failed to remove item:', data.message);
-                            alert('Failed to remove item: ' + data.message);
+                            alert('Failed to update quantity: ' + data.message);
                         }
                     })
                     .catch(error => {
-                        console.error('Error during item removal fetch:', error);
-                        alert('An error occurred while removing item. Please try again. ' + error.message);
+                        console.error('Error:', error);
+                        alert('An error occurred while updating quantity. Please try again.');
                     });
                 }
-            }
-        });
+            });
 
-            // Initial calculation and display update on page load
+            document.querySelectorAll('.remove-item').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (confirm('Are you sure you want to remove this item?')) {
+                        const menuItemId = this.dataset.menuItemId;
+                        const row = this.closest('tr');
+
+                        fetch('/Cart/RemoveItem', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': getAntiForgeryToken()
+                            },
+                            body: JSON.stringify({ menuItemId: menuItemId })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                row.remove();
+                                updateDisplayTotals();
+                            } else {
+                                alert('Failed to remove item: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('An error occurred while removing the item.');
+                        });
+                    }
+                });
+            });
+
+            window.clearCart = function() {
+                if (confirm('Are you sure you want to clear your cart?')) {
+                    window.location.href = '@Url.Action("Clear")';
+                }
+            };
+
             updateDisplayTotals();
         });
     </script>
 }
+
+<style>
+    .cart-item-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid var(--border-lighter);
+        transition: transform 0.2s;
+    }
+
+    .cart-item-image:hover {
+        transform: scale(1.1);
+    }
+
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .quantity-control .form-control {
+        width: 60px;
+        text-align: center;
+        padding: 4px;
+        border-radius: 4px;
+        border: 1px solid var(--border-lighter);
+    }
+
+    .quantity-btn {
+        padding: 4px 8px;
+        line-height: 1;
+        font-size: 14px;
+    }
+
+    .quantity-btn:hover {
+        background-color: var(--bg-accent);
+        color: var(--text-light);
+    }
+
+    .empty-cart {
+        padding: 40px;
+        color: var(--text-secondary);
+    }
+
+    .cart-summary .card {
+        border: 1px solid var(--border-lighter);
+        box-shadow: 0 2px 4px var(--shadow-color);
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    /* Dark theme support */
+    html.dark-theme .cart-item-image {
+        border-color: var(--border-color);
+    }
+
+    html.dark-theme .quantity-control .form-control {
+        background-color: var(--input-bg);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+
+    html.dark-theme .empty-cart {
+        color: var(--text-primary);
+    }
+
+    @@media (max-width: 768px) {
+        .cart-item-image {
+            width: 60px;
+            height: 60px;
+        }
+
+        .quantity-control {
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .table td {
+            padding: 8px;
+        }
+    }
+</style>

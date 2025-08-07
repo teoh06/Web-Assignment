@@ -14,6 +14,24 @@ public static class SeedData
         // Create DB if it doesn't exist
         context.Database.EnsureCreated();
 
+        // Seed Admin account
+        if (!context.Admins.Any())
+        {
+            var helper = new Helper(
+                serviceProvider.GetRequiredService<IWebHostEnvironment>(),
+                serviceProvider.GetRequiredService<IHttpContextAccessor>(),
+                serviceProvider.GetRequiredService<IConfiguration>());
+
+            context.Admins.Add(new Admin
+            {
+                Email = "admin@email.com",
+                Name = "Admin",
+                Hash = helper.HashPassword("123456")
+            });
+
+            context.SaveChanges();
+        }
+
         // Seed Categories
         if (!context.Categories.Any())
         {
@@ -106,21 +124,33 @@ public static class SeedData
             context.SaveChanges();
         }
 
-        // Seed Admin account
-        if (!context.Admins.Any())
+        // Seed PersonalizationOptions for categories
+        if (!context.PersonalizationOptions.Any())
         {
-            var helper = new Helper(
-                serviceProvider.GetRequiredService<IWebHostEnvironment>(),
-                serviceProvider.GetRequiredService<IHttpContextAccessor>(),
-                serviceProvider.GetRequiredService<IConfiguration>());
+            // Get category IDs
+            var westernFoodId = dbCategories.Single(c => c.Name == "Western Food").CategoryId;
+            var saladsId = dbCategories.Single(c => c.Name == "Salads").CategoryId;
+            var dessertsId = dbCategories.Single(c => c.Name == "Desserts").CategoryId;
+            var beveragesId = dbCategories.Single(c => c.Name == "Beverages").CategoryId;
 
-            context.Admins.Add(new Admin
+            var options = new PersonalizationOption[]
             {
-                Email = "admin@email.com",
-                Name = "Admin",
-                Hash = helper.HashPassword("123456")
-            });
-
+                // Western Food
+                new PersonalizationOption { CategoryId = westernFoodId, Name = "Extra Cheese" },
+                new PersonalizationOption { CategoryId = westernFoodId, Name = "No Onion" },
+                new PersonalizationOption { CategoryId = westernFoodId, Name = "Gluten Free Bun" },
+                // Salads
+                new PersonalizationOption { CategoryId = saladsId, Name = "No Croutons" },
+                new PersonalizationOption { CategoryId = saladsId, Name = "Extra Dressing" },
+                // Desserts
+                new PersonalizationOption { CategoryId = dessertsId, Name = "Extra Cocoa" },
+                new PersonalizationOption { CategoryId = dessertsId, Name = "No Nuts" },
+                // Beverages
+                new PersonalizationOption { CategoryId = beveragesId, Name = "Less Ice" },
+                new PersonalizationOption { CategoryId = beveragesId, Name = "No Sugar" },
+                new PersonalizationOption { CategoryId = beveragesId, Name = "Soy Milk" }
+            };
+            context.PersonalizationOptions.AddRange(options);
             context.SaveChanges();
         }
     }

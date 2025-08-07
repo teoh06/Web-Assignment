@@ -84,27 +84,32 @@ public class EmailVM
     public bool IsBodyHtml { get; set; }
 }
 
-public class ProfilePhotoVM
-{
-    public int Id { get; set; }
-    public string FileName { get; set; }
-    public DateTime UploadDate { get; set; }
-}
-
 public class UpdateProfileVM
 {
-    public string? Email { get; set; }
+    public string Email { get; set; } = "";
 
-    [StringLength(100)]
-    public string Name { get; set; }
+    [Required, MaxLength(100)]
+    public string Name { get; set; } = "";
 
-    public string? PhotoURL { get; set; }
+    public string PhotoURL { get; set; } = "";
 
     public IFormFile? ProfilePicture { get; set; }
 
-    // Add PhotoHistory property for profile photo history
-    public List<ProfilePhotoVM> PhotoHistory { get; set; } = new();
+    // For selecting from photo history
+    public string? SelectedPhotoPath { get; set; }
+
+    // For processed image data (base64)
+    public string? ProcessedImageData { get; set; }
+    public List<ProfilePhotoVM>? PhotoHistory { get; set; }
 }
+
+public class ProfilePhotoVM
+{
+    public int Id { get; set; }
+    public string FileName { get; set; } = "";
+    public DateTime UploadDate { get; set; }
+}
+
 
 public class FeaturedMenuItemVM
 {

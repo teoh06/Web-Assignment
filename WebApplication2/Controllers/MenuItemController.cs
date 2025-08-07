@@ -110,23 +110,34 @@ public class MenuItemController : Controller
     [HttpPost]
     [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
-    public IActionResult Create(MenuItem menuItem, IFormFile ImageFile)
+    public IActionResult Create(MenuItem menuItem, List<IFormFile> ImageFiles)
     {
         if (ModelState.IsValid)
         {
-            if (ImageFile != null && ImageFile.Length > 0)
+            if (ImageFiles != null && ImageFiles.Count > 0)
             {
                 var helper = new Helper(HttpContext.RequestServices.GetService<IWebHostEnvironment>(),
                                        HttpContext.RequestServices.GetService<IHttpContextAccessor>(),
                                        HttpContext.RequestServices.GetService<IConfiguration>());
-                var err = helper.ValidatePhoto(ImageFile);
-                if (!string.IsNullOrEmpty(err))
+                foreach (var imageFile in ImageFiles)
                 {
-                    ModelState.AddModelError("PhotoURL", err);
-                    ViewBag.Categories = db.Categories.ToList();
-                    return View(menuItem);
+                    var err = helper.ValidatePhoto(imageFile);
+                    if (!string.IsNullOrEmpty(err))
+                    {
+                        ModelState.AddModelError("PhotoURL", err);
+                        ViewBag.Categories = db.Categories.ToList();
+                        return View(menuItem);
+                    }
+                    var fileName = helper.SavePhoto(imageFile, "images");
+                    db.MenuItemImages.Add(new MenuItemImage {
+                        MenuItem = menuItem,
+                        FileName = fileName,
+                        UploadDate = DateTime.Now
+                    });
+                    // Set first image as PhotoURL for backward compatibility
+                    if (string.IsNullOrEmpty(menuItem.PhotoURL))
+                        menuItem.PhotoURL = fileName;
                 }
-                menuItem.PhotoURL = helper.SavePhoto(ImageFile, "images");
             }
             db.MenuItems.Add(menuItem);
             db.SaveChanges();
@@ -139,7 +150,9 @@ public class MenuItemController : Controller
     // GET: /MenuItem/Edit/
     public IActionResult Edit(int id)
     {
-        var menuItem = db.MenuItems.Find(id);
+        var menuItem = db.MenuItems
+            .Include(m => m.MenuItemImages)
+            .FirstOrDefault(m => m.MenuItemId == id);
         if (menuItem == null) return NotFound();
         ViewBag.Categories = db.Categories.ToList();
         return View(menuItem);
@@ -148,39 +161,68 @@ public class MenuItemController : Controller
     // POST: /MenuItem/Edit/
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Edit(int id, MenuItem menuItem, IFormFile ImageFile)
+    public IActionResult Edit(int id, MenuItem menuItem, List<IFormFile> ImageFiles)
     {
         if (id != menuItem.MenuItemId) return NotFound();
         if (ModelState.IsValid)
         {
-            var existing = db.MenuItems.AsNoTracking().FirstOrDefault(m => m.MenuItemId == id);
-            if (existing == null) return NotFound();
-            if (ImageFile != null && ImageFile.Length > 0)
+            try
             {
-                var helper = new Helper(HttpContext.RequestServices.GetService<IWebHostEnvironment>(),
-                                       HttpContext.RequestServices.GetService<IHttpContextAccessor>(),
-                                       HttpContext.RequestServices.GetService<IConfiguration>());
-                var err = helper.ValidatePhoto(ImageFile);
-                if (!string.IsNullOrEmpty(err))
+                var existing = db.MenuItems
+                    .Include(m => m.MenuItemImages)
+                    .FirstOrDefault(m => m.MenuItemId == id);
+
+                if (existing == null) return NotFound();
+
+                // Process new image uploads (append, do not remove old images)
+                if (ImageFiles != null && ImageFiles.Count > 0)
                 {
-                    ModelState.AddModelError("PhotoURL", err);
-                    ViewBag.Categories = db.Categories.ToList();
-                    return View(menuItem);
+                    var helper = new Helper(HttpContext.RequestServices.GetService<IWebHostEnvironment>(),
+                                   HttpContext.RequestServices.GetService<IHttpContextAccessor>(),
+                                   HttpContext.RequestServices.GetService<IConfiguration>());
+                    
+                    foreach (var imageFile in ImageFiles)
+                    {
+                        var err = helper.ValidatePhoto(imageFile);
+                        if (!string.IsNullOrEmpty(err))
+                        {
+                            ModelState.AddModelError("ImageFiles", err);
+                            ViewBag.Categories = db.Categories.ToList();
+                            // Reload images for the view
+                            menuItem.MenuItemImages = existing.MenuItemImages.ToList();
+                            return View(menuItem);
+                        }
+
+                        var fileName = helper.SavePhoto(imageFile, "images");
+                        db.MenuItemImages.Add(new MenuItemImage {
+                            MenuItemId = menuItem.MenuItemId,
+                            FileName = fileName,
+                            UploadDate = DateTime.Now
+                        });
+
+                        // Set first image as PhotoURL for backward compatibility if no PhotoURL exists
+                        if (string.IsNullOrEmpty(menuItem.PhotoURL))
+                        {
+                            menuItem.PhotoURL = fileName;
+                        }
+                    }
                 }
-                // Optionally delete old photo
-                if (!string.IsNullOrEmpty(existing.PhotoURL))
-                    helper.DeletePhoto(existing.PhotoURL, "images");
-                menuItem.PhotoURL = helper.SavePhoto(ImageFile, "images");
+
+                // Update the MenuItem
+                db.Entry(menuItem).State = EntityState.Modified;
+                db.SaveChanges();
+                return RedirectToAction("Details", new { id = menuItem.MenuItemId });
             }
-            else if (string.IsNullOrWhiteSpace(menuItem.PhotoURL))
+            catch (Exception ex)
             {
-                menuItem.PhotoURL = existing.PhotoURL;
+                ModelState.AddModelError("", "Error updating menu item: " + ex.Message);
             }
-            db.Entry(menuItem).State = EntityState.Modified;
-            db.SaveChanges();
-            return RedirectToAction(nameof(Index));
         }
         ViewBag.Categories = db.Categories.ToList();
+        // Reload images for the view
+        var reload = db.MenuItems.Include(m => m.MenuItemImages).FirstOrDefault(m => m.MenuItemId == id);
+        if (reload != null)
+            menuItem.MenuItemImages = reload.MenuItemImages.ToList();
         return View(menuItem);
     }
 
@@ -210,7 +252,9 @@ public class MenuItemController : Controller
     // GET: /MenuItem/Details/
     public IActionResult Details(int id)
     {
-        var menuItem = db.MenuItems.Include(m => m.Category).FirstOrDefault(m => m.MenuItemId == id);
+        var menuItem = db.MenuItems.Include(m => m.Category)
+                                   .Include(m => m.MenuItemImages)
+                                   .FirstOrDefault(m => m.MenuItemId == id);
         if (menuItem == null) return NotFound();
         var ratings = db.MenuItemRatings.Where(r => r.MenuItemId == id).ToList();
         var comments = db.MenuItemComments.Include(c => c.Member).Where(c => c.MenuItemId == id).OrderByDescending(c => c.CommentedAt).ToList();
