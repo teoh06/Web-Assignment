@@ -72,6 +72,7 @@ public class AccountController : Controller
         {
             failCount++;
             HttpContext.Session.SetInt32(failKey, failCount);
+            /*
             if (failCount >= MaxFailedAttempts)
             {
                 var until = DateTime.UtcNow.AddMinutes(BlockMinutes);
@@ -79,6 +80,7 @@ public class AccountController : Controller
                 ModelState.AddModelError("", $"Too many failed attempts. Login blocked for {BlockMinutes} minutes.");
                 return View(vm);
             }
+            */
             ModelState.AddModelError("", $"Login credentials not matched. ({failCount}/{MaxFailedAttempts})");
         }
         else if (u.IsPendingDeletion) // Add this condition

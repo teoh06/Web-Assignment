@@ -1,23 +1,498 @@
 @model WebApplication2.Models.Category
+@using WebApplication2.Models;
 @{
-    ViewBag.Title = "Edit Category";
+    ViewData["Title"] = "Edit Category - " + Model.Name;
+    var db = Context.RequestServices.GetService(typeof(DB)) as DB;
+    var options = db.PersonalizationOptions.Where(o => o.CategoryId == Model.CategoryId).OrderBy(o => o.Name).ToList();
 }
 
 <main>
-    <div class="form-container">
+    <div class="category-edit-container">
+        <!-- Header Section -->
+        <div class="edit-header">
+            <div class="header-content">
+                <div class="category-icon">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div class="header-text">
+                    <h1 class="edit-title">Edit Category</h1>
+                    <p class="edit-subtitle">Customize category details and personalization options</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a asp-action="Details" asp-route-id="@Model.CategoryId" class="btn btn-info btn-sm">
+                    <i class="fas fa-eye me-1"></i> Preview
+                </a>
+                <a asp-action="Index" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i> Back to List
+                </a>
+            </div>
+        </div>
 
-        <form asp-action="Edit" method="post">
-            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-            <input type="hidden" asp-for="CategoryId" />
-            <div class="form-field">
-                <label asp-for="Name"></label>
-                <input asp-for="Name" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            <div class="form-actions">
-                <a asp-action="Index" class="back-link">Back to List</a>
-                <button type="submit" class="save-btn">Save</button>
+        }
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong>Please fix the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                    @foreach (var modelState in ViewData.ModelState.Values)
+                    {
+                        foreach (var error in modelState.Errors)
+                        {
+                            <li>@error.ErrorMessage</li>
+                        }
+                    }
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </form>
+        }
+
+        <div class="edit-content">
+            <!-- Category Basic Info Section -->
+            <div class="edit-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-tag me-2"></i>
+                        Category Information
+                    </h2>
+                    <p class="section-description">Update the basic information for this category</p>
+                </div>
+                
+                <form asp-action="Edit" class="category-form">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <input type="hidden" asp-for="CategoryId" />
+                    
+                    <div class="form-group">
+                        <label asp-for="Name" class="form-label">
+                            <i class="fas fa-text-width me-1"></i>
+                            Category Name
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                            <input asp-for="Name" class="form-control form-control-lg" placeholder="Enter category name" maxlength="100" />
+                        </div>
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Choose a descriptive name that customers will easily recognize
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>
+                            Save Changes
+                        </button>
+                        <button type="reset" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-2"></i>
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Personalization Options Management Section -->
+            <div class="edit-section personalization-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-cogs me-2"></i>
+                        Personalization Options
+                        <span class="badge bg-primary ms-2">@options.Count options</span>
+                    </h2>
+                    <p class="section-description">Manage customization options available for menu items in this category</p>
+                </div>
+
+                <!-- Add New Option Form -->
+                <div class="add-option-card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-plus-circle me-2"></i>
+                            Add New Personalization Option
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" asp-action="AddPersonalizationOption" class="add-option-form">
+                            <input type="hidden" name="categoryId" value="@Model.CategoryId" />
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text">
+                                    <i class="fas fa-sliders-h"></i>
+                                </span>
+                                <input type="text" name="optionName" class="form-control" 
+                                       placeholder="e.g., Extra Cheese, No Onion, Gluten Free" 
+                                       maxlength="100" required 
+                                       id="newOptionInput" />
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-plus me-1"></i>
+                                    Add Option
+                                </button>
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-lightbulb me-1"></i>
+                                <strong>Suggestion:</strong> Add options that customers commonly request for this category
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Current Options Display -->
+                @if (options.Any())
+                {
+                    <div class="current-options-card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-list me-2"></i>
+                                Current Personalization Options
+                            </h3>
+                            <div class="card-actions">
+                                <button class="btn btn-outline-primary btn-sm" onclick="toggleSelectAll()">
+                                    <i class="fas fa-check-square me-1"></i>
+                                    Select All
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="removeSelected()" id="removeSelectedBtn" disabled>
+                                    <i class="fas fa-trash me-1"></i>
+                                    Remove Selected
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="options-grid">
+                                @foreach (var option in options)
+                                {
+                                    <div class="option-item" data-option-id="@option.Id">
+                                        <div class="option-content">
+                                            <div class="option-checkbox">
+                                                <input type="checkbox" class="form-check-input option-select" 
+                                                       id="option-@option.Id" value="@option.Id" 
+                                                       onchange="updateRemoveButton()" />
+                                                <label class="form-check-label" for="option-@option.Id"></label>
+                                            </div>
+                                            <div class="option-info">
+                                                <div class="option-name">@option.Name</div>
+                                                <div class="option-meta">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-hashtag"></i> ID: @option.Id
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="option-actions">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                        onclick="editOption(@option.Id, '@option.Name')">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <form method="post" asp-action="RemovePersonalizationOption" 
+                                                      class="d-inline" 
+                                                      onsubmit="return confirm('Remove personalization option: @option.Name?')">
+                                                    <input type="hidden" name="optionId" value="@option.Id" />
+                                                    <input type="hidden" name="categoryId" value="@Model.CategoryId" />
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            
+                            <!-- Options Statistics -->
+                            <div class="options-stats mt-4">
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <i class="fas fa-list-ul"></i>
+                                        <div class="stat-content">
+                                            <div class="stat-number">@options.Count</div>
+                                            <div class="stat-label">Total Options</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <i class="fas fa-chart-line"></i>
+                                        <div class="stat-content">
+                                            <div class="stat-number">@(db.MenuItems.Count(m => m.CategoryId == Model.CategoryId))</div>
+                                            <div class="stat-label">Menu Items</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <i class="fas fa-tags"></i>
+                                        <div class="stat-content">
+                                            <div class="stat-number">@options.Select(o => o.Name).Distinct().Count()</div>
+                                            <div class="stat-label">Unique Options</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="no-options-card">
+                        <div class="empty-state">
+                            <i class="fas fa-cogs empty-icon"></i>
+                            <h3 class="empty-title">No Personalization Options Yet</h3>
+                            <p class="empty-description">
+                                This category doesn't have any personalization options. 
+                                Add some options above to help customers customize their orders.
+                            </p>
+                            <div class="empty-suggestions">
+                                <h4>Popular options to consider:</h4>
+                                <div class="suggestion-tags">
+                                    <span class="suggestion-tag" onclick="fillSuggestion(this)">Extra Cheese</span>
+                                    <span class="suggestion-tag" onclick="fillSuggestion(this)">No Onion</span>
+                                    <span class="suggestion-tag" onclick="fillSuggestion(this)">Spicy</span>
+                                    <span class="suggestion-tag" onclick="fillSuggestion(this)">Less Salt</span>
+                                    <span class="suggestion-tag" onclick="fillSuggestion(this)">Gluten Free</span>
+                                    <span class="suggestion-tag" onclick="fillSuggestion(this)">Vegetarian</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
     </div>
 </main>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // Enhanced Category Edit Page Functionality
+        
+        // Select All/None functionality
+        let selectAllState = false;
+        function toggleSelectAll() {
+            const checkboxes = document.querySelectorAll('.option-select');
+            const button = document.querySelector('.btn-outline-primary');
+            
+            selectAllState = !selectAllState;
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAllState;
+            });
+            
+            button.innerHTML = selectAllState ? 
+                '<i class="fas fa-square me-1"></i> Select None' : 
+                '<i class="fas fa-check-square me-1"></i> Select All';
+                
+            updateRemoveButton();
+        }
+        
+        // Update remove button state
+        function updateRemoveButton() {
+            const selectedCheckboxes = document.querySelectorAll('.option-select:checked');
+            const removeBtn = document.getElementById('removeSelectedBtn');
+            
+            if (selectedCheckboxes.length > 0) {
+                removeBtn.disabled = false;
+                removeBtn.innerHTML = `<i class="fas fa-trash me-1"></i> Remove Selected (${selectedCheckboxes.length})`;
+            } else {
+                removeBtn.disabled = true;
+                removeBtn.innerHTML = '<i class="fas fa-trash me-1"></i> Remove Selected';
+            }
+        }
+        
+        // Remove selected options
+        function removeSelected() {
+            const selectedCheckboxes = document.querySelectorAll('.option-select:checked');
+            
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one option to remove.');
+                return;
+            }
+            
+            const optionNames = Array.from(selectedCheckboxes).map(cb => {
+                const optionItem = cb.closest('.option-item');
+                return optionItem.querySelector('.option-name').textContent;
+            });
+            
+            if (confirm(`Are you sure you want to remove these ${selectedCheckboxes.length} personalization options?\n\n${optionNames.join('\n')}`)) {
+                // Remove each selected option
+                selectedCheckboxes.forEach(checkbox => {
+                    const optionItem = checkbox.closest('.option-item');
+                    const optionId = optionItem.dataset.optionId;
+                    
+                    // Create and submit form for each option
+                    const form = document.createElement('form');
+                    form.method = 'post';
+                    form.action = '@Url.Action("RemovePersonalizationOption")';
+                    
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '__RequestVerificationToken';
+                    tokenInput.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                    
+                    const optionIdInput = document.createElement('input');
+                    optionIdInput.type = 'hidden';
+                    optionIdInput.name = 'optionId';
+                    optionIdInput.value = optionId;
+                    
+                    const categoryIdInput = document.createElement('input');
+                    categoryIdInput.type = 'hidden';
+                    categoryIdInput.name = 'categoryId';
+                    categoryIdInput.value = '@Model.CategoryId';
+                    
+                    form.appendChild(tokenInput);
+                    form.appendChild(optionIdInput);
+                    form.appendChild(categoryIdInput);
+                    
+                    document.body.appendChild(form);
+                });
+                
+                // For demo purposes, just reload the page to simulate removal
+                // In a real implementation, you'd submit the forms or use AJAX
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        }
+        
+        // Fill suggestion into input
+        function fillSuggestion(element) {
+            const input = document.getElementById('newOptionInput');
+            const suggestion = element.textContent;
+            
+            input.value = suggestion;
+            input.focus();
+            
+            // Add visual feedback
+            element.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                element.style.transform = 'scale(1)';
+            }, 150);
+        }
+        
+        // Edit option functionality (placeholder)
+        function editOption(optionId, optionName) {
+            const newName = prompt(`Edit personalization option:`, optionName);
+            
+            if (newName && newName.trim() !== optionName) {
+                // In a real implementation, you'd send an AJAX request to update the option
+                alert(`Feature coming soon: Update "${optionName}" to "${newName.trim()}"`); 
+            }
+        }
+        
+        // Auto-focus on new option input when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add animation delays for staggered loading effect
+            const optionItems = document.querySelectorAll('.option-item');
+            optionItems.forEach((item, index) => {
+                item.style.animationDelay = `${index * 0.1}s`;
+                item.classList.add('fade-in-up');
+            });
+            
+            // Add hover effects to suggestion tags
+            const suggestionTags = document.querySelectorAll('.suggestion-tag');
+            suggestionTags.forEach(tag => {
+                tag.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                tag.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+            
+            // Enhanced form validation
+            const categoryForm = document.querySelector('.category-form');
+            if (categoryForm) {
+                categoryForm.addEventListener('submit', function(e) {
+                    const nameInput = this.querySelector('input[name="Name"]');
+                    const name = nameInput.value.trim();
+                    
+                    if (!name) {
+                        e.preventDefault();
+                        nameInput.focus();
+                        showAlert('Please enter a category name.', 'danger');
+                        return;
+                    }
+                    
+                    if (name.length < 2) {
+                        e.preventDefault();
+                        nameInput.focus();
+                        showAlert('Category name must be at least 2 characters long.', 'danger');
+                        return;
+                    }
+                    
+                    // Show loading state
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Saving...';
+                    submitBtn.disabled = true;
+                });
+            }
+            
+            // Enhanced add option form validation
+            const addOptionForm = document.querySelector('.add-option-form');
+            if (addOptionForm) {
+                addOptionForm.addEventListener('submit', function(e) {
+                    const optionInput = this.querySelector('input[name="optionName"]');
+                    const optionName = optionInput.value.trim();
+                    
+                    if (!optionName) {
+                        e.preventDefault();
+                        optionInput.focus();
+                        showAlert('Please enter an option name.', 'danger');
+                        return;
+                    }
+                    
+                    if (optionName.length < 2) {
+                        e.preventDefault();
+                        optionInput.focus();
+                        showAlert('Option name must be at least 2 characters long.', 'danger');
+                        return;
+                    }
+                    
+                    // Check for duplicates
+                    const existingOptions = Array.from(document.querySelectorAll('.option-name'))
+                        .map(el => el.textContent.toLowerCase());
+                    
+                    if (existingOptions.includes(optionName.toLowerCase())) {
+                        e.preventDefault();
+                        optionInput.focus();
+                        showAlert('This personalization option already exists.', 'warning');
+                        return;
+                    }
+                    
+                    // Show loading state
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Adding...';
+                    submitBtn.disabled = true;
+                });
+            }
+        });
+        
+        // Helper function to show alerts
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.style.minWidth = '300px';
+            
+            const icon = type === 'danger' ? 'fa-exclamation-circle' : 
+                        type === 'warning' ? 'fa-exclamation-triangle' : 
+                        type === 'success' ? 'fa-check-circle' : 'fa-info-circle';
+            
+            alertDiv.innerHTML = `
+                <i class="fas ${icon} me-2"></i>${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentElement) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+}

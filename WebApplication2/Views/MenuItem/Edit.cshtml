@@ -1,73 +1,114 @@
 @model WebApplication2.Models.MenuItem
 @{
     ViewBag.Title = "Edit Menu Item";
-    var categories = ViewBag.Categories as List<WebApplication2.Models.Category>;
+    var categories = ViewBag.Categories as List<WebApplication2.Models.Category> ?? new List<WebApplication2.Models.Category>();
 }
-<form asp-action="Edit" method="post" enctype="multipart/form-data">
-    <input type="hidden" asp-for="MenuItemId" />
-    <div class="form-group">
-        <label asp-for="Name"></label>
-        <input asp-for="Name" class="form-control" />
-        <span asp-validation-for="Name" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="CategoryId">Category</label>
-        <select asp-for="CategoryId" class="form-control" asp-items="@(new SelectList(categories, "CategoryId", "Name"))"></select>
-        <span asp-validation-for="CategoryId" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="Description"></label>
-        <textarea asp-for="Description" class="form-control"></textarea>
-        <span asp-validation-for="Description" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="Price"></label>
-        <input asp-for="Price" class="form-control" />
-        <span asp-validation-for="Price" class="text-danger"></span>
-    </div>
-    <div class="form-group mb-3">
-        <label class="form-label">Images (Drag & Drop or Select Multiple)</label>
-        <div id="drop-area" class="drag-area position-relative mb-2" style="border:2px dashed #a1a1aa; border-radius:8px; min-height:150px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-            <input type="file" id="imageInput" name="ImageFiles" accept="image/*" multiple style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;" />
-            <div id="preview-content" style="text-align:center;width:100%;">
-                <span id="drop-text" style="color:#888;">Drag & drop images here, or click to select.</span>
-                <div id="preview-images" class="preview-images mt-2">
-                    @if (Model.MenuItemImages != null && Model.MenuItemImages.Any())
-                    {
-                        foreach (var img in Model.MenuItemImages)
-                        {
-                            <img src="/images/@img.FileName" class="preview-image" style="max-width:120px;margin:4px;" alt="Menu Item Image" />
-                        }
-                    }
-                </div>
-            </div>
-            <button type="button" id="deletePhotos" style="position:absolute;top:0.5rem;right:0.5rem;background:#ef4444;color:white;border:none;border-radius:50%;width:2rem;height:2rem;font-weight:bold;display:@(Model.MenuItemImages != null && Model.MenuItemImages.Any() ? "flex" : "none");align-items:center;justify-content:center;opacity:0.8;">&times;</button>
+
+<div class="create-form-container">
+    <h2 class="create-form-title">Edit @Model.Name</h2>
+    
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["SuccessMessage"]
         </div>
-        <div class="mt-2">Or enter image URL:</div>
-        <input asp-for="PhotoURL" id="photoUrlInput" class="form-control mt-2" placeholder="Optional: Enter image URL if not uploading" />
-        <span asp-validation-for="PhotoURL" class="text-danger"></span>
-    </div>
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
-</form>
+    }
+    
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            <h4>Validation Errors:</h4>
+            <ul>
+                @foreach (var modelState in ViewData.ModelState.Values)
+                {
+                    foreach (var error in modelState.Errors)
+                    {
+                        <li>@error.ErrorMessage</li>
+                    }
+                }
+            </ul>
+        </div>
+    }
+    
+    <form asp-action="Edit" method="post" enctype="multipart/form-data" class="create-form">
+        <input type="hidden" asp-for="MenuItemId" />
+        <input type="hidden" name="removeImage" id="removeImage" value="false" />
+
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="form-group">
+            <label asp-for="Name">Item Name</label>
+            <input asp-for="Name" class="form-control" placeholder="Enter menu item name" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Description">Description</label>
+            <textarea asp-for="Description" class="form-control" placeholder="Enter item description" rows="3"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Price">Price</label>
+            <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" placeholder="0.00" />
+            </div>
+            <span asp-validation-for="Price" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="CategoryId">Category</label>
+            <select asp-for="CategoryId" class="form-control" asp-items="@(new SelectList(categories, "CategoryId", "Name"))"></select>
+            <span asp-validation-for="CategoryId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="imageFile">Photo (Optional)</label>
+            <div id="drop-area" class="drag-area">
+                <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" />
+                <div id="preview-content">
+                    <span id="drop-text" style="display: @(string.IsNullOrEmpty(Model.PhotoURL) ? "block" : "none");">Drag & drop an image here, or click to select. (Max 2MB)</span>
+                    <div id="preview-images" class="preview-images">
+                        @if (!string.IsNullOrEmpty(Model.PhotoURL))
+                        {
+                            <img src="/images/@Model.PhotoURL" class="preview-image" style="max-width: 150px; max-height: 150px;" alt="Current Image" />
+                        }
+                    </div>
+                </div>
+                <button type="button" id="deletePhoto" class="btn btn-danger btn-sm fa-solid fa-xmark" style="display: @(string.IsNullOrEmpty(Model.PhotoURL) ? "none" : "block");"></button>
+            </div>
+            <small class="form-text text-muted">Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 2MB.</small>
+            <span asp-validation-for="PhotoURL" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary submit-btn">Save Changes</button>
+        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    </form>
+</div>
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
+        // Add form submission debugging
+        document.querySelector('form').addEventListener('submit', function(e) {
+            console.log('Form submitted');
+            console.log('Form data:', new FormData(this));
+            
+            // Log form field values
+            const formData = new FormData(this);
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+        });
+        
         document.addEventListener('DOMContentLoaded', () => {
             const dropArea = document.getElementById('drop-area');
             const imageInput = document.getElementById('imageInput');
             const dropText = document.getElementById('drop-text');
             const previewImages = document.getElementById('preview-images');
-            const deleteBtn = document.getElementById('deletePhotos');
-            const photoUrlInput = document.getElementById('photoUrlInput');
-            let imageFiles = [];
-
-            // Hide drop text if there are existing images
-            if (previewImages.children.length > 0) {
-                dropText.classList.add('hidden');
-                deleteBtn.style.display = 'flex';
-            }
+            const deleteBtn = document.getElementById('deletePhoto');
+            const removeImageInput = document.getElementById('removeImage'); // Get the hidden input
 
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, e => {
@@ -75,55 +116,54 @@
                     e.stopPropagation();
                 }, false);
             });
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => dropArea.classList.add('active'), false);
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'), false);
-            });
+            ['dragenter', 'dragover'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.add('active')));
+            ['dragleave', 'drop'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.remove('active')));
 
             dropArea.addEventListener('drop', e => {
                 const dt = e.dataTransfer;
-                handleFiles(dt.files);
+                if (dt.files.length > 0) {
+                    imageInput.files = dt.files;
+                    handleFile(dt.files[0]);
+                }
             });
 
             imageInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
             });
 
             deleteBtn.addEventListener('click', e => {
                 e.stopPropagation();
-                clearPreviews();
+                clearPreview();
+                // *** FIX: Set the hidden input value to true on delete ***
+                removeImageInput.value = 'true';
             });
 
-            function handleFiles(files) {
-                imageFiles = Array.from(files);
-                if (imageFiles.length > 0) {
-                    dropText.classList.add('hidden');
-                    deleteBtn.style.display = 'flex';
-                    imageFiles.forEach((file, idx) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            const img = document.createElement('img');
-                            img.src = e.target.result;
-                            img.className = 'preview-image';
-                            img.style.maxWidth = '120px';
-                            img.style.margin = '4px';
-                            previewImages.appendChild(img);
-                        };
-                        reader.readAsDataURL(file);
-                    });
-                    photoUrlInput.value = '';
+            function handleFile(file) {
+                previewImages.innerHTML = '';
+                if (file) {
+                    dropText.style.display = 'none';
+                    deleteBtn.style.display = 'block';
+                    // *** FIX: If a new file is chosen, we are NOT removing the old one (we are replacing) ***
+                    removeImageInput.value = 'false';
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'preview-image';
+                        img.style.maxWidth = '150px';
+                        img.style.maxHeight = '150px';
+                        previewImages.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
                 }
             }
 
-            function clearPreviews() {
+            function clearPreview() {
                 imageInput.value = '';
-                imageFiles = [];
                 previewImages.innerHTML = '';
-                dropText.classList.remove('hidden');
+                dropText.style.display = 'block';
                 deleteBtn.style.display = 'none';
             }
         });

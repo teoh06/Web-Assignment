@@ -67,9 +67,9 @@ public class Member : User
     [MaxLength(100)]
     public string? PhotoURL { get; set; }
     // Navigation property for orders
-    public ICollection<Order> Orders { get; set; }
+    public ICollection<Order> Orders { get; set; } = new List<Order>();
     // Navigation property for photo history
-    public ICollection<MemberPhoto> MemberPhotos { get; set; }
+    public ICollection<MemberPhoto> MemberPhotos { get; set; } = new List<MemberPhoto>();
 }
 
 public class MemberPhoto
@@ -90,7 +90,7 @@ public class Category
     [Required(ErrorMessage ="Category Name is Required"), MaxLength(100)]
     public string Name { get; set; }
     // Navigation property
-    public ICollection<MenuItem>? MenuItems { get; set; }
+    public ICollection<MenuItem>? MenuItems { get; set; } = new List<MenuItem>();
 }
 
 public class MenuItem
@@ -111,7 +111,7 @@ public class MenuItem
     [Required(ErrorMessage = "Category is required")]
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
-    public ICollection<MenuItemImage> MenuItemImages { get; set; } // Multiple images
+    public ICollection<MenuItemImage> MenuItemImages { get; set; } = new List<MenuItemImage>(); // Initialize the collection
 }
 
 public class Order
@@ -124,7 +124,7 @@ public class Order
     public Member Member { get; set; }
     public DateTime OrderDate { get; set; } = DateTime.Now;
     public string Status { get; set; } // e.g., Pending, Preparing, Served
-    public ICollection<OrderItem> OrderItems { get; set; }
+    public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     // Add persistent payment method
     public string PaymentMethod { get; set; } // Cash, Card, etc.
 }

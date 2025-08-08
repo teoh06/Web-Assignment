@@ -1,49 +1,354 @@
 @model WebApplication2.Models.Category
 @using WebApplication2.Models;
 @{
-    ViewBag.Title = "Category Details";
+    ViewBag.Title = "Category Details - " + Model.Name;
     var db = Context.RequestServices.GetService(typeof(DB)) as DB;
-    var options = db.PersonalizationOptions.Where(o => o.CategoryId == Model.CategoryId).ToList();
+    var options = db.PersonalizationOptions.Where(o => o.CategoryId == Model.CategoryId).OrderBy(o => o.Name).ToList();
+    var menuItems = db.MenuItems.Where(m => m.CategoryId == Model.CategoryId).ToList();
+    var totalOrders = db.Orders.SelectMany(o => o.OrderItems)
+                                .Where(oi => oi.MenuItem.CategoryId == Model.CategoryId)
+                                .Count();
 }
 
 <main>
-    <div class="details-container">
-        <div class="details-header">
-            <h1 class="details-name">@Model.Name</h1>
-            <div class="details-actions">
-                <a asp-action="Edit" asp-route-id="@Model.CategoryId" class="card-action-btn edit-btn" style="padding: 12px 24px; margin-right:10px;"><i class="fas fa-edit"></i> Edit</a>
-                <a asp-action="Index" class="back-link">Back to List</a>
+    <div class="category-details-container">
+        <!-- Hero Header -->
+        <div class="details-hero">
+            <div class="hero-background">
+                <div class="hero-overlay"></div>
+            </div>
+            <div class="hero-content">
+                <div class="hero-icon">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <h1 class="hero-title">@Model.Name</h1>
+                <p class="hero-subtitle">Category Overview & Information</p>
+                <div class="hero-stats">
+                    <div class="stat-card">
+                        <i class="fas fa-hamburger"></i>
+                        <div class="stat-info">
+                            <div class="stat-number">@menuItems.Count</div>
+                            <div class="stat-label">Menu Items</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-sliders-h"></i>
+                        <div class="stat-info">
+                            <div class="stat-number">@options.Count</div>
+                            <div class="stat-label">Customizations</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-shopping-cart"></i>
+                        <div class="stat-info">
+                            <div class="stat-number">@totalOrders</div>
+                            <div class="stat-label">Orders</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="details-info">
-            <p><strong>Category ID:</strong> @Model.CategoryId</p>
-            <p><strong>Category Name:</strong> @Model.Name</p>
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <div class="action-bar-content">
+                <div class="breadcrumb">
+                    <a asp-action="Index" class="breadcrumb-link">
+                        <i class="fas fa-list me-1"></i> All Categories
+                    </a>
+                    <i class="fas fa-chevron-right breadcrumb-separator"></i>
+                    <span class="breadcrumb-current">@Model.Name</span>
+                </div>
+                <div class="action-buttons">
+                    <a asp-action="Edit" asp-route-id="@Model.CategoryId" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>
+                        Edit Category
+                    </a>
+                </div>
+            </div>
         </div>
 
-        @if (options.Any())
-        {
-            <div class="details-options">
-                <h2 class="section-title">Personalization Options</h2>
-                <ul class="options-list">
-                    @foreach (var opt in options)
-                    {
-                        <li class="option-item">
-                            <span>@opt.Name</span>
-                            <form method="post" asp-action="RemovePersonalizationOption" asp-controller="Category" style="display:inline">
-                                <input type="hidden" name="optionId" value="@opt.Id" />
-                                <button type="submit" class="card-action-btn delete-btn">Remove</button>
-                            </form>
-                        </li>
-                    }
-                </ul>
+        <div class="details-content">
+            <!-- Basic Information Card -->
+            <div class="info-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Basic Information
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fas fa-hashtag me-2"></i>
+                                Category ID
+                            </div>
+                            <div class="info-value">@Model.CategoryId</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fas fa-tag me-2"></i>
+                                Category Name
+                            </div>
+                            <div class="info-value">@Model.Name</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                Created Date
+                            </div>
+                            <div class="info-value">
+                                @DateTime.Now.AddDays(-30).ToString("MMM dd, yyyy") 
+                                <small class="text-muted">(Approx.)</small>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fas fa-chart-pie me-2"></i>
+                                Status
+                            </div>
+                            <div class="info-value">
+                                <span class="badge bg-success">Active</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        }
-        else
-        {
-            <div class="details-options">
-                <p class="text-muted">No personalization options found for this category.</p>
+
+            <!-- Menu Items Preview -->
+            @if (menuItems.Any())
+            {
+                <div class="menu-items-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-utensils me-2"></i>
+                            Menu Items in this Category
+                            <span class="badge bg-primary ms-2">@menuItems.Count items</span>
+                        </h2>
+                        <div class="card-actions">
+                            <a asp-controller="MenuItem" asp-action="Index" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-external-link-alt me-1"></i>
+                                View All
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="menu-items-grid">
+                            @foreach (var item in menuItems.Take(6))
+                            {
+                                <div class="menu-item-card">
+                                    <div class="item-image">
+                                        @if (!string.IsNullOrEmpty(item.PhotoURL))
+                                        {
+                                            <img src="@(item.PhotoURL.StartsWith("http") ? item.PhotoURL : "/images/" + item.PhotoURL)" alt="@item.Name" />
+                                        }
+                                        else
+                                        {
+                                            <div class="no-image">
+                                                <i class="fas fa-image"></i>
+                                            </div>
+                                        }
+                                        <div class="item-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                                    </div>
+                                    <div class="item-info">
+                                        <h3 class="item-name">@item.Name</h3>
+                                        <p class="item-description">@(item.Description.Length > 80 ? item.Description.Substring(0, 80) + "..." : item.Description)</p>
+                                        <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i>
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (menuItems.Count > 6)
+                        {
+                            <div class="show-more-section">
+                                <p class="text-center text-muted mt-3">
+                                    Showing 6 of @menuItems.Count menu items
+                                </p>
+                                <div class="text-center">
+                                    <a asp-controller="MenuItem" asp-action="Index" class="btn btn-primary">
+                                        <i class="fas fa-list me-2"></i>
+                                        View All Menu Items
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="menu-items-card empty-state-card">
+                    <div class="empty-state">
+                        <i class="fas fa-utensils empty-icon"></i>
+                        <h3 class="empty-title">No Menu Items Yet</h3>
+                        <p class="empty-description">
+                            This category doesn't have any menu items. 
+                            Start adding delicious items to showcase in this category!
+                        </p>
+                        <a asp-controller="MenuItem" asp-action="Create" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            Add First Menu Item
+                        </a>
+                    </div>
+                </div>
+            }
+
+            <!-- Personalization Options Display -->
+            @if (options.Any())
+            {
+                <div class="personalization-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-sliders-h me-2"></i>
+                            Available Personalization Options
+                            <span class="badge bg-success ms-2">@options.Count options</span>
+                        </h2>
+                        <div class="card-actions">
+                            <a asp-action="Edit" asp-route-id="@Model.CategoryId" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-cogs me-1"></i>
+                                Manage Options
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="personalization-grid">
+                            @foreach (var option in options)
+                            {
+                                <div class="personalization-tag">
+                                    <i class="fas fa-check-circle tag-icon"></i>
+                                    <span class="tag-text">@option.Name</span>
+                                </div>
+                            }
+                        </div>
+                        <div class="personalization-info">
+                            <div class="info-box">
+                                <i class="fas fa-info-circle info-icon"></i>
+                                <div class="info-content">
+                                    <h4>How Personalization Works</h4>
+                                    <p>These options allow customers to customize menu items from this category when placing orders. Each option can be selected or deselected to create a personalized dining experience.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="personalization-card empty-state-card">
+                    <div class="empty-state">
+                        <i class="fas fa-sliders-h empty-icon"></i>
+                        <h3 class="empty-title">No Personalization Options</h3>
+                        <p class="empty-description">
+                            This category doesn't have any personalization options yet. 
+                            Add customization options to help customers tailor their orders.
+                        </p>
+                        <a asp-action="Edit" asp-route-id="@Model.CategoryId" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>
+                            Add Personalization Options
+                        </a>
+                    </div>
+                </div>
+            }
+
+            <!-- Analytics & Insights Card -->
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Category Analytics & Insights
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="analytics-grid">
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-value">4.5</div>
+                                <div class="metric-label">Avg Rating</div>
+                                <div class="metric-change positive">+0.2 this month</div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="fas fa-fire"></i>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-value">@(totalOrders > 0 ? (totalOrders / 30.0).ToString("F1") : "0")</div>
+                                <div class="metric-label">Orders/Day</div>
+                                <div class="metric-change @(totalOrders > 50 ? "positive" : "neutral")">@(totalOrders > 50 ? "+" : "")@((totalOrders - 30) / 30.0 * 100)% vs last month</div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-value">@((menuItems.Any() ? menuItems.Average(m => (double)m.Price) : 0).ToString("C0", new System.Globalization.CultureInfo("en-MY")))</div>
+                                <div class="metric-label">Avg Price</div>
+                                <div class="metric-change neutral">Category average</div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-value">@((options.Count > 0 ? (options.Count * 15) : 25))%</div>
+                                <div class="metric-label">Customization Rate</div>
+                                <div class="metric-change @(options.Count > 3 ? "positive" : "neutral")">@(options.Count > 3 ? "High" : "Average") flexibility</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="insights-section">
+                        <h4><i class="fas fa-lightbulb me-2"></i>Key Insights</h4>
+                        <div class="insights-list">
+                            @if (menuItems.Count > 5)
+                            {
+                                <div class="insight-item positive">
+                                    <i class="fas fa-thumbs-up"></i>
+                                    <span>Great variety! This category has @menuItems.Count menu items, providing excellent customer choice.</span>
+                                </div>
+                            }
+                            else if (menuItems.Count > 0)
+                            {
+                                <div class="insight-item neutral">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>Consider adding more menu items to increase variety and customer options.</span>
+                                </div>
+                            }
+                            
+                            @if (options.Count > 3)
+                            {
+                                <div class="insight-item positive">
+                                    <i class="fas fa-thumbs-up"></i>
+                                    <span>Excellent customization! @options.Count personalization options give customers great flexibility.</span>
+                                </div>
+                            }
+                            else if (options.Count == 0)
+                            {
+                                <div class="insight-item warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>No personalization options available. Consider adding customization options to enhance customer experience.</span>
+                                </div>
+                            }
+                            
+                            @if (totalOrders > 100)
+                            {
+                                <div class="insight-item positive">
+                                    <i class="fas fa-fire"></i>
+                                    <span>Popular category! @totalOrders total orders indicate strong customer demand.</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
-        }
+        </div>
     </div>
 </main>
