@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication2.Models;
+using Microsoft.Extensions.Logging;
 
 namespace WebApplication2.Controllers;
 
 public class CategoryController : Controller
 {
     private readonly DB db;
-    public CategoryController(DB db)
+    private readonly ILogger<CategoryController> logger;
+    
+    public CategoryController(DB db, ILogger<CategoryController> logger)
     {
         this.db = db;
+        this.logger = logger;
     }
 
     // GET: /Category
@@ -29,13 +33,46 @@ public class CategoryController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult Create(Category category)
     {
-        if (ModelState.IsValid)
+        logger.LogInformation("Create action called with Category: {@Category}", category);
+        
+        if (!ModelState.IsValid)
         {
+            logger.LogWarning("ModelState is invalid. Errors: {@Errors}", 
+                ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            return View(category);
+        }
+
+        try
+        {
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(category.Name))
+            {
+                ModelState.AddModelError("Name", "Category name is required.");
+                return View(category);
+            }
+
+            // Check if category name already exists
+            var existingCategory = db.Categories.FirstOrDefault(c => c.Name.ToLower() == category.Name.ToLower());
+            if (existingCategory != null)
+            {
+                ModelState.AddModelError("Name", "A category with this name already exists.");
+                return View(category);
+            }
+
+            logger.LogInformation("Adding Category to database: {@Category}", category);
             db.Categories.Add(category);
-            db.SaveChanges();
+            var result = db.SaveChanges();
+            logger.LogInformation("SaveChanges result: {Result}", result);
+
+            TempData["SuccessMessage"] = $"Category '{category.Name}' was created successfully!";
             return RedirectToAction(nameof(Index));
         }
-        return View(category);
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error creating category: {Message}", ex.Message);
+            ModelState.AddModelError("", $"Error creating category: {ex.Message}");
+            return View(category);
+        }
     }
 
     // GET: /Category/Edit/5
@@ -51,14 +88,48 @@ public class CategoryController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult Edit(int id, Category category)
     {
+        logger.LogInformation("Edit action called with id: {Id}, Category: {@Category}", id, category);
+        
         if (id != category.CategoryId) return NotFound();
-        if (ModelState.IsValid)
+        
+        if (!ModelState.IsValid)
         {
+            logger.LogWarning("ModelState is invalid. Errors: {@Errors}", 
+                ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            return View(category);
+        }
+
+        try
+        {
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(category.Name))
+            {
+                ModelState.AddModelError("Name", "Category name is required.");
+                return View(category);
+            }
+
+            // Check if category name already exists (excluding current category)
+            var existingCategory = db.Categories.FirstOrDefault(c => c.Name.ToLower() == category.Name.ToLower() && c.CategoryId != id);
+            if (existingCategory != null)
+            {
+                ModelState.AddModelError("Name", "A category with this name already exists.");
+                return View(category);
+            }
+
+            logger.LogInformation("Updating Category in database: {@Category}", category);
             db.Entry(category).State = EntityState.Modified;
-            db.SaveChanges();
+            var result = db.SaveChanges();
+            logger.LogInformation("SaveChanges result: {Result}", result);
+
+            TempData["SuccessMessage"] = $"Category '{category.Name}' was updated successfully!";
             return RedirectToAction(nameof(Index));
         }
-        return View(category);
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating category: {Message}", ex.Message);
+            ModelState.AddModelError("", $"Error updating category: {ex.Message}");
+            return View(category);
+        }
     }
 
     // GET: /Category/Delete/5

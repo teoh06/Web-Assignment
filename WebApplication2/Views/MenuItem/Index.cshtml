@@ -10,7 +10,7 @@
 <div class="menu-container">
     <!-- Updated form with consistent parameter names and AJAX functionality -->
     <form id="filterForm" class="form-inline mb-3" style="display:flex;gap:10px;flex-wrap:wrap;">
-        <input type="text" name="search" id="searchInput" value="@Context.Request.Query["search"]" placeholder="Search name..." class="form-control" />
+        <input type="text" name="search" id="searchInput" value="@Context.Request.Query["search"]" placeholder="Search name..." class="form-control"/>
         <select name="categoryId" id="categorySelect" class="form-control">
             <option value="">All Categories</option>
             @foreach (var cat in Model.Categories)

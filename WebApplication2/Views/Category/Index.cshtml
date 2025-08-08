@@ -18,14 +18,14 @@
                     <div class="category-card-content">
                         <h2 class="category-name">@item.Name</h2>
                         <div class="category-card-actions">
-                            <a asp-action="Edit" asp-route-id="@item.CategoryId" class="card-action-btn edit-btn">
-                                <i class="fas fa-edit"></i> Edit
+                            <a asp-action="Edit" asp-route-id="@item.CategoryId" class="card-action-btn btn-warning in-the-middle">
+                                <i class="fas fa-edit me-2"></i> Edit
                             </a>
-                            <a asp-action="Details" asp-route-id="@item.CategoryId" class="card-action-btn details-btn">
-                                <i class="fas fa-info-circle"></i> Details
+                            <a asp-action="Details" asp-route-id="@item.CategoryId" class="card-action-btn btn-info in-the-middle">
+                                <i class="fas fa-info-circle me-2"></i> Details
                             </a>
-                            <a asp-action="Delete" asp-route-id="@item.CategoryId" class="card-action-btn delete-btn">
-                                <i class="fas fa-trash-alt"></i> Delete
+                            <a asp-action="Delete" asp-route-id="@item.CategoryId" class="card-action-btn delete-btn in-the-middle">
+                                <i class="fas fa-trash-alt me-2"></i> Delete
                             </a>
                         </div>
                     </div>

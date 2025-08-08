@@ -6,6 +6,12 @@
     var db = Context.RequestServices.GetService(typeof(DB)) as DB;
     var options = db.PersonalizationOptions.Where(o => o.CategoryId == menuItem.CategoryId).ToList();
 }
+@if (TempData["EditMessage"] != null)
+{
+    <div class="alert alert-info" role="alert">
+        @Html.Raw(TempData["EditMessage"])
+    </div>
+}
 <div class="card mb-4 menuitem-details-card">
     <div class="row g-0">
         <div class="col-md-5">
@@ -13,17 +19,15 @@
                 <div class="swiper-wrapper">
                     @if (menuItem.MenuItemImages != null && menuItem.MenuItemImages.Count > 0)
                     {
-                        foreach (var img in menuItem.MenuItemImages)
-                        {
-                            <div class="swiper-slide">
-                                <img src="/images/@img.FileName" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
-                            </div>
-                        }
+                        var img = menuItem.MenuItemImages.First();
+                        <div class="swiper-slide">
+                            <img src="/images/@img.FileName" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
+                        </div>
                     }
                     else if (!string.IsNullOrEmpty(menuItem.PhotoURL))
                     {
                         <div class="swiper-slide">
-                            <img src="/images/@menuItem.PhotoURL" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
+                            <img src="@(menuItem.PhotoURL.StartsWith("http") ? menuItem.PhotoURL : "/images/" + menuItem.PhotoURL)" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
                         </div>
                     }
                 </div>

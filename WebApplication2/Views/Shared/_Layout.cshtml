@@ -1,10 +1,26 @@
-﻿@inject DB db
+@inject DB db
 @{
     WebApplication2.Models.Member member = null;
     if (User.IsInRole("Member"))
     {
         member = db.Members.Find(User.Identity!.Name);
     }
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show auto-dismiss" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["EditMessage"] != null)
+{
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        @Html.Raw(TempData["EditMessage"])
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 }
 
 <!DOCTYPE html>
@@ -75,6 +91,7 @@
 </head>
 
 <body>
+
     <div class="info">@Html.Raw(TempData["Info"])</div>
 
     <header>
@@ -119,26 +136,20 @@
         {
             <a href="/MenuItem/Index">Manage Menu Items</a>
             <a href="/Category/Index">Manage Categories</a>
-            <a class="nav-link" asp-controller="Admin"
-               style="display:inline;
-                    background: var(--nav-button-bg);
-                    color: var(--nav-button-text);
-                    text-decoration: none;
-                    padding: 5px 10px;
-                    white-space: nowrap;" asp-action="Index">Admin Panel</a>
+            <a class="nav-link default-button" asp-controller="Admin" asp-action="Index">Admin Panel</a>
         }
         <div></div>
 
         @* Theme Toggle Button *@
-        <button id="themeToggle" class="theme-toggle">
+        <button id="themeToggle" class="theme-toggle default-button" style="font-size: 20px; line-height: 0;">
             <span class="theme-toggle-icon">🌙</span>
-            <span class="theme-toggle-text">Dark</span>
+            <span class="theme-toggle-text"></span>
         </button>
 
         @if (User.Identity!.IsAuthenticated)
         {
             <form asp-controller="Account" asp-action="Logout" method="post" onsubmit="return confirmLogout();">
-                <button type="submit" class="default-button" style="border: none; line-height: 1.6;">Logout</button>
+                <button type="submit" class="default-button" style="border: none; line-height: 1.8;">Logout</button>
             </form>
 
             <a href="/Account/UpdatePassword">Update Password</a>
@@ -175,12 +186,31 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/app.js" asp-append-version="true"></script>
 
     <script>
         function confirmLogout() {
             return confirm("Are you sure you want to logout?");
         }
+
+        // Auto-dismiss success messages after 4 seconds
+        document.addEventListener('DOMContentLoaded', function () {
+            const autoDissmissAlerts = document.querySelectorAll('.alert.auto-dismiss');
+            autoDissmissAlerts.forEach(function(alert) {
+                setTimeout(function() {
+                    // Use Bootstrap's alert close method
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Alert) {
+                        const bootstrapAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                        bootstrapAlert.close();
+                    } else {
+                        // Fallback: manually fade out and remove
+                        alert.classList.remove('show');
+                        setTimeout(() => alert.remove(), 150);
+                    }
+                }, 4000); // 4 seconds
+            });
+        });
 
         document.addEventListener('DOMContentLoaded', function () {
             const themeToggle = document.getElementById('themeToggle');
@@ -215,11 +245,11 @@
                 if (theme === 'dark') {
                     document.documentElement.classList.add('dark-theme');
                     themeToggleIcon.textContent = '☀️';
-                    themeToggleText.textContent = 'Light';
+                    themeToggleText.textContent = '';
                 } else {
                     document.documentElement.classList.remove('dark-theme');
                     themeToggleIcon.textContent = '🌙';
-                    themeToggleText.textContent = 'Dark';
+                    themeToggleText.textContent = '';
                 }
 
                 // Optional: trigger visual refresh for dynamic content
