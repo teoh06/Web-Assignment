@@ -1416,8 +1416,8 @@ html.dark-theme .danger-zone {
 }
 
 .popup-btn-primary {
-    background: var(--bg-accent);
-    color: var(--text-light);
+    background: var(--accent-green);
+    color: var(--text-primary);
 }
 
     .popup-btn-primary:hover {
@@ -3222,15 +3222,12 @@ html.dark-theme .input-group-text {
 }
 
 .item-price {
-    position: absolute;
     top: 15px;
     right: 15px;
     background: var(--primary-brand);
-    color: var(--text-light);
+    color: var(--text-primary);
     padding: 8px 12px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 1rem;
     box-shadow: var(--shadow-md);
 }
 

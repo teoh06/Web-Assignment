@@ -2,4 +2,97 @@
     ViewBag.Title = "Account | Access Denied";
 }
 
-<p>You are <b>NOT AUTHORIZED</b> to access the page.</p>
+<style>
+    .access-denied-container {
+        max-width: 650px;
+        margin: 50px auto;
+        padding: 30px;
+        background: black;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        border-left: 4px solid #4a6cf7;
+    }
+
+    .access-icon {
+        font-size: 48px;
+        color: #4a6cf7;
+        margin-bottom: 20px;
+        line-height: 1;
+    }
+
+    h1.access-title {
+        color: #1e293b;
+        margin-bottom: 15px;
+        font-size: 28px;
+    }
+
+    .access-message {
+        color: #475569;
+        line-height: 1.6;
+        margin-bottom: 25px;
+        font-size: 16px;
+    }
+
+    .access-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-access {
+        padding: 10px 24px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        font-size: 15px;
+    }
+
+    .btn-primary {
+        background-color: #4a6cf7;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            background-color: #3a5cf0;
+            transform: translateY(-2px);
+        }
+
+    .btn-secondary {
+        background-color: #f1f5f9;
+        color: #1e293b;
+    }
+
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+        }
+
+    .error-code {
+        margin-top: 25px;
+        padding-top: 15px;
+        border-top: 1px solid #e2e8f0;
+        color: #94a3b8;
+        font-size: 14px;
+    }
+</style>
+
+<div class="access-denied-container">
+    <div class="access-icon">🔒</div>
+    <h1 class="access-title">Access Restricted</h1>
+    <p class="access-message">
+        You don't have permission to view this page. This might be because you're not signed in with the right account or this content is restricted.
+    </p>
+
+    <div class="access-actions">
+        <a href="/" class="btn-access btn-primary">Return to Homepage</a>
+    </div>
+
+    <div class="error-code">
+        Error code: 403 Forbidden
+    </div>
+</div>

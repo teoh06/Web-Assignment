@@ -1,5 +1,4 @@
 ﻿@model List<WebApplication2.Controllers.CartItemVM>
-@using System.Globalization;
 @using Microsoft.AspNetCore.Http;
 @inject IHtmlHelper Html
 
@@ -8,17 +7,17 @@
 }
 
 <div class="container py-4">
-    @if (!Model.Any())
-    {
-        <div class="text-center empty-cart">
-            <i class="fas fa-shopping-cart fa-3x mb-3"></i>
-            <p class="lead" id="emptyCartMessage">Your cart is empty</p>
-            <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary">Start Shopping</a>
-        </div>
-    }
-    else
-    {
-        <div class="card" id="cartContent">
+    <div id="cartContent" style="@(Model.Any() ? "" : "display:none;")">
+        <!-- Filter form -->
+        <form id="filterForm" class="form-inline mb-3" style="display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" name="search" id="searchInput" placeholder="Search name..." class="form-control" />
+            <input type="number" name="minPrice" id="minPriceInput" placeholder="Min Price" class="form-control" style="width:120px;" min="0" step="0.01" />
+            <input type="number" name="maxPrice" id="maxPriceInput" placeholder="Max Price" class="form-control" style="width:120px;" min="0" step="0.01" />
+            <button type="submit" class="btn btn-primary" style="margin-left: 20px;">Filter</button>
+            <button type="button" id="clearFilters" class="btn btn-secondary">Clear</button>
+        </form>
+
+        <div class="card">
             <div class="card-header">
                 <h4 class="mb-0">Shopping Cart</h4>
             </div>
@@ -40,8 +39,8 @@
                             {
                                 <tr data-menu-item-id="@item.MenuItemId">
                                     <td>
-                                        <img src="/Images/@(item.PhotoURL ?? "default.jpg")" 
-                                             class="cart-item-image" 
+                                        <img src="/Images/@(item.PhotoURL ?? "default.jpg")"
+                                             class="cart-item-image"
                                              alt="@item.Name" />
                                     </td>
                                     <td>
@@ -66,27 +65,31 @@
                                         }
                                     </td>
                                     <td class="text-end item-price" data-price="@item.Price">
-                                        @item.Price.ToString("C", new CultureInfo("en-MY"))
+                                        RM @item.Price.ToString("0.00")
                                     </td>
                                     <td>
                                         <div class="quantity-control">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary quantity-btn" 
-                                                    onclick="updateQuantity(this, -1)">−</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary quantity-btn"
+                                                    onclick="updateQuantity(this, -1)">
+                                                −
+                                            </button>
                                             <input type="number"
                                                    class="item-quantity form-control"
                                                    value="@item.Quantity"
                                                    min="1" max="100"
                                                    data-item-price="@item.Price"
                                                    data-menu-item-id="@item.MenuItemId" />
-                                            <button type="button" class="btn btn-sm btn-outline-secondary quantity-btn" 
-                                                    onclick="updateQuantity(this, 1)">+</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary quantity-btn"
+                                                    onclick="updateQuantity(this, 1)">
+                                                +
+                                            </button>
                                         </div>
                                     </td>
                                     <td class="text-end item-subtotal">
-                                        @((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))
+                                        RM @((item.Price * item.Quantity).ToString("0.00"))
                                     </td>
                                     <td>
-                                        <button class="btn btn-link text-danger remove-item" 
+                                        <button class="btn btn-link text-danger remove-item"
                                                 data-menu-item-id="@item.MenuItemId">
                                             <i class="fas fa-trash"></i>
                                         </button>
@@ -106,7 +109,7 @@
                                     <div class="d-flex justify-content-between mb-3">
                                         <span>Total</span>
                                         <strong id="grandTotal">
-                                            @Model.Sum(item => item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY"))
+                                            RM @Model.Sum(item => item.Price * item.Quantity).ToString("0.00")
                                         </strong>
                                     </div>
                                     <a asp-action="Payment" class="btn btn-success w-100 mb-2">Proceed to Payment</a>
@@ -124,7 +127,20 @@
                 <i class="fas fa-arrow-left me-2"></i>Continue Shopping
             </a>
         </div>
-    }
+    </div>
+
+    <div id="emptyCart" class="text-center empty-cart" style="@(Model.Any() ? "display:none;" : "")">
+        <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+        <p class="lead" id="emptyCartMessage">Your cart is empty</p>
+        <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary">Start Shopping</a>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" style="display: none; text-align: center; padding: 20px;">
+        <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -133,51 +149,154 @@
             const cartTableBody = document.getElementById('cartTableBody');
             const grandTotalElement = document.getElementById('grandTotal');
             const cartContentDiv = document.getElementById('cartContent');
+            const emptyCartDiv = document.getElementById('emptyCart');
             const emptyCartMessage = document.getElementById('emptyCartMessage');
 
-            const currencyFormatter = new Intl.NumberFormat('en-MY', {
-                style: 'currency',
-                currency: 'MYR'
-            });
+            const currencyFormatter = (value) => `RM ${Number(value).toFixed(2)}`;
 
             function getAntiForgeryToken() {
                 const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
                 return tokenInput ? tokenInput.value : '';
             }
 
-            function updateDisplayTotals() {
-                let currentGrandTotal = 0;
-                document.querySelectorAll('#cartTableBody tr').forEach(row => {
-                    const quantityInput = row.querySelector('.item-quantity');
-                    const subtotalCell = row.querySelector('.item-subtotal');
-                    const price = parseFloat(quantityInput.dataset.itemPrice);
-                    const quantity = parseInt(quantityInput.value);
+            // Filter functionality
+            document.getElementById('filterForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                performFilter();
+            });
 
-                    const subtotal = quantity * price;
-                    subtotalCell.textContent = currencyFormatter.format(subtotal);
-                    currentGrandTotal += subtotal;
-                });
-                grandTotalElement.textContent = currencyFormatter.format(currentGrandTotal);
+            // Clear filters
+            document.getElementById('clearFilters').addEventListener('click', function() {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('minPriceInput').value = '';
+                document.getElementById('maxPriceInput').value = '';
+                performFilter();
+            });
 
-                if (cartTableBody.children.length === 0) {
-                    location.reload(); // Refresh to show empty cart message
+            // Real-time filtering
+            document.getElementById('searchInput').addEventListener('input', debounce(performFilter, 500));
+
+            function performFilter() {
+                const search = document.getElementById('searchInput').value;
+                const minPrice = document.getElementById('minPriceInput').value;
+                const maxPrice = document.getElementById('maxPriceInput').value;
+
+                // Show loading indicator
+                document.getElementById('loadingIndicator').style.display = 'block';
+                document.getElementById('cartTableBody').style.opacity = '0.5';
+
+                // Build query parameters
+                const params = new URLSearchParams();
+                if (search) params.append('search', search);
+                if (minPrice) params.append('minPrice', minPrice);
+                if (maxPrice) params.append('maxPrice', maxPrice);
+
+                // Make AJAX request
+                fetch(`@Url.Action("GetFilteredCartItems", "Cart")?${params.toString()}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        updateTable(data);
+                    })
+                    .catch(error => {
+                        console.error('Error filtering cart items:', error);
+                        alert('Failed to filter cart items. Please try again.');
+                    })
+                    .finally(() => {
+                        // Hide loading indicator
+                        document.getElementById('loadingIndicator').style.display = 'none';
+                        document.getElementById('cartTableBody').style.opacity = '1';
+                    });
+            }
+
+            function updateTable(data) {
+                const tbody = document.getElementById('cartTableBody');
+                grandTotalElement.textContent = currencyFormatter(data.fullTotal);
+
+                if (data.items.length === 0) {
+                    if (data.fullTotal === 0) {
+                        cartContentDiv.style.display = 'none';
+                        emptyCartDiv.style.display = 'block';
+                        emptyCartMessage.textContent = 'Your cart is empty';
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No items match your filter</td></tr>';
+                    }
+                } else {
+                    let html = '';
+                    data.items.forEach(item => {
+                        const photoURL = item.photoURL ? item.photoURL : 'default.jpg';
+                        const personalizations = item.selectedPersonalizations ? item.selectedPersonalizations.split(',').map(p => p.trim()) : [];
+                        let persHtml = '';
+                        if (personalizations.length > 0) {
+                            if (personalizations.length > 1) {
+                                persHtml = '<div class="small text-muted">Personalizations:</div><ul>' + personalizations.map(p => `<li>${p}</li>`).join('') + '</ul>';
+                            } else {
+                                persHtml = `<div class="small text-muted">Personalization: ${personalizations[0]}</div>`;
+                            }
+                        }
+
+                        html += `
+                            <tr data-menu-item-id="${item.menuItemId}">
+                                <td>
+                                    <img src="/Images/${photoURL}" class="cart-item-image" alt="${item.name}" />
+                                </td>
+                                <td>
+                                    <h6 class="mb-0">${item.name}</h6>
+                                    ${persHtml}
+                                </td>
+                                <td class="text-end item-price" data-price="${item.price}">
+                                    ${currencyFormatter(item.price)}
+                                </td>
+                                <td>
+                                    <div class="quantity-control">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary quantity-btn" onclick="updateQuantity(this, -1)">−</button>
+                                        <input type="number" class="item-quantity form-control" value="${item.quantity}" min="1" max="100" data-item-price="${item.price}" data-menu-item-id="${item.menuItemId}" />
+                                        <button type="button" class="btn btn-sm btn-outline-secondary quantity-btn" onclick="updateQuantity(this, 1)">+</button>
+                                    </div>
+                                </td>
+                                <td class="text-end item-subtotal">
+                                    ${currencyFormatter(item.price * item.quantity)}
+                                </td>
+                                <td>
+                                    <button class="btn btn-link text-danger remove-item" data-menu-item-id="${item.menuItemId}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                    cartContentDiv.style.display = 'block';
+                    emptyCartDiv.style.display = 'none';
                 }
+            }
+
+            // Debounce function
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
             }
 
             window.updateQuantity = function(button, change) {
                 const container = button.closest('.quantity-control');
                 const input = container.querySelector('.item-quantity');
                 let newValue = parseInt(input.value) + change;
-                
+
                 // Ensure within bounds
                 newValue = Math.max(1, Math.min(100, newValue));
                 input.value = newValue;
-                
+
                 // Trigger input event to update cart
                 const event = new Event('input', { bubbles: true });
                 input.dispatchEvent(event);
             };
 
+            // Delegated event for quantity input
             cartTableBody.addEventListener('input', function(event) {
                 if (event.target.classList.contains('item-quantity')) {
                     const input = event.target;
@@ -209,7 +328,7 @@
                     })
                     .then(data => {
                         if (data.success) {
-                            updateDisplayTotals();
+                            performFilter();
                         } else {
                             alert('Failed to update quantity: ' + data.message);
                         }
@@ -221,12 +340,13 @@
                 }
             });
 
-            document.querySelectorAll('.remove-item').forEach(button => {
-                button.addEventListener('click', function(e) {
+            // Delegated event for remove item
+            cartTableBody.addEventListener('click', function(e) {
+                const button = e.target.closest('.remove-item');
+                if (button) {
                     e.preventDefault();
                     if (confirm('Are you sure you want to remove this item?')) {
-                        const menuItemId = this.dataset.menuItemId;
-                        const row = this.closest('tr');
+                        const menuItemId = button.dataset.menuItemId;
 
                         fetch('/Cart/RemoveItem', {
                             method: 'POST',
@@ -239,8 +359,7 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                row.remove();
-                                updateDisplayTotals();
+                                performFilter();
                             } else {
                                 alert('Failed to remove item: ' + data.message);
                             }
@@ -250,7 +369,7 @@
                             alert('An error occurred while removing the item.');
                         });
                     }
-                });
+                }
             });
 
             window.clearCart = function() {
@@ -258,8 +377,6 @@
                     window.location.href = '@Url.Action("Clear")';
                 }
             };
-
-            updateDisplayTotals();
         });
     </script>
 }
@@ -274,9 +391,9 @@
         transition: transform 0.2s;
     }
 
-    .cart-item-image:hover {
-        transform: scale(1.1);
-    }
+        .cart-item-image:hover {
+            transform: scale(1.1);
+        }
 
     .quantity-control {
         display: flex;
@@ -285,13 +402,13 @@
         gap: 8px;
     }
 
-    .quantity-control .form-control {
-        width: 60px;
-        text-align: center;
-        padding: 4px;
-        border-radius: 4px;
-        border: 1px solid var(--border-lighter);
-    }
+        .quantity-control .form-control {
+            width: 60px;
+            text-align: center;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid var(--border-lighter);
+        }
 
     .quantity-btn {
         padding: 4px 8px;
@@ -299,10 +416,10 @@
         font-size: 14px;
     }
 
-    .quantity-btn:hover {
-        background-color: var(--bg-accent);
-        color: var(--text-light);
-    }
+        .quantity-btn:hover {
+            background-color: var(--bg-accent);
+            color: var(--text-light);
+        }
 
     .empty-cart {
         padding: 40px;
@@ -334,18 +451,21 @@
     }
 
     @@media (max-width: 768px) {
-        .cart-item-image {
-            width: 60px;
-            height: 60px;
-        }
+        .cart-item-image
 
-        .quantity-control {
-            flex-direction: column;
-            gap: 4px;
-        }
+    {
+        width: 60px;
+        height: 60px;
+    }
 
-        .table td {
-            padding: 8px;
-        }
+    .quantity-control {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .table td {
+        padding: 8px;
+    }
+
     }
 </style>
