@@ -2,27 +2,31 @@
     ViewBag.Title = "Account Deletion Initiated";
 }
 
-<p>
-    Your account deletion process has been initiated.
-    An email has been sent to your registered email address to finalize the deletion.
-    Please check your inbox (and spam folder).
-</p>
+<div class="page-container">
+    <div class="create-form-container">
 
-<p>
-    Remember, there is a grace period for account recovery.
-</p>
-<br>
-<br>
+        <div class="alert alert-info fade-in-up">
+            <i class="fas fa-info-circle"></i>
+            <span>Your account deletion process has been initiated. An email has been sent to your registered email address to finalize the deletion. Please check your inbox (and spam folder).</span>
+        </div>
 
-@if (ViewBag.EmailError != null)
-{
-    <div class="alert alert-danger">
-        <b>Email sending failed:</b> @ViewBag.EmailError
+        <div class="alert alert-warning fade-in-up">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Remember, there is a grace period for account recovery.</span>
+        </div>
+
+        @if (ViewBag.EmailError != null)
+        {
+            <div class="alert alert-danger fade-in-up">
+                <i class="fas fa-exclamation-circle"></i>
+                <b>Email sending failed:</b> @ViewBag.EmailError
+            </div>
+        }
+
+        <div class="form-actions">
+            <a href="@Url.Action("Index", "Home")" class="btn btn-primary">Return to Home</a>
+        </div>
     </div>
-}
-
-<div>
-    <a href="@Url.Action("Index", "Home")">Return to Home</a>
 </div>
 
 @section Scripts {

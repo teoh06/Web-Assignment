@@ -5,57 +5,131 @@
     var siteKey = ViewBag.SiteKey as string;
 }
 
-<form asp-action="Register" method="post" enctype="multipart/form-data" class="form">
-    @Html.AntiForgeryToken()
-    <div asp-validation-summary="ModelOnly"></div>
+<div class="auth-container">
+    <div class="auth-card">
+        <!-- Header Section -->
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <h1 class="auth-title">Join QuickBite</h1>
+            <p class="auth-subtitle">Create your account to get started</p>
+        </div>
 
-    <label asp-for="Email"></label>
-    <input asp-for="Email" autofocus>
-    <span asp-validation-for="Email"></span>
+        <!-- Form Section -->
+        <form asp-action="Register" method="post" enctype="multipart/form-data" class="auth-form">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
 
-    <label asp-for="Password"></label>
-    <div class="password-toggle-container">
-        <input asp-for="Password" autocomplete="new-password" id="registerPasswordInput" />
-        <span class="password-toggle-icon" onclick="togglePasswordVisibility('registerPasswordInput', this)">
-            <i class="fas fa-eye"></i>
-        </span>
+            <!-- Email Field -->
+            <div class="form-group">
+                <label asp-for="Email" class="form-label">
+                    <i class="fas fa-envelope"></i>
+                    Email Address
+                </label>
+                <input asp-for="Email" class="form-input" placeholder="Enter your email" autofocus>
+                <span asp-validation-for="Email" class="field-validation"></span>
+            </div>
+
+            <!-- Full Name Field -->
+            <div class="form-group">
+                <label asp-for="Name" class="form-label">
+                    <i class="fas fa-user"></i>
+                    Full Name
+                </label>
+                <input asp-for="Name" class="form-input" placeholder="Enter your full name">
+                <span asp-validation-for="Name" class="field-validation"></span>
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-group">
+                <label asp-for="Password" class="form-label">
+                    <i class="fas fa-lock"></i>
+                    Password
+                </label>
+                <div class="password-field">
+                    <input asp-for="Password" class="form-input" placeholder="Create a password" autocomplete="new-password" id="registerPasswordInput">
+                    <span class="password-toggle" onclick="togglePasswordVisibility('registerPasswordInput', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <span asp-validation-for="Password" class="field-validation"></span>
+            </div>
+
+            <!-- Confirm Password Field -->
+            <div class="form-group">
+                <label asp-for="Confirm" class="form-label">
+                    <i class="fas fa-check-circle"></i>
+                    Confirm Password
+                </label>
+                <div class="password-field">
+                    <input asp-for="Confirm" class="form-input" placeholder="Confirm your password" autocomplete="new-password" id="confirmPasswordInput">
+                    <span class="password-toggle" onclick="togglePasswordVisibility('confirmPasswordInput', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <span asp-validation-for="Confirm" class="field-validation"></span>
+            </div>
+
+            <!-- Profile Picture Field -->
+            <div class="form-group">
+                <label asp-for="ProfilePicture" class="form-label">
+                    <i class="fas fa-camera"></i>
+                    Profile Picture (Optional)
+                </label>
+                <div class="file-upload-wrapper">
+                    <label class="file-upload">
+                        <input asp-for="ProfilePicture" accept="image/jpeg, image/png, image/jpg, image/webp, image/gif, image/bmp, image/svg+xml, image/tiff" hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="upload-text">
+                                <strong>Choose a photo</strong>
+                                <span>or drag and drop</span>
+                            </div>
+                        </div>
+                        <img src="/images/photo.jpg" class="upload-preview" style="display: none;">
+                    </label>
+                </div>
+                <span asp-validation-for="ProfilePicture" class="field-validation"></span>
+            </div>
+
+            <!-- reCAPTCHA -->
+            @if (!string.IsNullOrEmpty(siteKey))
+            {
+                <div class="form-group recaptcha-group">
+                    <div class="g-recaptcha" data-sitekey="@siteKey"></div>
+                </div>
+            }
+
+            <!-- Submit Buttons -->
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-user-plus"></i>
+                    Create Account
+                </button>
+                <button type="reset" class="btn-secondary">
+                    <i class="fas fa-undo"></i>
+                    Clear Form
+                </button>
+            </div>
+        </form>
+
+        <!-- Footer Links -->
+        <div class="auth-footer">
+            <p class="auth-links">
+                Already have an account? <a href="/Account/Login" class="auth-link">Sign In</a>
+            </p>
+        </div>
     </div>
-    <span asp-validation-for="Password"></span>
-
-    <label asp-for="Confirm"></label>
-    <div class="password-toggle-container">
-        <input asp-for="Confirm" autocomplete="new-password" id="confirmPasswordInput" />
-        <span class="password-toggle-icon" onclick="togglePasswordVisibility('confirmPasswordInput', this)">
-            <i class="fas fa-eye"></i>
-        </span>
-    </div>
-    <span asp-validation-for="Confirm"></span>
-
-
-    <label asp-for="Name"></label>
-    <input asp-for="Name">
-    <span asp-validation-for="Name"></span>
-
-    <label asp-for="ProfilePicture"></label>
-    <label class="upload">
-        <small>Select Photo...</small>
-        <input asp-for="ProfilePicture" accept="image/jpeg, image/png, image/jpg, image/webp, image/gif, image/bmp, image/svg+xml, image/tiff" hidden>
-        <img src="/images/photo.jpg">
-    </label>
-    <span asp-validation-for="ProfilePicture"></span>
-
-    <br>
-    <section>
-        <div class="g-recaptcha" data-sitekey="@siteKey"></div>
-        <br>
-        <button>Register</button>
-        <button type="reset">Reset</button>
-    </section>
-    <br>
-</form>
+</div>
 
 @section Scripts {
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    @if (!string.IsNullOrEmpty(siteKey))
+    {
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    }
     <script>
         // The same reusable function as in Login.cshtml
         function togglePasswordVisibility(inputId, iconSpan) {

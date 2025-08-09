@@ -363,6 +363,7 @@ namespace WebApplication2.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [AllowAnonymous]
         public IActionResult Details(int id)
         {
             var menuItem = db.MenuItems.Include(m => m.Category)
