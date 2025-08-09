@@ -42,8 +42,14 @@ public class AccountController : Controller
     [HttpPost]
     public async Task<IActionResult> Login(LoginVM vm, string? returnURL)
     {
+        // Always ensure SiteKey is available for the view
+        ViewBag.SiteKey = HttpContext.RequestServices.GetService<IConfiguration>()?["GoogleReCaptcha:SiteKey"];
+        
         var recaptchaToken = Request.Form["g-recaptcha-response"];
-        if (!await _recaptcha.VerifyAsync(recaptchaToken))
+        var siteKey = ViewBag.SiteKey as string;
+        
+        // Only validate recaptcha if site key is configured
+        if (!string.IsNullOrEmpty(siteKey) && !await _recaptcha.VerifyAsync(recaptchaToken))
         {
             ModelState.AddModelError("", "reCAPTCHA validation failed. Please try again.");
         }
@@ -72,7 +78,7 @@ public class AccountController : Controller
         {
             failCount++;
             HttpContext.Session.SetInt32(failKey, failCount);
-            /*
+
             if (failCount >= MaxFailedAttempts)
             {
                 var until = DateTime.UtcNow.AddMinutes(BlockMinutes);
@@ -80,7 +86,7 @@ public class AccountController : Controller
                 ModelState.AddModelError("", $"Too many failed attempts. Login blocked for {BlockMinutes} minutes.");
                 return View(vm);
             }
-            */
+
             ModelState.AddModelError("", $"Login credentials not matched. ({failCount}/{MaxFailedAttempts})");
         }
         else if (u.IsPendingDeletion) // Add this condition
@@ -159,8 +165,14 @@ public class AccountController : Controller
     [HttpPost]
     public async Task<IActionResult> Register(RegisterVM vm)
     {
+        // Always ensure SiteKey is available for the view
+        ViewBag.SiteKey = HttpContext.RequestServices.GetService<IConfiguration>()?["GoogleReCaptcha:SiteKey"];
+        
         var recaptchaToken = Request.Form["g-recaptcha-response"];
-        if (!await _recaptcha.VerifyAsync(recaptchaToken))
+        var siteKey = ViewBag.SiteKey as string;
+        
+        // Only validate recaptcha if site key is configured
+        if (!string.IsNullOrEmpty(siteKey) && !await _recaptcha.VerifyAsync(recaptchaToken))
         {
             ModelState.AddModelError("", "reCAPTCHA validation failed. Please try again.");
         }

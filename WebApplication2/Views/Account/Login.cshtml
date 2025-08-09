@@ -5,46 +5,87 @@
     var siteKey = ViewBag.SiteKey as string;
 }
 
-<form class="form" method="post">
-    <div asp-validation-summary="ModelOnly"></div>
+<div class="auth-container">
+    <div class="auth-card">
+        <!-- Header Section -->
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-utensils"></i>
+            </div>
+            <h1 class="auth-title">Welcome Back</h1>
+            <p class="auth-subtitle">Sign in to your QuickBite account</p>
+        </div>
 
-    <label asp-for="Email"></label>
-    <input asp-for="Email" autofocus>
-    <span asp-validation-for="Email"></span>
+        <!-- Form Section -->
+        <form class="auth-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
 
-    <label asp-for="Password"></label>
-    <div class="password-toggle-container">
-        <input asp-for="Password" autocomplete="new-password" id="passwordInput">
-        <span class="password-toggle-icon" onclick="togglePasswordVisibility('passwordInput', this)">
-            <i class="fas fa-eye"></i>
-        </span>
+            <!-- Email Field -->
+            <div class="form-group">
+                <label asp-for="Email" class="form-label">
+                    <i class="fas fa-envelope"></i>
+                    Email Address
+                </label>
+                <input asp-for="Email" class="form-input" placeholder="Enter your email" autofocus>
+                <span asp-validation-for="Email" class="field-validation"></span>
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-group">
+                <label asp-for="Password" class="form-label">
+                    <i class="fas fa-lock"></i>
+                    Password
+                </label>
+                <div class="password-field">
+                    <input asp-for="Password" class="form-input" placeholder="Enter your password" autocomplete="current-password" id="passwordInput">
+                    <span class="password-toggle" onclick="togglePasswordVisibility('passwordInput', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <span asp-validation-for="Password" class="field-validation"></span>
+            </div>
+
+            <!-- Remember Me -->
+            <div class="form-group remember-group">
+                <label class="checkbox-label">
+                    <input asp-for="RememberMe" type="checkbox" class="checkbox-input">
+                    <span class="checkbox-custom"></span>
+                    <span class="checkbox-text">Remember me for 14 days</span>
+                </label>
+            </div>
+
+            <!-- reCAPTCHA -->
+            @if (!string.IsNullOrEmpty(siteKey))
+            {
+                <div class="form-group recaptcha-group">
+                    <div class="g-recaptcha" data-sitekey="@siteKey"></div>
+                </div>
+            }
+
+            <!-- Submit Buttons -->
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In
+                </button>
+                <button type="reset" class="btn-secondary">
+                    <i class="fas fa-undo"></i>
+                    Clear
+                </button>
+            </div>
+        </form>
+
+        <!-- Footer Links -->
+        <div class="auth-footer">
+            <p class="auth-links">
+                Don't have an account? <a href="/Account/Register" class="auth-link">Create Account</a>
+            </p>
+            <p class="auth-links">
+                Forgot your password? <a href="/Account/ResetPassword" class="auth-link">Reset Password</a>
+            </p>
+        </div>
     </div>
-    <span asp-validation-for="Password"></span>
-
-    <br>
-    <label>
-        <input asp-for="RememberMe">Remember Me
-    </label>
-    <br>
-
-    <br>
-    <section>
-        @if (!string.IsNullOrEmpty(siteKey))
-        {
-            <div class="g-recaptcha" data-sitekey="@siteKey"></div>
-        }
-        <br>
-        <button>Login</button>
-        <button type="reset">Reset</button>
-        <br>
-    </section>
-</form>
-
-<br>
-<p>
-    [ <a href="/Account/Register">Register</a> |
-    <a href="/Account/ResetPassword">Reset Password</a> ]
-</p>
+</div>
 
 @section Scripts {
     @if (!string.IsNullOrEmpty(siteKey))
