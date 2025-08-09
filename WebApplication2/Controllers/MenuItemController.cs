@@ -56,10 +56,10 @@ namespace WebApplication2.Controllers
         {
             logger.LogInformation("Create action called with MenuItem: {@MenuItem}", menuItem);
             logger.LogInformation("ImageFile is null: {IsNull}", imageFile == null);
-            
+
             if (!ModelState.IsValid)
             {
-                logger.LogWarning("ModelState is invalid. Errors: {@Errors}", 
+                logger.LogWarning("ModelState is invalid. Errors: {@Errors}",
                     ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
                 ViewBag.Categories = db.Categories.ToList();
                 return View(menuItem);
@@ -109,10 +109,10 @@ namespace WebApplication2.Controllers
                 }
 
                 // Check if menu item name already exists in the same category
-                var existingItem = db.MenuItems.FirstOrDefault(m => 
-                    m.Name.ToLower() == menuItem.Name.ToLower() && 
+                var existingItem = db.MenuItems.FirstOrDefault(m =>
+                    m.Name.ToLower() == menuItem.Name.ToLower() &&
                     m.CategoryId == menuItem.CategoryId);
-                
+
                 if (existingItem != null)
                 {
                     ModelState.AddModelError("Name", "A menu item with this name already exists in the selected category.");
@@ -169,7 +169,7 @@ namespace WebApplication2.Controllers
 
             if (!ModelState.IsValid)
             {
-                logger.LogWarning("ModelState is invalid. Errors: {@Errors}", 
+                logger.LogWarning("ModelState is invalid. Errors: {@Errors}",
                     ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
                 ViewBag.Categories = db.Categories.ToList();
                 return View(menuItem);
@@ -207,11 +207,11 @@ namespace WebApplication2.Controllers
                 }
 
                 // Check if menu item name already exists in the same category (excluding current item)
-                var existingItem = db.MenuItems.FirstOrDefault(m => 
-                    m.Name.ToLower() == menuItem.Name.ToLower() && 
+                var existingItem = db.MenuItems.FirstOrDefault(m =>
+                    m.Name.ToLower() == menuItem.Name.ToLower() &&
                     m.CategoryId == menuItem.CategoryId &&
                     m.MenuItemId != id);
-                
+
                 if (existingItem != null)
                 {
                     ModelState.AddModelError("Name", "A menu item with this name already exists in the selected category.");
@@ -284,7 +284,7 @@ namespace WebApplication2.Controllers
         // *** FIX: Add a centralized helper method for saving images ***
         private async Task<string?> SaveImage(IFormFile imageFile)
         {
-            logger.LogInformation("SaveImage called with file: {FileName}, Size: {Size}, ContentType: {ContentType}", 
+            logger.LogInformation("SaveImage called with file: {FileName}, Size: {Size}, ContentType: {ContentType}",
                 imageFile.FileName, imageFile.Length, imageFile.ContentType);
 
             if (imageFile.Length == 0 || imageFile.Length > 2 * 1024 * 1024) // 2MB limit
@@ -303,7 +303,7 @@ namespace WebApplication2.Controllers
 
             var uploadsFolder = Path.Combine(env.WebRootPath, "images");
             logger.LogInformation("Uploads folder path: {Path}", uploadsFolder);
-            
+
             // Ensure the directory exists
             if (!Directory.Exists(uploadsFolder))
             {
@@ -409,6 +409,54 @@ namespace WebApplication2.Controllers
             db.MenuItemComments.Add(comment);
             db.SaveChanges();
             return Json(new { user = email, content, time = comment.CommentedAt });
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult GetFilteredMenuItems(string? search, int? categoryId, decimal? minPrice, decimal? maxPrice)
+        {
+            try
+            {
+                var query = db.MenuItems
+                    .Include(m => m.Category)
+                    .AsQueryable();
+
+                // Only search by name
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(m => m.Name.Contains(search));
+                }
+
+                // You can keep price filters if needed
+                if (minPrice.HasValue)
+                {
+                    query = query.Where(m => m.Price >= minPrice);
+                }
+
+                if (maxPrice.HasValue)
+                {
+                    query = query.Where(m => m.Price <= maxPrice);
+                }
+
+                var items = query
+                    .OrderBy(m => m.Name)
+                    .Select(m => new
+                    {
+                        menuItemId = m.MenuItemId,
+                        name = m.Name,
+                        photoURL = m.PhotoURL,
+                        categoryName = m.Category.Name,
+                        price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))
+                    })
+                    .ToList();
+
+                return Json(items);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error filtering menu items");
+                return BadRequest(new { error = "Failed to filter menu items" });
+            }
         }
     }
 }

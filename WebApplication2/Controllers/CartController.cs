@@ -6,6 +6,7 @@ using System.ComponentModel.DataAnnotations; // For [Required], [CreditCard], [R
 using Microsoft.EntityFrameworkCore; // For .Include() and .FirstOrDefaultAsync()
 using System.Threading.Tasks; // For async/await
 using System; // For Math.Max, DateTime.Now
+using System.Globalization;
 
 namespace WebApplication2.Controllers;
 
@@ -54,11 +55,11 @@ public class CartController : Controller
         else
         {
             // Add new item to cart
-            cart.Add(new CartItemVM 
-            { 
-                MenuItemId = menuItemId, 
-                Name = menuItem.Name, 
-                Price = menuItem.Price, 
+            cart.Add(new CartItemVM
+            {
+                MenuItemId = menuItemId,
+                Name = menuItem.Name,
+                Price = menuItem.Price,
                 Quantity = quantity,
                 PhotoURL = menuItem.PhotoURL ?? "default.jpg",
                 SelectedPersonalizations = SelectedPersonalizations
@@ -339,6 +340,45 @@ public class CartController : Controller
         };
 
         return View(vm);
+    }
+
+    [HttpGet]
+    public IActionResult GetFilteredCartItems(string? search, decimal? minPrice, decimal? maxPrice)
+    {
+        var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
+        var fullTotal = cart.Sum(x => x.Price * x.Quantity);
+
+        var query = cart.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(m => m.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (minPrice.HasValue)
+        {
+            query = query.Where(m => m.Price >= minPrice.Value);
+        }
+
+        if (maxPrice.HasValue)
+        {
+            query = query.Where(m => m.Price <= maxPrice.Value);
+        }
+
+        var items = query
+            .OrderBy(m => m.Name)
+            .Select(m => new
+            {
+                menuItemId = m.MenuItemId,
+                name = m.Name,
+                photoURL = m.PhotoURL,
+                price = m.Price,
+                quantity = m.Quantity,
+                selectedPersonalizations = m.SelectedPersonalizations
+            })
+            .ToList();
+
+        return Json(new { items, fullTotal });
     }
 }
 
