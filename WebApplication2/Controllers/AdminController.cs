@@ -35,11 +35,26 @@ public class AdminController : Controller
     {
         var sales = _context.Orders
             .GroupBy(o => o.OrderDate.Date)
-            .Select(g => new { Date = g.Key, Total = g.Sum(o => o.OrderItems.Sum(i => i.UnitPrice * i.Quantity)) })
+            .Select(g => new
+            {
+                Date = g.Key,
+                Total = g.Sum(o => o.OrderItems.Sum(i => i.UnitPrice * i.Quantity)),
+                Items = g.SelectMany(o => o.OrderItems)
+                         .GroupBy(i => i.MenuItem.Name)
+                         .Select(ig => new
+                         {
+                             Product = ig.Key,
+                             Quantity = ig.Sum(x => x.Quantity),
+                             Amount = ig.Sum(x => x.UnitPrice * x.Quantity)
+                         })
+                         .ToList()
+            })
             .OrderBy(x => x.Date)
             .ToList();
+
         return PartialView("_SalesSummary", sales);
     }
+
 
     [HttpGet]
     public IActionResult SalesReportSection()
@@ -61,39 +76,84 @@ public class AdminController : Controller
 
         var sales = _context.Orders
             .GroupBy(o => o.OrderDate.Date)
-            .Select(g => new { Date = g.Key, Total = g.Sum(o => o.OrderItems.Sum(i => i.UnitPrice * i.Quantity)) })
+            .Select(g => new
+            {
+                Date = g.Key,
+                Total = g.Sum(o => o.OrderItems.Sum(i => i.UnitPrice * i.Quantity)),
+                Items = g.SelectMany(o => o.OrderItems)
+                         .GroupBy(i => i.MenuItem.Name)
+                         .Select(ig => new
+                         {
+                             Product = ig.Key,
+                             Quantity = ig.Sum(x => x.Quantity),
+                             Amount = ig.Sum(x => x.UnitPrice * x.Quantity)
+                         })
+                         .ToList()
+            })
             .OrderBy(x => x.Date)
             .ToList();
 
-        var pdf = QuestPDF.Fluent.Document.Create(container =>
+        var pdf = Document.Create(container =>
         {
             container.Page(page =>
             {
                 page.Margin(20);
-                page.Header().Text("Sales Report").FontSize(20).Bold().AlignCenter();
-                page.Content().Table(table =>
+
+                page.Header()
+                    .Text("Sales Report")
+                    .FontSize(20)
+                    .Bold()
+                    .AlignCenter();
+
+                page.Content().Column(col =>
                 {
-                    table.ColumnsDefinition(columns =>
+                    foreach (var day in sales)
                     {
-                        columns.ConstantColumn(120);
-                        columns.RelativeColumn();
-                    });
-                    table.Header(header =>
-                    {
-                        header.Cell().Text("Date").Bold();
-                        header.Cell().Text("Total Sales").Bold();
-                    });
-                    foreach (var s in sales)
-                    {
-                        table.Cell().Text(((DateTime)s.Date).ToString("yyyy-MM-dd"));
-                        table.Cell().Text(((decimal)s.Total).ToString("C", new CultureInfo("en-MY")));
+                        // Day header
+                        col.Item().Text($"{day.Date:yyyy-MM-dd} - Total: {day.Total.ToString("C", new CultureInfo("en-MY"))}")
+                            .Bold()
+                            .FontSize(14)
+                            .Underline();
+
+                        // Table of products
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(3); // Product
+                                columns.RelativeColumn(1); // Quantity
+                                columns.RelativeColumn(2); // Amount
+                            });
+
+                            // Header
+                            table.Header(header =>
+                            {
+                                header.Cell().Text("Product").Bold();
+                                header.Cell().Text("Quantity").Bold();
+                                header.Cell().Text("Amount").Bold();
+                            });
+
+                            // Rows
+                            foreach (var item in day.Items)
+                            {
+                                table.Cell().Text(item.Product);
+                                table.Cell().Text(item.Quantity.ToString());
+                                table.Cell().Text(item.Amount.ToString("C", new CultureInfo("en-MY")));
+                            }
+                        });
+
+                        // Spacer between days
+                        col.Item().Text("");
                     }
                 });
             });
         });
-        var stream = new MemoryStream();
+
+        using var stream = new MemoryStream();
         pdf.GeneratePdf(stream);
         stream.Position = 0;
+
         return File(stream.ToArray(), "application/pdf", "SalesReport.pdf");
     }
+
 }
