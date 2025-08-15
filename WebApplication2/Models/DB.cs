@@ -119,7 +119,7 @@ public class MenuItem
 
     public ICollection<MenuItemImage> MenuItemImages { get; set; } = new List<MenuItemImage>();
 
-    
+    // --- Add IsActive property for menu item filtering ---
     public bool IsActive { get; set; } = true;
 }
 
