@@ -30,19 +30,33 @@ namespace WebApplication2.Controllers
         [AllowAnonymous]
         public IActionResult Index()
         {
-            // Add the success message display logic here or in _Layout.cshtml
             if (TempData["SuccessMessage"] != null)
             {
                 ViewBag.SuccessMessage = TempData["SuccessMessage"];
             }
-            var items = db.MenuItems.Include(m => m.Category).OrderBy(m => m.Name).ToList();
+
+            IQueryable<MenuItem> query = db.MenuItems;
+
+            // Hide inactive items for non-admins
+            if (!User.IsInRole("Admin"))
+            {
+                query = query.Where(m => m.IsActive);
+            }
+
+            var items = query
+                .Include(m => m.Category)
+                .OrderBy(m => m.Name)
+                .ToList();
+
             var vm = new MenuItemIndexVM
             {
                 MenuItems = items,
                 Categories = db.Categories.ToList()
             };
+
             return View(vm);
         }
+
 
         public IActionResult Create()
         {
@@ -411,6 +425,23 @@ namespace WebApplication2.Controllers
             db.SaveChanges();
             return Json(new { user = email, content, time = comment.CommentedAt });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public IActionResult ToggleActive(int id)
+        {
+            var menuItem = db.MenuItems.Find(id);
+            if (menuItem == null) return NotFound();
+
+            menuItem.IsActive = !menuItem.IsActive;
+            db.SaveChanges();
+
+            TempData["SuccessMessage"] = $"Menu item '{menuItem.Name}' is now {(menuItem.IsActive ? "Active" : "Inactive")}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+
 
         [AllowAnonymous]
         [HttpGet]

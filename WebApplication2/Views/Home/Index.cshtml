@@ -23,7 +23,20 @@
 
         <div class="jumbotron text-center">
             <p>Order your favorite meals for in-house dining with ease!</p>
-            <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Browse Menu</a>
+            @if (User.IsInRole("Member"))
+            {
+                <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Browse Menu</a>
+            }
+			else if (User.IsInRole("Admin"))
+            {
+                <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Edit Menu</a>
+            }
+            else
+            {
+                <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Browse Menu</a>
+            }
+            
+            
         </div>
     </div>
 

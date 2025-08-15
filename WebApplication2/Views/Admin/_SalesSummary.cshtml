@@ -4,48 +4,40 @@
 @if (Model != null && Model.Any())
 {
     <h3>Sales Summary</h3>
-    <table class="table table-bordered">
-        <thead>
-            <tr><th>Date</th><th>Total Sales</th></tr>
-        </thead>
-        <tbody>
-        @foreach (var s in Model)
-        {
-            <tr>
-                <td>@(((DateTime)s.Date).ToString("yyyy-MM-dd"))</td>
-                <td>@s.Total.ToString("C", new CultureInfo("en-MY"))</td>
-            </tr>
-        }
-        </tbody>
-    </table>
-    <div class="d-flex justify-content-start mb-3">
-        <a asp-action="SalesReport" class="btn btn-info">Download Sales Report (PDF)</a>
-    </div>
-    <canvas id="salesChart" width="400" height="150"></canvas>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const sales = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model));
-        if (sales && sales.length) {
-            const ctx = document.getElementById('salesChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: sales.map(s => new Date(s.Date).toISOString().slice(0,10)),
-                    datasets: [{
-                        label: 'Total Sales',
-                        data: sales.map(s => s.Total),
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } }
+
+    @foreach (var day in Model)
+    {
+        <h4>
+            @(((DateTime)day.Date).ToString("yyyy-MM-dd")) -
+            Total: @day.Total.ToString("C", new CultureInfo("en-MY"))
+        </h4>
+
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in day.Items)
+                {
+                    <tr>
+                        <td>@item.Product</td>
+                        <td>@item.Quantity</td>
+                        <td>@item.Amount.ToString("C", new CultureInfo("en-MY"))</td>
+                    </tr>
                 }
-            });
-        }
-    </script>
+            </tbody>
+        </table>
+    }
+
+    <div class="d-flex justify-content-start mb-3">
+        <a asp-action="SalesReport" class="btn btn-info">
+            Download Sales Report (PDF)
+        </a>
+    </div>
 }
 else
 {
