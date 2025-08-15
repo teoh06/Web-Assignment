@@ -68,6 +68,10 @@ public class Member : User
     public string? PhotoURL { get; set; }
     // Navigation property for orders
     public ICollection<Order> Orders { get; set; } = new List<Order>();
+    // New Address Field
+    [MaxLength(200)]
+    public string? Address { get; set; }
+
     // Navigation property for photo history
     public ICollection<MemberPhoto> MemberPhotos { get; set; } = new List<MemberPhoto>();
 }
@@ -127,6 +131,10 @@ public class Order
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     // Add persistent payment method
     public string PaymentMethod { get; set; } // Cash, Card, etc.
+    // --- Enhancement: Store delivery address used for this order ---
+    [MaxLength(200)]
+    public string DeliveryAddress { get; set; }
+    public string DeliveryOption { get; set; } // Add delivery option
 }
 
 public class OrderItem

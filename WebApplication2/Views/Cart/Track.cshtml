@@ -1,0 +1,120 @@
+@using Microsoft.AspNetCore.Mvc;   
+@using WebApplication2.Models;
+@model WebApplication2.Controllers.TrackOrderVM
+
+@{
+    ViewBag.Title = "Track Your Order";
+}
+
+<div class="container py-4">
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="trackOrderForm" method="post" onsubmit="return false;">
+                <div class="field-row">
+                    <label asp-for="OrderNumber">Order Number</label>
+                    <input asp-for="OrderNumber" class="form-input" autofocus placeholder="Enter your order number (or select below)">
+                    <span asp-validation-for="OrderNumber" class="field-validation-error"></span>
+                </div>
+                <div class="field-row">
+                    <label asp-for="Address">Shipping Address</label>
+                    <input asp-for="Address" class="form-input" placeholder="@(Model.Address ?? "Enter your address")">
+                    <span asp-validation-for="Address" class="field-validation-error"></span>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="btn-primary" onclick="trackOrderAjax()">Track Order</button>
+                </div>
+            </form>
+            <div id="deliveryAnimation" style="display:none; text-align:center; margin-top:30px;">
+                <div id="animationBox" style="width:120px;height:60px;margin:auto;position:relative;">
+                    <div id="motorBody" style="width:60px;height:30px;background:var(--primary-brand);border-radius:15px 15px 10px 10px;position:absolute;left:30px;top:15px;"></div>
+                    <div id="motorWheel1" style="width:18px;height:18px;background:#333;border-radius:50%;position:absolute;left:32px;top:38px;"></div>
+                    <div id="motorWheel2" style="width:18px;height:18px;background:#333;border-radius:50%;position:absolute;left:70px;top:38px;"></div>
+                    <div id="motorSeat" style="width:20px;height:10px;background:#222;border-radius:5px;position:absolute;left:50px;top:10px;"></div>
+                    <div id="motorRider" style="width:16px;height:16px;background:var(--accent-green);border-radius:50%;position:absolute;left:60px;top:0px;"></div>
+                    <div id="motorHandle" style="width:20px;height:4px;background:#222;position:absolute;left:70px;top:20px;border-radius:2px;"></div>
+                </div>
+                <div id="animationStatus" style="margin-top:10px;font-weight:bold;"></div>
+            </div>
+            <div id="orderResult"></div>
+        </div>
+    </div>
+
+    @if (Model.Orders != null && Model.Orders.Any())
+    {
+        <h2 class="mb-4">Your Recent Orders</h2>
+        <ul class="list-group mb-4">
+            @foreach (var order in Model.Orders)
+            {
+                <li class="list-group-item">
+                    <strong>Order #: </strong>@order.OrderNumber<br />
+                    <strong>Date: </strong>@order.OrderDate<br />
+                    <strong>Status: </strong>@order.Status<br />
+                    <strong>Delivery Option:</strong> @order.DeliveryOption<br />
+                    <button type="button" onclick="document.getElementById('orderNumberInput').value='@order.OrderNumber'; trackOrderAjax();" class="btn btn-sm btn-outline-primary mt-2">Track This Order</button>
+                </li>
+            }
+        </ul>
+    }
+    else if (Model.IsPostBack)
+    {
+        <p>No orders found with the given information.</p>
+    }
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var orderInput = document.querySelector('input[name="OrderNumber"]');
+        if (orderInput) orderInput.id = 'orderNumberInput';
+    });
+
+    function trackOrderAjax() {
+        var orderNumber = document.getElementById('orderNumberInput').value;
+        var address = document.querySelector('input[name="Address"]').value;
+        var formData = new FormData();
+        formData.append('OrderNumber', orderNumber);
+        formData.append('Address', address);
+        var animationBox = document.getElementById('deliveryAnimation');
+        var motorBody = document.getElementById('motorBody');
+        var motorWheel1 = document.getElementById('motorWheel1');
+        var motorWheel2 = document.getElementById('motorWheel2');
+        var status = document.getElementById('animationStatus');
+        var orderResult = document.getElementById('orderResult');
+        orderResult.innerHTML = '';
+        animationBox.style.display = 'block';
+        motorBody.style.left = '30px';
+        motorWheel1.style.left = '32px';
+        motorWheel2.style.left = '70px';
+        status.textContent = 'Order is being delivered...';
+        var distance = 60;
+        var duration = 2000;
+        var start = null;
+        function animateMotor(ts) {
+            if (!start) start = ts;
+            var progress = ts - start;
+            var percent = Math.min(progress / duration, 1);
+            var move = 30 + percent * distance;
+            motorBody.style.left = move + 'px';
+            motorWheel1.style.left = (move + 2) + 'px';
+            motorWheel2.style.left = (move + 40) + 'px';
+            if (percent < 1) {
+                window.requestAnimationFrame(animateMotor);
+            } else {
+                status.textContent = 'Checking order status...';
+                fetch('/Cart/Track', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(html => {
+                    animationBox.style.display = 'none';
+                    orderResult.innerHTML = html;
+                })
+                .catch(() => {
+                    animationBox.style.display = 'none';
+                    orderResult.innerHTML = '<div class="text-danger">Failed to track order. Please try again.</div>';
+                });
+            }
+        }
+        window.requestAnimationFrame(animateMotor);
+    }
+</script>

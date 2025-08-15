@@ -47,6 +47,11 @@ else
                                 </li>
                             }
                         </ul>
+                        <div class="mt-2">
+                            <strong>Delivery Address:</strong> @order.DeliveryAddress
+                            <br>
+                            <strong>Delivery Option:</strong> @order.DeliveryOption
+                        </div>
                         <div class="d-flex justify-content-end align-items-center mt-3">
                             <h4 class="mb-0 me-3">Total: @order.Total.ToString("C", new CultureInfo("en-MY"))</h4>
                             <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">View Receipt</a>

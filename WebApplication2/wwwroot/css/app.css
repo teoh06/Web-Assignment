@@ -276,9 +276,10 @@ main {
 }
 
     .table th,
-    .table td {
+    .table td,
+    .bg-body {
         border: 1px solid var(--border-color);
-        background: var(--bg-primary);
+        background: var(--bg-primary) !important;
         color: var(--text-primary) !important;
         padding: 5px;
     }

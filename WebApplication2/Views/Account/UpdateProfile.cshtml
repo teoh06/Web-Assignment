@@ -35,6 +35,20 @@
             </div>
 
             <div class="field-row">
+                <label asp-for="Address">Address</label>
+                <div class="address-input-container">
+                    <input asp-for="Address" class="form-input address-input" 
+                           placeholder="Enter your full address (e.g., 123 Main Street, City, State ZIP)"
+                           autocomplete="street-address"
+                           data-validation-url="/Account/ValidateAddress"
+                           data-suggestions-url="/Account/GetAddressSuggestions">
+                    <div class="address-suggestions" id="addressSuggestions" hidden></div>
+                    <div class="address-validation-feedback" id="addressFeedback" hidden></div>
+                </div>
+                <span asp-validation-for="Address" class="field-validation-error"></span>
+            </div>
+
+            <div class="field-row">
                 <label asp-for="Name">Name</label>
                 <input asp-for="Name" class="form-input" autofocus>
                 <span asp-validation-for="Name" class="field-validation-error"></span>
@@ -497,9 +511,276 @@
             }
         });
 
+        // Enhanced Address Validation System
+        let addressValidationTimeout;
+        let addressSuggestionTimeout;
+        const addressInput = document.querySelector('.address-input');
+        const addressSuggestions = document.getElementById('addressSuggestions');
+        const addressFeedback = document.getElementById('addressFeedback');
+        
+        if (addressInput) {
+            // Real-time validation as user types
+            addressInput.addEventListener('input', function(e) {
+                const address = e.target.value.trim();
+                
+                // Clear previous timeouts
+                if (addressValidationTimeout) clearTimeout(addressValidationTimeout);
+                if (addressSuggestionTimeout) clearTimeout(addressSuggestionTimeout);
+                
+                // Clear previous feedback and suggestions
+                addressFeedback.innerHTML = '';
+                addressSuggestions.innerHTML = '';
+                
+                if (address.length >= 3) {
+                    // Show suggestions after short delay
+                    addressSuggestionTimeout = setTimeout(() => {
+                        showAddressSuggestions(address);
+                    }, 300);
+                    
+                    // Validate address after longer delay
+                    addressValidationTimeout = setTimeout(() => {
+                        validateAddress(address);
+                    }, 800);
+                }
+            });
+            
+            // Hide suggestions when input loses focus
+            addressInput.addEventListener('blur', function() {
+                setTimeout(() => {
+                    addressSuggestions.innerHTML = '';
+                }, 200); // Small delay to allow clicking suggestions
+            });
+            
+            // Format address on blur
+            addressInput.addEventListener('blur', function(e) {
+                const address = e.target.value.trim();
+                if (address) {
+                    e.target.value = formatAddressInput(address);
+                }
+            });
+        }
+        
+        async function validateAddress(address) {
+            if (!address || address.length < 10) return;
+            
+            try {
+                const response = await fetch('/Account/ValidateAddress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    },
+                    body: JSON.stringify(address)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    displayAddressValidationFeedback(result);
+                }
+            } catch (error) {
+                console.error('Address validation error:', error);
+            }
+        }
+        
+        async function showAddressSuggestions(partialAddress) {
+            if (partialAddress.length < 3) return;
+            
+            try {
+                const response = await fetch(`/Account/GetAddressSuggestions?partialAddress=${encodeURIComponent(partialAddress)}`);
+                if (response.ok) {
+                    const suggestions = await response.json();
+                    displayAddressSuggestions(suggestions);
+                }
+            } catch (error) {
+                console.error('Address suggestions error:', error);
+            }
+        }
+        
+        function displayAddressValidationFeedback(result) {
+            let feedbackHtml = '';
+            
+            if (result.isValid) {
+                feedbackHtml = '<div class="validation-success"><i class="fas fa-check-circle"></i> Address looks good!</div>';
+                
+                if (result.formattedAddress && result.formattedAddress !== addressInput.value) {
+                    feedbackHtml += `<div class="validation-suggestion">💡 Suggested format: <span class="suggested-address" onclick="applyFormattedAddress('${result.formattedAddress}')">${result.formattedAddress}</span></div>`;
+                }
+                
+                if (result.isGeocodingValidated) {
+                    feedbackHtml += '<div class="validation-verified"><i class="fas fa-map-marker-alt"></i> Address verified with mapping service</div>';
+                }
+            } else {
+                feedbackHtml = '<div class="validation-errors">';
+                result.errors.forEach(error => {
+                    feedbackHtml += `<div class="validation-error"><i class="fas fa-exclamation-triangle"></i> ${error}</div>`;
+                });
+                feedbackHtml += '</div>';
+            }
+            
+            if (result.warnings && result.warnings.length > 0) {
+                feedbackHtml += '<div class="validation-warnings">';
+                result.warnings.forEach(warning => {
+                    feedbackHtml += `<div class="validation-warning"><i class="fas fa-info-circle"></i> ${warning}</div>`;
+                });
+                feedbackHtml += '</div>';
+            }
+            
+            addressFeedback.innerHTML = feedbackHtml;
+        }
+        
+        function displayAddressSuggestions(suggestions) {
+            if (!suggestions || suggestions.length === 0) {
+                addressSuggestions.innerHTML = '';
+                return;
+            }
+            
+            let suggestionsHtml = '<div class="suggestions-list">';
+            suggestions.forEach(suggestion => {
+                suggestionsHtml += `<div class="suggestion-item" onclick="applySuggestion('${suggestion}')">${suggestion}</div>`;
+            });
+            suggestionsHtml += '</div>';
+            
+            addressSuggestions.innerHTML = suggestionsHtml;
+        }
+        
+        function applySuggestion(suggestion) {
+            addressInput.value = suggestion;
+            addressSuggestions.innerHTML = '';
+            addressInput.focus();
+            
+            // Trigger validation for the selected suggestion
+            setTimeout(() => validateAddress(suggestion), 100);
+        }
+        
+        function applyFormattedAddress(formattedAddress) {
+            addressInput.value = formattedAddress;
+            addressFeedback.innerHTML = '<div class="validation-success"><i class="fas fa-check"></i> Address format applied!</div>';
+        }
+        
+        function formatAddressInput(address) {
+            // Basic formatting: capitalize first letter of each word, normalize spaces
+            return address.replace(/\s+/g, ' ')
+                         .split(' ')
+                         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                         .join(' ');
+        }
+        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Profile photo history system initialized');
+            console.log('Enhanced address validation system initialized');
+            
+            // Add custom CSS for address validation
+            const addressStyles = document.createElement('style');
+            addressStyles.textContent = `
+                .address-input-container {
+                    position: relative;
+                }
+                
+                .address-suggestions {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    right: 0;
+                    background: white;
+                    border: 1px solid #ddd;
+                    border-top: none;
+                    border-radius: 0 0 4px 4px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    z-index: 1000;
+                    max-height: 200px;
+                    overflow-y: auto;
+                }
+                
+                .suggestion-item {
+                    padding: 10px;
+                    cursor: pointer;
+                    border-bottom: 1px solid #eee;
+                }
+                
+                .suggestion-item:hover {
+                    background-color: #f5f5f5;
+                }
+                
+                .suggestion-item:last-child {
+                    border-bottom: none;
+                }
+                
+                .address-validation-feedback {
+                    margin-top: 8px;
+                    font-size: 14px;
+                }
+                
+                .validation-success {
+                    color: #28a745;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                }
+                
+                .validation-error {
+                    color: #dc3545;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    margin-bottom: 4px;
+                }
+                
+                .validation-warning {
+                    color: #ffc107;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    margin-bottom: 4px;
+                }
+                
+                .validation-suggestion {
+                    color: #6c757d;
+                    margin-top: 4px;
+                    font-size: 13px;
+                }
+                
+                .suggested-address {
+                    color: #007bff;
+                    cursor: pointer;
+                    text-decoration: underline;
+                }
+                
+                .suggested-address:hover {
+                    color: #0056b3;
+                }
+                
+                .validation-verified {
+                    color: #17a2b8;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    font-size: 13px;
+                    margin-top: 4px;
+                }
+                
+                .field-help {
+                    margin-top: 8px;
+                    color: #6c757d;
+                }
+                
+                .field-help small {
+                    font-size: 12px;
+                }
+                
+                .address-input.validating {
+                    border-left: 3px solid #ffc107;
+                }
+                
+                .address-input.valid {
+                    border-left: 3px solid #28a745;
+                }
+                
+                .address-input.invalid {
+                    border-left: 3px solid #dc3545;
+                }
+            `;
+            document.head.appendChild(addressStyles);
         });
     </script>
 }

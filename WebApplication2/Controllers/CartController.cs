@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore; // For .Include() and .FirstOrDefaultAsync(
 using System.Threading.Tasks; // For async/await
 using System; // For Math.Max, DateTime.Now
 using System.Globalization;
+using Microsoft.AspNetCore.Authorization; // For [Authorize] attribute
+using Microsoft.AspNetCore.Http;
+using System.Text.Json;
 
 namespace WebApplication2.Controllers;
 
@@ -20,6 +23,20 @@ public class CartController : Controller
     }
 
     private const string CartSessionKey = "CartItems";
+
+    // GET: /Cart/Index (Displays the cart page)
+    public IActionResult Index()
+    {
+        // Retrieve cart items from session
+        var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey);
+        if (cart == null || !cart.Any())
+        {
+            // Try to load from cookie if session cart is empty
+            cart = CartCookieHelper.LoadCartFromCookie(HttpContext);
+            HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
+        }
+        return View(cart);
+    }
 
     // POST: /Cart/Add (Modified to return JSON for AJAX calls from MenuItem/Index)
     [HttpPost]
@@ -68,20 +85,13 @@ public class CartController : Controller
 
         // Save updated cart back to session
         HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
+        CartCookieHelper.SaveCartToCookie(HttpContext, cart); // Save to cookie
 
         // Calculate current total (optional, but useful for client-side updates)
         decimal currentCartTotal = cart.Sum(x => x.Price * x.Quantity);
 
         // Return a JSON response for AJAX calls
         return Json(new { success = true, message = $"Added {quantity} x {menuItem.Name} to cart.", newTotal = currentCartTotal });
-    }
-
-    // GET: /Cart/Index (Displays the cart page)
-    public IActionResult Index()
-    {
-        // Retrieve cart items from session
-        var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
-        return View(cart);
     }
 
     // NEW ACTION: POST to update item quantity via AJAX from Cart/Index
@@ -110,6 +120,7 @@ public class CartController : Controller
         if (itemToUpdate.Quantity > 100) itemToUpdate.Quantity = 100;
 
         HttpContext.Session.SetObjectAsJson(CartSessionKey, cart); // Save updated cart to session
+        CartCookieHelper.SaveCartToCookie(HttpContext, cart); // Save to cookie
 
         return Json(new { success = true, newTotal = cart.Sum(x => x.Price * x.Quantity) });
     }
@@ -134,6 +145,7 @@ public class CartController : Controller
         if (cart.Count < initialCount) // Check if an item was actually removed
         {
             HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
+            CartCookieHelper.SaveCartToCookie(HttpContext, cart); // Save to cookie
             return Json(new { success = true, message = "Item removed.", newTotal = cart.Sum(x => x.Price * x.Quantity) });
         }
         else
@@ -146,6 +158,7 @@ public class CartController : Controller
     public IActionResult Clear()
     {
         HttpContext.Session.Remove(CartSessionKey);
+        CartCookieHelper.ClearCartCookie(HttpContext); // Clear cookie
         TempData["Info"] = "Cart cleared.";
         return RedirectToAction("Index");
     }
@@ -155,60 +168,26 @@ public class CartController : Controller
     {
         if (!User.IsInRole("Member"))
             return Unauthorized();
-
-        var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
+        var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey);
+        if (cart == null || !cart.Any())
+        {
+            cart = CartCookieHelper.LoadCartFromCookie(HttpContext);
+            HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
+        }
         var total = cart.Sum(item => item.Price * item.Quantity);
-
         if (total <= 0)
         {
             TempData["Error"] = "Your cart is empty or total is zero. Please add items to proceed.";
-            return RedirectToAction("Index"); // Redirect if cart is empty
+            return RedirectToAction("Index");
         }
-
-        var vm = new PaymentVM { Total = total, CartItems = cart };
+        var member = _db.Members.FirstOrDefault(m => m.Email == User.Identity.Name);
+        var vm = new PaymentVM
+        {
+            Total = total,
+            CartItems = cart,
+            DeliveryAddress = member?.Address ?? ""
+        };
         return View(vm);
-    }
-
-    public async Task<IActionResult> History() // Or MyOrders if that's your action name
-    {
-        if (!User.IsInRole("Member"))
-        {
-            return Unauthorized(); // Or RedirectToAction("Login", "Account");
-        }
-
-        var memberEmail = User.Identity.Name; // Get the logged-in member's email
-
-        // Fetch orders for the current member from the database
-        // Include OrderItems and their related MenuItems for display
-        var orders = await _db.Orders
-                              .Where(o => o.MemberEmail == memberEmail)
-                              .OrderByDescending(o => o.OrderDate)
-                              .Include(o => o.OrderItems)
-                                  .ThenInclude(oi => oi.MenuItem) // Load MenuItem details for each order item
-                              .ToListAsync();
-
-        var orderHistoryVm = new OrderHistoryVM();
-        foreach (var order in orders)
-        {
-            var orderSummary = new OrderSummaryVM
-            {
-                OrderId = order.OrderId,
-                OrderDate = order.OrderDate,
-                Status = order.Status,
-                Items = order.OrderItems.Select(oi => new OrderItemVM
-                {
-                    MenuItemName = oi.MenuItem?.Name, // Use null-conditional operator for safety
-                    Quantity = oi.Quantity,
-                    UnitPrice = oi.UnitPrice,
-                    PhotoURL = oi.MenuItem?.PhotoURL, // Optional: Photo for history
-                    SelectedPersonalizations = oi.SelectedPersonalizations // Map personalization to VM
-                }).ToList(),
-                Total = order.OrderItems.Sum(oi => oi.UnitPrice * oi.Quantity) // Calculate total
-            };
-            orderHistoryVm.Orders.Add(orderSummary);
-        }
-
-        return View(orderHistoryVm);
     }
 
     // POST: /Cart/Payment (Processes payment and creates the order in DB)
@@ -218,13 +197,14 @@ public class CartController : Controller
     {
         if (!User.IsInRole("Member"))
             return Unauthorized();
-
-        // Security: Re-calculate total from session on the server to prevent client-side tampering
         var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
         vm.Total = cart.Sum(item => item.Price * item.Quantity);
         vm.CartItems = cart;
-
-        // Adjust validation for CardNumber if PaymentMethod is Cash
+        var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+        if (string.IsNullOrWhiteSpace(vm.DeliveryAddress))
+        {
+            vm.DeliveryAddress = member?.Address ?? "";
+        }
         if (vm.PaymentMethod == "Cash")
         {
             ModelState.Remove(nameof(vm.CardNumber));
@@ -237,7 +217,6 @@ public class CartController : Controller
                 ModelState.AddModelError(nameof(vm.CardNumber), "Card number is required for card payment.");
             }
         }
-
         if (!ModelState.IsValid || vm.Total <= 0 || !cart.Any())
         {
             if (vm.Total <= 0 || !cart.Any())
@@ -246,19 +225,17 @@ public class CartController : Controller
             }
             return View(vm);
         }
-
-        // Create a new Order record in the database
         var order = new Order
         {
             MemberEmail = User.Identity.Name,
             OrderDate = DateTime.Now,
             Status = "Paid",
-            PaymentMethod = vm.PaymentMethod // Store payment method persistently
+            PaymentMethod = vm.PaymentMethod,
+            DeliveryAddress = vm.DeliveryAddress,
+            DeliveryOption = vm.DeliveryOption
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync();
-
-        // Add OrderItem records for each item in the cart
         foreach (var item in cart)
         {
             _db.OrderItems.Add(new OrderItem
@@ -267,25 +244,22 @@ public class CartController : Controller
                 MenuItemId = item.MenuItemId,
                 Quantity = item.Quantity,
                 UnitPrice = item.Price,
-                SelectedPersonalizations = item.SelectedPersonalizations // Save personalization to DB
+                SelectedPersonalizations = item.SelectedPersonalizations
             });
         }
         await _db.SaveChangesAsync();
-
-        // Store payment and delivery information in TempData for the receipt
         TempData["LastPaymentMethod"] = vm.PaymentMethod;
         TempData["LastPhoneNumber"] = vm.PhoneNumber;
         TempData["LastDeliveryInstructions"] = vm.DeliveryInstructions;
         TempData["LastDeliveryOption"] = vm.DeliveryOption;
+        TempData["LastDeliveryAddress"] = vm.DeliveryAddress;
         if (vm.PaymentMethod == "Card")
         {
             TempData["LastCardNumber"] = vm.CardNumber;
         }
-
-        // Clear the cart
         HttpContext.Session.Remove(CartSessionKey);
+        CartCookieHelper.ClearCartCookie(HttpContext); // Clear cookie after order placed
         TempData["Success"] = $"Order #{order.OrderId} placed successfully! Thank you for your purchase.";
-
         return RedirectToAction("Receipt", new { id = order.OrderId });
     }
 
@@ -313,6 +287,7 @@ public class CartController : Controller
         string deliveryInstructions = TempData["LastDeliveryInstructions"] as string;
         string cardNumber = TempData["LastCardNumber"] as string;
         string deliveryOption = TempData["LastDeliveryOption"] as string;
+        string deliveryAddress = order.DeliveryAddress ?? TempData["LastDeliveryAddress"] as string;
 
         // Map database entities to the ReceiptVM for display
         var receiptItems = order.OrderItems.Select(oi => new CartItemVM
@@ -336,7 +311,8 @@ public class CartController : Controller
             PhoneNumber = phoneNumber,
             DeliveryInstructions = deliveryInstructions,
             CardNumber = cardNumber,
-            DeliveryOption = deliveryOption
+            DeliveryOption = deliveryOption,
+            DeliveryAddress = deliveryAddress // Set delivery address
         };
 
         return View(vm);
@@ -379,6 +355,127 @@ public class CartController : Controller
             .ToList();
 
         return Json(new { items, fullTotal });
+    }
+
+    // GET: /Cart/Track
+    [Authorize(Roles = "Member")]
+    public async Task<IActionResult> Track()
+    {
+        var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+        // --- Enhancement: Show recent orders for selection ---
+        var recentOrders = await _db.Orders
+            .Where(o => o.MemberEmail == member.Email)
+            .OrderByDescending(o => o.OrderDate)
+            .Take(5)
+            .Select(o => new OrderDetailsVM
+            {
+                OrderNumber = o.OrderId.ToString(),
+                OrderDate = o.OrderDate,
+                Status = o.Status,
+                DeliveryOption = o.DeliveryOption // Pass delivery option
+            }).ToListAsync();
+
+        var vm = new TrackOrderVM
+        {
+            Address = member?.Address,
+            Orders = recentOrders,
+            IsPostBack = false
+        };
+        return View(vm);
+    }
+
+    // POST: /Cart/Track
+    [HttpPost]
+    [Authorize(Roles = "Member")]
+    public async Task<IActionResult> Track(TrackOrderVM vm)
+    {
+        vm.IsPostBack = true;
+        var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+        if (string.IsNullOrEmpty(vm.Address))
+        {
+            vm.Address = member?.Address;
+        }
+        if (string.IsNullOrWhiteSpace(vm.OrderNumber))
+        {
+            vm.Orders = await _db.Orders
+                .Where(o => o.MemberEmail == member.Email)
+                .OrderByDescending(o => o.OrderDate)
+                .Take(5)
+                .Select(o => new OrderDetailsVM
+                {
+                    OrderNumber = o.OrderId.ToString(),
+                    OrderDate = o.OrderDate,
+                    Status = o.Status,
+                    DeliveryOption = o.DeliveryOption // Pass delivery option
+                }).ToListAsync();
+            return PartialView("TrackResult", vm); // Return partial for AJAX
+        }
+        if (ModelState.IsValid)
+        {
+            if (int.TryParse(vm.OrderNumber, out int orderId))
+            {
+                var orders = await _db.Orders
+                    .Where(o => o.OrderId == orderId && o.MemberEmail == User.Identity.Name)
+                    .Select(o => new OrderDetailsVM
+                    {
+                        OrderNumber = o.OrderId.ToString(),
+                        OrderDate = o.OrderDate,
+                        Status = o.Status,
+                        DeliveryOption = o.DeliveryOption // Pass delivery option
+                    })
+                    .ToListAsync();
+                vm.Orders = orders;
+            }
+            else
+            {
+                ModelState.AddModelError("OrderNumber", "Invalid order number format.");
+            }
+        }
+        return PartialView("TrackResult", vm); // Return partial for AJAX
+    }
+
+    // POST: /Cart/History
+    [HttpGet]
+    [Authorize(Roles = "Member")]
+    public async Task<IActionResult> History()
+    {
+        if (!User.IsInRole("Member"))
+        {
+            return Unauthorized();
+        }
+
+        var memberEmail = User.Identity.Name;
+        var orders = await _db.Orders
+                              .Where(o => o.MemberEmail == memberEmail)
+                              .OrderByDescending(o => o.OrderDate)
+                              .Include(o => o.OrderItems)
+                                  .ThenInclude(oi => oi.MenuItem)
+                              .ToListAsync();
+
+        var orderHistoryVm = new OrderHistoryVM();
+        foreach (var order in orders)
+        {
+            var orderSummary = new OrderSummaryVM
+            {
+                OrderId = order.OrderId,
+                OrderDate = order.OrderDate,
+                Status = order.Status,
+                Items = order.OrderItems.Select(oi => new OrderItemVM
+                {
+                    MenuItemName = oi.MenuItem?.Name,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    PhotoURL = oi.MenuItem?.PhotoURL,
+                    SelectedPersonalizations = oi.SelectedPersonalizations
+                }).ToList(),
+                Total = order.OrderItems.Sum(oi => oi.UnitPrice * oi.Quantity),
+                DeliveryAddress = order.DeliveryAddress,
+                DeliveryOption = order.DeliveryOption
+            };
+            orderHistoryVm.Orders.Add(orderSummary);
+        }
+
+        return View(orderHistoryVm);
     }
 }
 
@@ -429,6 +526,12 @@ public class PaymentVM
     [StringLength(200, ErrorMessage = "Address cannot exceed 200 characters")]
     public string? BillingAddress { get; set; }
 
+    // --- Enhancement: Delivery Address for this order ---
+    [Display(Name = "Delivery Address")]
+    [Required(ErrorMessage = "Delivery address is required.")]
+    [StringLength(200, ErrorMessage = "Address cannot exceed 200 characters")]
+    public string DeliveryAddress { get; set; }
+
     [Display(Name = "Phone Number")]
     [RegularExpression(@"^\d{10,12}$", ErrorMessage = "Please enter a valid phone number")]
     [Required(ErrorMessage = "Phone number is required for order updates")]
@@ -462,6 +565,8 @@ public class ReceiptVM
     public string DeliveryInstructions { get; set; }
     public string CardNumber { get; set; }  // Only last 4 digits will be displayed
     public string DeliveryOption { get; set; } // Add delivery option
+    // --- Enhancement: Show delivery address used ---
+    public string DeliveryAddress { get; set; }
 }
 
 public class OrderHistoryVM
@@ -476,6 +581,9 @@ public class OrderSummaryVM // A nested ViewModel for each individual order in t
     public decimal Total { get; set; }
     public string Status { get; set; }
     public List<OrderItemVM> Items { get; set; } = new List<OrderItemVM>(); // Details for each item in the order
+    // --- Enhancement: Show delivery address used ---
+    public string DeliveryAddress { get; set; }
+    public string DeliveryOption { get; set; } // Add delivery option
 }
 
 public class OrderItemVM // A ViewModel for items within an order history record
@@ -485,4 +593,44 @@ public class OrderItemVM // A ViewModel for items within an order history record
     public decimal UnitPrice { get; set; } // Price at the time of order
     public string PhotoURL { get; set; } // Optional: for displaying item photos in history
     public string? SelectedPersonalizations { get; set; } // Add this property for personalization display
+}
+
+public class TrackOrderVM
+{
+    [Required]
+    public string OrderNumber { get; set; }
+    public string? Address { get; set; }
+    public List<OrderDetailsVM> Orders { get; set; } = new List<OrderDetailsVM>();
+    public bool IsPostBack { get; set; }
+}
+
+public class OrderDetailsVM
+{
+    public string OrderNumber { get; set; }
+    public DateTime OrderDate { get; set; }
+    public string Status { get; set; }
+    public string DeliveryOption { get; set; } // Add delivery option
+}
+
+// --- CART COOKIE HELPER ---
+public static class CartCookieHelper
+{
+    private const string CartCookieKey = "MemberCart";
+    public static void SaveCartToCookie(HttpContext context, List<CartItemVM> cart)
+    {
+        var options = new CookieOptions { Expires = DateTimeOffset.Now.AddDays(30), HttpOnly = true };
+        var json = JsonSerializer.Serialize(cart);
+        context.Response.Cookies.Append(CartCookieKey, json, options);
+    }
+    public static List<CartItemVM> LoadCartFromCookie(HttpContext context)
+    {
+        var json = context.Request.Cookies[CartCookieKey];
+        if (string.IsNullOrEmpty(json)) return new List<CartItemVM>();
+        try { return JsonSerializer.Deserialize<List<CartItemVM>>(json) ?? new List<CartItemVM>(); }
+        catch { return new List<CartItemVM>(); }
+    }
+    public static void ClearCartCookie(HttpContext context)
+    {
+        context.Response.Cookies.Delete(CartCookieKey);
+    }
 }
