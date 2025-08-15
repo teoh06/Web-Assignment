@@ -32,14 +32,14 @@
     <link rel="shortcut icon" href="/images/quickbite.png">
 
     <!-- Immediate theme application to prevent flashing -->
-   <script>
-    (function () {
-        const themeCookie = document.cookie.split('; ').find(row => row.startsWith('theme='));
-        const savedTheme = themeCookie ? themeCookie.split('=')[1] : null;
-        if (savedTheme === 'dark') {
-            document.documentElement.classList.add('dark-theme');
-        }
-    })();
+    <script>
+        (function () {
+            const themeCookie = document.cookie.split('; ').find(row => row.startsWith('theme='));
+            const savedTheme = themeCookie ? themeCookie.split('=')[1] : null;
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark-theme');
+            }
+        })();
     </script>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
@@ -48,46 +48,6 @@
     <link rel="stylesheet" href="/css/app.css" asp-append-version="true">
     @RenderSection("head", false)
 
-    <!-- Google Translate -->
-    <script type="text/javascript">
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement({
-                pageLanguage: 'en',
-                includedLanguages: 'en,ms,zh-CN',
-                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                autoDisplay: false
-            }, 'google_translate_element');
-            
-            // Hide the Google Translate banner
-            document.cookie = 'googtrans=/en/en; path=/; domain=' + location.hostname;
-        }
-
-        // Add event listener to remove the Google Translate banner
-        window.addEventListener('load', function() {
-            var bannerFrame = document.getElementsByClassName('goog-te-banner-frame')[0];
-            if (bannerFrame) {
-                bannerFrame.style.display = 'none';
-            }
-            document.body.style.top = '0px';
-            
-            // Create a style element to override Google Translate styles
-            var style = document.createElement('style');
-            style.textContent = `
-                .goog-te-banner-frame { display: none !important; }
-                body { top: 0 !important; }
-                .goog-te-gadget-simple { 
-                    background-color: var(--bg-secondary) !important;
-                    border: 1px solid var(--border-color) !important;
-                    padding: 5px !important;
-                    border-radius: 4px !important;
-                }
-                .goog-te-gadget-simple span { color: var(--text-primary) !important; }
-            `;
-            document.head.appendChild(style);
-        });
-    </script>
-
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </head>
 
 <body>
@@ -100,8 +60,6 @@
             <a href="/" style="text-decoration: none; color: inherit; margin-left: 8px;">QuickBite</a>
         </h1>
 
-        <!-- Google Translate Widget moved to header -->
-        <div id="google_translate_element" style="margin-left: auto; margin-right: 20px;"></div>
 
         @* User name and role *@
         @if (User.Identity!.IsAuthenticated)
@@ -131,7 +89,9 @@
         {
             <a href="/Cart">Cart</a>
             <a href="/Cart/History">My Orders</a>
+            <a href="/Cart/Track">Track Order</a>
         }
+
         @if (User.IsInRole("Admin"))
         {
             <a href="/MenuItem/Index">Manage Menu Items</a>
@@ -160,7 +120,7 @@
             <a href="/Account/Register">Register</a>
             <a href="/Account/ResetPassword">Reset Password</a>
         }
-        @if (User.IsInRole("Member"))   
+        @if (User.IsInRole("Member"))
         {
             <a href="/Account/UpdateProfile">Update Profile</a>
         }

@@ -1,0 +1,76 @@
+@model WebApplication2.Controllers.TrackOrderVM
+@functions {
+    public int GetProgress(string status)
+    {
+        switch (status)
+        {
+            case "Paid": return 25;
+            case "Preparing": return 50;
+            case "Out for Delivery": return 75;
+            case "Delivered": return 100;
+            default: return 10;
+        }
+    }
+}
+@if (Model.Orders != null && Model.Orders.Any())
+{
+    <h2 class="mb-4">Order Status</h2>
+    <ul class="list-group mb-4">
+        @foreach (var item in Model.Orders)
+        {
+            <li class="list-group-item">
+                <strong>Order #: </strong>@item.OrderNumber<br />
+                <strong>Date: </strong>@item.OrderDate<br />
+                <strong>Status: </strong>
+                @if (item.Status == "Delivered")
+                {
+                    <span class="text-success">Delivered Successfully!</span>
+                }
+                else if (item.Status == "Pending")
+                {
+                    <span class="text-warning">Pending Delivery</span>
+                }
+                else
+                {
+                    <span>@item.Status</span>
+                }
+                <br />
+                <strong>Delivery Option:</strong> @item.DeliveryOption
+            </li>
+        }
+    </ul>
+
+    var firstOrder = Model.Orders.First();
+    <div class="order-tracking-details card p-4 mb-4" style="max-width:500px;margin:auto;">
+        <h4 class="mb-3">Order #@firstOrder.OrderNumber</h4>
+        <div class="progress mb-3" style="height: 20px; background: #eee; border-radius: 10px;">
+            <div class="progress-bar" style="width:@GetProgress(firstOrder.Status)% ; background: var(--accent-green); height: 100%; border-radius: 10px;"></div>
+        </div>
+        <ul class="tracking-steps d-flex justify-content-between mb-3" style="list-style:none; padding:0;">
+            <li class="@(firstOrder.Status == "Paid" ? "active" : "")">Order Placed</li>
+            <li class="@(firstOrder.Status == "Preparing" ? "active" : "")">Preparing</li>
+            <li class="@(firstOrder.Status == "Out for Delivery" ? "active" : "")">Out for Delivery</li>
+            <li class="@(firstOrder.Status == "Delivered" ? "active" : "")">Delivered</li>
+        </ul>
+        <div class="mb-2">
+            <strong>Delivery Option:</strong> @firstOrder.DeliveryOption <br />
+            <strong>Delivery Address:</strong> @Model.Address
+        </div>
+        <div class="mb-2">
+            <strong>Estimated Delivery Time:</strong> @DateTime.Now.AddMinutes(30).ToString("HH:mm")
+        </div>
+        <div class="delivery-motor-animation" style="width:100px;height:60px;margin:auto;position:relative;">
+            <div class="motor-body" style="width:60px;height:30px;background:var(--primary-brand);border-radius:15px 15px 10px 10px;position:absolute;left:20px;top:15px;"></div>
+            <div class="motor-wheel" style="width:18px;height:18px;background:#333;border-radius:50%;position:absolute;left:22px;top:38px;"></div>
+            <div class="motor-wheel" style="width:18px;height:18px;background:#333;border-radius:50%;position:absolute;left:60px;top:38px;"></div>
+            <div class="motor-seat" style="width:20px;height:10px;background:#222;border-radius:5px;position:absolute;left:40px;top:10px;"></div>
+            <div class="motor-rider" style="width:16px;height:16px;background:var(--accent-green);border-radius:50%;position:absolute;left:50px;top:0px;"></div>
+            <div class="motor-handle" style="width:20px;height:4px;background:#222;position:absolute;left:60px;top:20px;border-radius:2px;"></div>
+        </div>
+        <div class="text-center mt-2 text-muted" style="font-size:14px;">Your order is on the way with our motor delivery!</div>
+    </div>
+}
+else
+{
+    <p>No orders found with the given information.</p>
+}

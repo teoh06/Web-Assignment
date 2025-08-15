@@ -71,7 +71,9 @@ public class AccountController : Controller
         }
 
         // (1) Get user (admin or member) record based on email (PK)
-        var u = db.Users.Find(vm.Email);
+        var u = db.Members.Find(vm.Email) as User;
+        if (u == null)
+            u = db.Admins.Find(vm.Email);
 
         // (2) Custom validation -> verify password
         if (u == null || !hp.VerifyPassword(u.Hash, vm.Password))
@@ -197,7 +199,8 @@ public class AccountController : Controller
                 Email = vm.Email,
                 Hash = hp.HashPassword(vm.Password),
                 Name = vm.Name,
-                PhotoURL = vm.ProfilePicture != null ? hp.SavePhoto(vm.ProfilePicture, "photos") : "default.png", // Use default if not provided
+                PhotoURL = vm.ProfilePicture != null ? hp.SavePhoto(vm.ProfilePicture, "photos") : "default.png",
+                Address = vm.Address,
                 DeletionToken = "",
             });
             db.SaveChanges();
@@ -270,6 +273,7 @@ public class AccountController : Controller
     {
         Email = m.Email,
         Name = m.Name,
+        Address = m.Address,
         PhotoURL = m.PhotoURL,
         PhotoHistory = photoHistory
     };
@@ -296,6 +300,7 @@ public class AccountController : Controller
         if (ModelState.IsValid)
         {
             m.Name = vm.Name;
+            m.Address = vm.Address; // Update address
 
             // Handle processed image data (from cropper)
             if (!string.IsNullOrEmpty(vm.ProcessedImageData))
@@ -644,6 +649,62 @@ public class AccountController : Controller
             TempData["Info"] = "User restored.";
         }
         return RedirectToAction("", "Admin");
+    }
+
+    // Address validation API endpoints
+    [HttpPost]
+    public async Task<JsonResult> ValidateAddress([FromBody] string address)
+    {
+        try
+        {
+            var addressService = HttpContext.RequestServices.GetService<Services.IAddressService>();
+            
+            if (addressService == null)
+            {
+                return Json(new { 
+                    isValid = false, 
+                    errors = new[] { "Address validation service unavailable" }
+                });
+            }
+
+            var result = await addressService.ValidateAddressAsync(address);
+            
+            return Json(new {
+                isValid = result.IsValid,
+                errors = result.Errors,
+                warnings = result.Warnings,
+                formattedAddress = result.FormattedAddress,
+                isGeocodingValidated = result.IsGeocodingValidated
+            });
+        }
+        catch (Exception ex)
+        {
+            return Json(new {
+                isValid = false,
+                errors = new[] { "Address validation failed: " + ex.Message }
+            });
+        }
+    }
+
+    [HttpGet]
+    public JsonResult GetAddressSuggestions(string partialAddress)
+    {
+        try
+        {
+            var addressService = HttpContext.RequestServices.GetService<Services.IAddressService>();
+            
+            if (addressService == null || string.IsNullOrWhiteSpace(partialAddress))
+            {
+                return Json(new string[0]);
+            }
+
+            var suggestions = addressService.GetAddressSuggestions(partialAddress);
+            return Json(suggestions);
+        }
+        catch
+        {
+            return Json(new string[0]);
+        }
     }
 
 

@@ -26,6 +26,9 @@ builder.Services.AddScoped<Helper>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<WebApplication2.Services.RecaptchaHelper>();
 
+// Register AddressService
+builder.Services.AddScoped<WebApplication2.Services.IAddressService, WebApplication2.Services.AddressService>();
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

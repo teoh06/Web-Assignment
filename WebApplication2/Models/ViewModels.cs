@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 using System.Linq;
+using WebApplication2.Attributes;
+using WebApplication2.Controllers; // Add this for CartItemVM, OrderItemVM
 
 #nullable disable warnings
 
@@ -29,7 +31,11 @@ public class RegisterVM
     [MaxLength(100, ErrorMessage = "Name cannot exceed 100 characters.")]
     public string Name { get; set; }
 
-    public IFormFile? ProfilePicture { get; set; } 
+    public IFormFile? ProfilePicture { get; set; }
+
+    // Address for order tracking
+    [MaxLength(200)]
+    public string? Address { get; set; } 
 }
 
 public class LoginVM
@@ -95,6 +101,11 @@ public class UpdateProfileVM
 
     public IFormFile? ProfilePicture { get; set; }
 
+    // Address for order tracking
+    [ValidAddress(MinimumLength = 10, MaximumLength = 200, RequireHouseNumber = true, RequireStreetName = true)]
+    [CompleteAddress(RequireCity = true, RequireStateProvince = false, RequirePostalCode = false)]
+    public string? Address { get; set; }
+
     // For selecting from photo history
     public string? SelectedPhotoPath { get; set; }
 
@@ -130,6 +141,102 @@ public class MenuItemDetailsVM
     public List<MenuItemComment> Comments { get; set; }
     public double AverageRating => Ratings?.Count > 0 ? Ratings.Average(r => r.Value) : 0;
     public int RatingsCount => Ratings?.Count ?? 0;
+}
+
+public class TrackOrderVM
+{
+    [Required]
+    public string OrderNumber { get; set; }
+    public string? Address { get; set; }
+    public List<OrderDetailsVM> Orders { get; set; } = new List<OrderDetailsVM>();
+    public bool IsPostBack { get; set; }
+}
+
+public class OrderDetailsVM
+{
+    public string OrderNumber { get; set; }
+    public DateTime OrderDate { get; set; }
+    public string Status { get; set; }
+    public string DeliveryOption { get; set; } // Add delivery option for tracking
+}
+
+public class PaymentVM
+{
+    [Display(Name = "Payment Method")]
+    [Required(ErrorMessage = "Please select a payment method.")]
+    public string PaymentMethod { get; set; }
+
+    [Display(Name = "Card Number")]
+    [RegularExpression(@"^\d{16}$", ErrorMessage = "Card number must be 16 digits.")]
+    public string? CardNumber { get; set; }
+
+    [Display(Name = "Card Holder Name")]
+    [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
+    public string? CardHolderName { get; set; }
+
+    [Display(Name = "Expiry Date")]
+    [RegularExpression(@"^(0[1-9]|1[0-2])\/([0-9]{2})$", ErrorMessage = "Expiry date must be in MM/YY format")]
+    public string? ExpiryDate { get; set; }
+
+    [Display(Name = "CVV")]
+    [RegularExpression(@"^\d{3,4}$", ErrorMessage = "CVV must be 3 or 4 digits")]
+    public string? CVV { get; set; }
+
+    [Display(Name = "Billing Address")]
+    [StringLength(200, ErrorMessage = "Address cannot exceed 200 characters")]
+    public string? BillingAddress { get; set; }
+
+    // --- Enhancement: Delivery Address for this order ---
+    [Display(Name = "Delivery Address")]
+    [Required(ErrorMessage = "Delivery address is required.")]
+    [StringLength(200, ErrorMessage = "Address cannot exceed 200 characters")]
+    public string DeliveryAddress { get; set; }
+
+    [Display(Name = "Phone Number")]
+    [RegularExpression(@"^\d{10,12}$", ErrorMessage = "Please enter a valid phone number")]
+    [Required(ErrorMessage = "Phone number is required for order updates")]
+    public string PhoneNumber { get; set; }
+
+    [Display(Name = "Delivery Instructions")]
+    [StringLength(500, ErrorMessage = "Delivery instructions cannot exceed 500 characters")]
+    public string? DeliveryInstructions { get; set; }
+
+    [Display(Name = "Delivery Option")]
+    [Required(ErrorMessage = "Please select a delivery option.")]
+    public string DeliveryOption { get; set; } // "Delivery" or "Pickup"
+
+    public decimal Total { get; set; } // Set by the controller based on session cart
+    public List<CartItemVM> CartItems { get; set; } = new List<CartItemVM>(); // Add this property
+}
+
+public class ReceiptVM
+{
+    public int OrderId { get; set; }
+    public DateTime Date { get; set; }
+    public List<CartItemVM> Items { get; set; } = new List<CartItemVM>(); // Initialize list
+    public decimal Total { get; set; }
+    public string PaymentMethod { get; set; } // Add payment method
+    public string MemberEmail { get; set; }   // Add member email
+    public string Status { get; set; }        // Add order status
+
+    // New fields from payment information
+    public string PhoneNumber { get; set; }
+    public string DeliveryInstructions { get; set; }
+    public string CardNumber { get; set; }  // Only last 4 digits will be displayed
+    public string DeliveryOption { get; set; } // Add delivery option
+    // --- Enhancement: Show delivery address used ---
+    public string DeliveryAddress { get; set; }
+}
+
+public class OrderSummaryVM // A nested ViewModel for each individual order in the history
+{
+    public int OrderId { get; set; }
+    public DateTime OrderDate { get; set; }
+    public decimal Total { get; set; }
+    public string Status { get; set; }
+    public List<OrderItemVM> Items { get; set; } = new List<OrderItemVM>(); // Details for each item in the order
+    public string DeliveryAddress { get; set; }
+    public string DeliveryOption { get; set; } // Add delivery option
 }
 
 

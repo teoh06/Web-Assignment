@@ -28,6 +28,11 @@
                             <input asp-for="PhoneNumber" class="form-control" placeholder="Enter your phone number" required />
                             <span asp-validation-for="PhoneNumber" class="text-danger"></span>
                         </div>
+                        <div class="mb-3">
+                            <label asp-for="DeliveryAddress" class="form-label"></label>
+                            <input asp-for="DeliveryAddress" class="form-control" placeholder="@(Model.DeliveryAddress ?? "Enter your address")" required />
+                            <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
+                        </div>
 
                         <div class="mb-3">
                             <label asp-for="DeliveryInstructions" class="form-label"></label>
