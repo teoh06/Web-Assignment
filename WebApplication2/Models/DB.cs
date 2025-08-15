@@ -107,12 +107,18 @@ public class MenuItem
     [Column(TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
     public string? PhotoURL { get; set; }
+
     // Foreign key
     [Required(ErrorMessage = "Category is required")]
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
-    public ICollection<MenuItemImage> MenuItemImages { get; set; } = new List<MenuItemImage>(); // Initialize the collection
+
+    public ICollection<MenuItemImage> MenuItemImages { get; set; } = new List<MenuItemImage>();
+
+    
+    public bool IsActive { get; set; } = true;
 }
+
 
 public class Order
 {

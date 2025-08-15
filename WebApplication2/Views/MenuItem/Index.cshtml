@@ -61,6 +61,13 @@
                         <td>
                             @if (isAdmin)
                             {
+                                <form asp-action="ToggleActive" method="post" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.MenuItemId" />
+                                    <button type="submit" class="btn btn-sm @(item.IsActive ? "btn-secondary" : "btn-success")">
+                                        @(item.IsActive ? "Inactive" : "Activate")
+                                    </button>
+                                </form>
                                 <a class="btn btn-sm btn-warning" asp-controller="MenuItem" asp-action="Edit" asp-route-id="@item.MenuItemId">Edit</a>
                                 <a class="btn btn-sm btn-danger" asp-controller="MenuItem" asp-action="Delete" asp-route-id="@item.MenuItemId">Delete</a>
                                 <a class="btn btn-sm btn-info" asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">Details</a>

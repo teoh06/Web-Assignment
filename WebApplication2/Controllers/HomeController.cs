@@ -17,8 +17,15 @@ public class HomeController : Controller
     // GET: Home/Index
     public IActionResult Index()
     {
-        // Get 3 featured menu items (e.g., by price descending, or just take 3)
-        var featured = db.MenuItems
+        var query = db.MenuItems.AsQueryable();
+
+        // Hide inactive items for non-admins
+        if (!User.IsInRole("Admin"))
+        {
+            query = query.Where(m => m.IsActive);
+        }
+
+        var featured = query
             .OrderByDescending(m => m.Price)
             .Take(4)
             .Select(m => new FeaturedMenuItemVM
@@ -30,8 +37,11 @@ public class HomeController : Controller
                 Image = "/images/" + (string.IsNullOrEmpty(m.PhotoURL) ? "default.jpg" : m.PhotoURL)
             })
             .ToList();
+
         return View(featured);
     }
+
+
 
     // GET: Home/Both
     [Authorize]
