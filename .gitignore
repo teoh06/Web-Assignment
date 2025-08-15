@@ -331,6 +331,9 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+/WebApplication2/Migrations
+
+
 # ------------------------
 # EF Core Migrations
 # ------------------------
@@ -338,3 +341,4 @@ FodyWeavers.xsd
 # Optional: keep snapshot but ignore migration scripts
 # /Migrations/*.cs
 # !/Migrations/*ModelSnapshot.cs
+
