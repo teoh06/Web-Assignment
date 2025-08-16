@@ -441,7 +441,51 @@ public class MenuItemController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost]
+    public IActionResult ToggleFavorite(int menuItemId)
+    {
+        if (!User.Identity.IsAuthenticated) return Unauthorized();
+        var email = User.Identity.Name;
+        var fav = db.MenuItemFavorites.FirstOrDefault(f => f.MenuItemId == menuItemId && f.MemberEmail == email);
+        if (fav != null)
+        {
+            db.MenuItemFavorites.Remove(fav);
+            db.SaveChanges();
+            return Json(new { favorited = false });
+        }
+        else
+        {
+            db.MenuItemFavorites.Add(new MenuItemFavorite { MenuItemId = menuItemId, MemberEmail = email });
+            db.SaveChanges();
+            return Json(new { favorited = true });
+        }
+    }
 
+    [HttpGet]
+    public IActionResult GetUserFavorites()
+    {
+        if (!User.Identity.IsAuthenticated) return Unauthorized();
+        var email = User.Identity.Name;
+        var favorites = db.MenuItemFavorites.Where(f => f.MemberEmail == email)
+            .Select(f => f.MenuItemId).ToList();
+        return Json(favorites);
+    }
+
+    [HttpGet]
+    public IActionResult GetTopSellItems(int count = 5)
+    {
+        var topItems = db.MenuItems
+            .OrderByDescending(m => db.CartItems.Where(c => c.MenuItemId == m.MenuItemId).Count())
+            .Take(count)
+            .Select(m => new {
+                m.MenuItemId,
+                m.Name,
+                m.PhotoURL,
+                m.Price,
+                m.Description
+            }).ToList();
+        return Json(topItems);
+    }
 
     [AllowAnonymous]
     [HttpGet]

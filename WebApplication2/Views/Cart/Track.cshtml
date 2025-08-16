@@ -17,23 +17,52 @@
                 </div>
                 <div class="field-row">
                     <label asp-for="Address">Shipping Address</label>
-                    <input asp-for="Address" class="form-input" placeholder="@(Model.Address ?? "Enter your address")">
+                    <div class="address-input-container">
+                        <input asp-for="Address" id="addressInput" class="form-input address-input" placeholder="Enter your address" autocomplete="address-line1">
+                        @if (!string.IsNullOrEmpty(Model.Address))
+                        {
+                            <button type="button" id="useMyAddressBtn" class="use-address-btn" onclick="useMyAddress()" title="Use my profile address">
+                                📍 Use My Address
+                            </button>
+                        }
+                    </div>
                     <span asp-validation-for="Address" class="field-validation-error"></span>
+                    @if (!string.IsNullOrEmpty(Model.Address))
+                    {
+                        <div class="mt-2">
+                            <small class="text-muted profile-address-info">💡 Your profile address: <strong>@Model.Address</strong></small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mt-2">
+                            <small class="text-warning">⚠️ No address in your profile. Please add one in your profile settings.</small>
+                        </div>
+                    }
                 </div>
                 <div class="form-buttons">
                     <button type="button" class="btn-primary" onclick="trackOrderAjax()">Track Order</button>
                 </div>
             </form>
-            <div id="deliveryAnimation" style="display:none; text-align:center; margin-top:30px;">
-                <div id="animationBox" style="width:120px;height:60px;margin:auto;position:relative;">
-                    <div id="motorBody" style="width:60px;height:30px;background:var(--primary-brand);border-radius:15px 15px 10px 10px;position:absolute;left:30px;top:15px;"></div>
-                    <div id="motorWheel1" style="width:18px;height:18px;background:#333;border-radius:50%;position:absolute;left:32px;top:38px;"></div>
-                    <div id="motorWheel2" style="width:18px;height:18px;background:#333;border-radius:50%;position:absolute;left:70px;top:38px;"></div>
-                    <div id="motorSeat" style="width:20px;height:10px;background:#222;border-radius:5px;position:absolute;left:50px;top:10px;"></div>
-                    <div id="motorRider" style="width:16px;height:16px;background:var(--accent-green);border-radius:50%;position:absolute;left:60px;top:0px;"></div>
-                    <div id="motorHandle" style="width:20px;height:4px;background:#222;position:absolute;left:70px;top:20px;border-radius:2px;"></div>
+            <div id="deliveryAnimation" style="display:none; text-align:center; margin-top:30px; padding: 20px; background: linear-gradient(135deg, #F7931E 30%, #FF6B35 100%); border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <div id="animationBox" style="width:250px;height:80px;margin:auto;position:relative;background: linear-gradient(to right, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%);border-radius:10px;overflow:hidden;">
+                    <!-- Road lines -->
+                    <div style="position:absolute;bottom:15px;left:0;right:0;height:2px;background:#333;opacity:0.3;"></div>
+                    <div style="position:absolute;bottom:12px;left:10px;width:20px;height:1px;background:#fff;opacity:0.5;animation:roadLine 1s infinite linear;"></div>
+                    
+                    <!-- Animated motor -->
+                    <div id="motorContainer" style="position:absolute;left:20px;top:25px;">
+                        <div id="motorBody" style="width:45px;height:25px;background:#2196F3;border-radius:12px 12px 6px 6px;position:relative;"></div>
+                        <div id="motorWheel1" class="wheel" style="width:15px;height:15px;background:#333;border:2px solid #666;border-radius:50%;position:absolute;left:5px;top:22px;"></div>
+                        <div id="motorWheel2" class="wheel" style="width:15px;height:15px;background:#333;border:2px solid #666;border-radius:50%;position:absolute;left:25px;top:22px;"></div>
+                        <div id="motorSeat" style="width:15px;height:8px;background:#555;border-radius:4px;position:absolute;left:15px;top:-3px;"></div>
+                        <div id="motorRider" style="width:12px;height:12px;background:#4CAF50;border-radius:50%;position:absolute;left:17px;top:-10px;"></div>
+                        <div id="motorHandle" style="width:10px;height:3px;background:#333;position:absolute;left:35px;top:10px;border-radius:2px;"></div>
+                        <!-- Exhaust smoke effect -->
+                        <div class="smoke" style="position:absolute;left:-5px;top:15px;width:8px;height:8px;background:#ddd;border-radius:50%;opacity:0.6;animation:smoke 0.8s infinite;"></div>
+                    </div>
                 </div>
-                <div id="animationStatus" style="margin-top:10px;font-weight:bold;"></div>
+                <div id="animationStatus" style="margin-top:15px;font-weight:bold;color:white;font-size:16px;"></div>
             </div>
             <div id="orderResult"></div>
         </div>
@@ -61,11 +90,185 @@
     }
 </div>
 
+<style>
+    @@keyframes wheelRotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    @@keyframes roadLine {
+        0% { transform: translateX(-250px); }
+        100% { transform: translateX(250px); }
+    }
+    
+    @@keyframes smoke {
+        0% { 
+            opacity: 0.6; 
+            transform: translateX(0) scale(1); 
+        }
+        100% { 
+            opacity: 0; 
+            transform: translateX(-20px) scale(0.5); 
+        }
+    }
+    
+    .wheel {
+        animation: wheelRotate 0.2s infinite linear;
+    }
+    
+    .smoke {
+        animation: smoke 0.8s infinite;
+    }
+    
+    .field-row {
+        margin-bottom: 1rem;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-input:focus {
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        outline: none;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+    
+    /* Address input container styling */
+    .address-input-container {
+        display: flex;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .address-input {
+        flex: 1;
+        margin-right: 0;
+    }
+    
+    .use-address-btn {
+        background: linear-gradient(135deg, #2196F3, #1976D2);
+        color: white;
+        border: none;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        min-width: 140px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .use-address-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        background: linear-gradient(135deg, #1976D2, #1565C0);
+    }
+    
+    .profile-address-info {
+        display: block;
+        padding: 8px;
+        border-radius: 4px;
+        border-left: 4px solid #4CAF50;
+    }
+    
+    @@media (max-width: 768px) {
+        .address-input-container {
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .use-address-btn {
+            min-width: auto;
+            width: 100%;
+        }
+    }
+</style>
+
 <script>
+    // Store profile address as a global variable to avoid issues with HTML encoding
+    var profileAddress = '@Html.Raw(Model.Address?.Replace("\r\n", "\\n")?.Replace("\"", "\\\"")?? "")';
+    
     document.addEventListener('DOMContentLoaded', function() {
         var orderInput = document.querySelector('input[name="OrderNumber"]');
         if (orderInput) orderInput.id = 'orderNumberInput';
+        
+        var addressInput = document.getElementById('addressInput');
+        
+        // Auto-fill address on page load if user has a profile address
+        if (profileAddress.trim() && profileAddress !== '') {
+            addressInput.value = profileAddress;
+            addressInput.placeholder = 'Address auto-filled from your profile';
+        } else {
+            addressInput.placeholder = 'Enter your delivery address';
+        }
+        
+        // Update button visibility based on whether user has profile address
+        var useMyAddressBtn = document.getElementById('useMyAddressBtn');
+        if (profileAddress.trim() === '' || profileAddress === '') {
+            useMyAddressBtn.style.display = 'none';
+        }
     });
+    
+    // Function to use the user's profile address
+    function useMyAddress() {
+        var addressInput = document.getElementById('addressInput');
+        
+        if (profileAddress.trim() && profileAddress !== '') {
+            addressInput.value = profileAddress;
+            addressInput.focus();
+            
+            // Add a subtle animation to indicate the field was updated
+            addressInput.style.backgroundColor = '#d4edda';
+            addressInput.style.border = '2px solid #28a745';
+            setTimeout(function() {
+                addressInput.style.backgroundColor = '';
+                addressInput.style.border = '';
+            }, 2000);
+            
+            // Show success message briefly
+            var successMsg = document.createElement('div');
+            successMsg.className = 'alert alert-success mt-2';
+            successMsg.style.fontSize = '12px';
+            successMsg.style.padding = '5px 10px';
+            successMsg.innerHTML = '✅ Address filled from your profile!';
+            addressInput.parentElement.appendChild(successMsg);
+            
+            setTimeout(function() {
+                if (successMsg.parentElement) {
+                    successMsg.parentElement.removeChild(successMsg);
+                }
+            }, 3000);
+        } else {
+            alert('❌ No address found in your profile. Please update your profile with your delivery address.');
+        }
+    }
 
     function trackOrderAjax() {
         var orderNumber = document.getElementById('orderNumberInput').value;

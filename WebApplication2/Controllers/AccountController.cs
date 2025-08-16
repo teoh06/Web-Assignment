@@ -44,10 +44,10 @@ public class AccountController : Controller
     {
         // Always ensure SiteKey is available for the view
         ViewBag.SiteKey = HttpContext.RequestServices.GetService<IConfiguration>()?["GoogleReCaptcha:SiteKey"];
-        
+
         var recaptchaToken = Request.Form["g-recaptcha-response"];
         var siteKey = ViewBag.SiteKey as string;
-        
+
         // Only validate recaptcha if site key is configured
         if (!string.IsNullOrEmpty(siteKey) && !await _recaptcha.VerifyAsync(recaptchaToken))
         {
@@ -169,10 +169,10 @@ public class AccountController : Controller
     {
         // Always ensure SiteKey is available for the view
         ViewBag.SiteKey = HttpContext.RequestServices.GetService<IConfiguration>()?["GoogleReCaptcha:SiteKey"];
-        
+
         var recaptchaToken = Request.Form["g-recaptcha-response"];
         var siteKey = ViewBag.SiteKey as string;
-        
+
         // Only validate recaptcha if site key is configured
         if (!string.IsNullOrEmpty(siteKey) && !await _recaptcha.VerifyAsync(recaptchaToken))
         {
@@ -255,31 +255,30 @@ public class AccountController : Controller
     {
         var m = db.Members.Include(x => x.MemberPhotos)
                       .FirstOrDefault(x => x.Email == User.Identity!.Name);
-    if (m == null) return RedirectToAction("Index", "Home");
+        if (m == null) return RedirectToAction("Index", "Home");
 
-    // Get up to 4 most recent previous photos
-    var photoHistory = m.MemberPhotos
-        .OrderByDescending(p => p.UploadDate)
-        .Take(4)
-        .Select(p => new ProfilePhotoVM
+        // The photo history should include all unique, non-default photos associated with the member
+        var photoHistory = m.MemberPhotos
+            .OrderByDescending(p => p.UploadDate)
+            .Select(p => new ProfilePhotoVM
+            {
+                Id = p.Id,
+                FileName = p.FileName,
+                UploadDate = p.UploadDate
+            })
+            .ToList();
+
+        var vm = new UpdateProfileVM
         {
-            Id = p.Id,
-            FileName = p.FileName,
-            UploadDate = p.UploadDate
-        })
-        .ToList();
+            Email = m.Email,
+            Name = m.Name,
+            Address = m.Address,
+            PhotoURL = m.PhotoURL,
+            PhotoHistory = photoHistory
+        };
 
-    var vm = new UpdateProfileVM
-    {
-        Email = m.Email,
-        Name = m.Name,
-        Address = m.Address,
-        PhotoURL = m.PhotoURL,
-        PhotoHistory = photoHistory
-    };
-
-    return View(vm);
-}
+        return View(vm);
+    }
 
     // POST: Account/UpdateProfile
     [Authorize(Roles = "Member")]
@@ -290,7 +289,6 @@ public class AccountController : Controller
                           .FirstOrDefault(x => x.Email == User.Identity!.Name);
         if (m == null) return RedirectToAction("Index", "Home");
 
-        // Validate regular photo upload
         if (vm.ProfilePicture != null)
         {
             var err = hp.ValidatePhoto(vm.ProfilePicture);
@@ -300,134 +298,135 @@ public class AccountController : Controller
         if (ModelState.IsValid)
         {
             m.Name = vm.Name;
-            m.Address = vm.Address; // Update address
+            m.Address = vm.Address;
 
-            // Handle processed image data (from cropper)
-            if (!string.IsNullOrEmpty(vm.ProcessedImageData))
+            string? newPhotoUrl = null;
+            string oldPhotoUrl = m.PhotoURL;
+
+            // --- Determine the new photo URL ---
+            try
             {
-                try
+                if (!string.IsNullOrEmpty(vm.ProcessedImageData))
                 {
-                    // Save current photo to history if it exists and is not default
-                    if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
-                    {
-                        if (!m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
-                        {
-                            m.MemberPhotos.Add(new MemberPhoto
-                            {
-                                MemberEmail = m.Email,
-                                FileName = m.PhotoURL,
-                                UploadDate = DateTime.Now
-                            });
-                        }
-                    }
-
-                    // Delete old photo file
-                    if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
-                    {
-                        hp.DeletePhoto(m.PhotoURL, "photos");
-                    }
-
-                    // Convert base64 to image and save
-                    string newFileName = SaveBase64Image(vm.ProcessedImageData, "photos");
-                    m.PhotoURL = newFileName;
-
-                    // Keep only the 4 most recent previous photos
-                    var toRemove = m.MemberPhotos
-                        .OrderByDescending(p => p.UploadDate)
-                        .Skip(4)
-                        .ToList();
-                    db.MemberPhotos.RemoveRange(toRemove);
+                    // Case 1: New photo from cropper
+                    newPhotoUrl = SaveBase64Image(vm.ProcessedImageData, "photos");
                 }
-                catch (Exception ex)
+                else if (vm.ProfilePicture != null)
                 {
-                    ModelState.AddModelError("ProcessedImageData", "Error processing image: " + ex.Message);
-                    // Repopulate photo history for redisplay
-                    vm.Email = m.Email;
-                    vm.PhotoURL = m.PhotoURL;
-                    vm.PhotoHistory = m.MemberPhotos
-                        .OrderByDescending(p => p.UploadDate)
-                        .Take(4)
-                        .Select(p => new ProfilePhotoVM
-                        {
-                            Id = p.Id,
-                            FileName = p.FileName,
-                            UploadDate = p.UploadDate
-                        })
-                        .ToList();
-                    return View(vm);
+                    // Case 2: New photo from direct upload
+                    newPhotoUrl = hp.SavePhoto(vm.ProfilePicture, "photos");
                 }
-            }
-            // Handle new photo upload (regular file upload)
-            else if (vm.ProfilePicture != null)
-            {
-                // Save current photo to history if it exists and is not default
-                if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png")
+                else if (!string.IsNullOrEmpty(vm.SelectedPhotoPath) && int.TryParse(vm.SelectedPhotoPath, out int selectedPhotoId))
                 {
-                    if (!m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
-                    {
-                        m.MemberPhotos.Add(new MemberPhoto
-                        {
-                            MemberEmail = m.Email,
-                            FileName = m.PhotoURL,
-                            UploadDate = DateTime.Now
-                        });
-                    }
-                    // Keep only the 4 most recent previous photos
-                    var toRemove = m.MemberPhotos
-                        .OrderByDescending(p => p.UploadDate)
-                        .Skip(4)
-                        .ToList();
-                    db.MemberPhotos.RemoveRange(toRemove);
-                }
-
-                hp.DeletePhoto(m.PhotoURL, "photos");
-                m.PhotoURL = hp.SavePhoto(vm.ProfilePicture, "photos");
-            }
-            // Handle selecting a previous photo
-            else if (!string.IsNullOrEmpty(vm.SelectedPhotoPath))
-            {
-                if (int.TryParse(vm.SelectedPhotoPath, out int selectedPhotoId))
-                {
+                    // Case 3: Reusing a photo from history
                     var selectedPhoto = m.MemberPhotos.FirstOrDefault(p => p.Id == selectedPhotoId);
                     if (selectedPhoto != null)
                     {
-                        // Save current photo to history if not already in history and not default
-                        if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.jpg" && m.PhotoURL != "default.png" &&
-                            !m.MemberPhotos.Any(p => p.FileName == m.PhotoURL))
-                        {
-                            m.MemberPhotos.Add(new MemberPhoto
-                            {
-                                MemberEmail = m.Email,
-                                FileName = m.PhotoURL,
-                                UploadDate = DateTime.Now
-                            });
-                        }
-                        m.PhotoURL = selectedPhoto.FileName;
+                        newPhotoUrl = selectedPhoto.FileName;
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", "Error processing photo: " + ex.Message);
+                // On error, fall through to return the view with the model state error
+            }
 
+
+            // --- If a photo change occurred, update history and current photo ---
+            if (newPhotoUrl != null && newPhotoUrl != oldPhotoUrl)
+            {
+                // Add the previous photo to history if it's not a default one and not already there
+                if (!string.IsNullOrEmpty(oldPhotoUrl) && oldPhotoUrl != "default.png" && !m.MemberPhotos.Any(p => p.FileName == oldPhotoUrl))
+                {
+                    m.MemberPhotos.Add(new MemberPhoto
+                    {
+                        MemberEmail = m.Email,
+                        FileName = oldPhotoUrl,
+                        UploadDate = DateTime.Now
+                    });
+                }
+
+                // Set the new photo
+                m.PhotoURL = newPhotoUrl;
+            }
+
+            // Save all changes (name, address, new photo URL, new history entry)
             db.SaveChanges();
+
+            // --- Prune photo history to keep the 4 most recent ones AFTER saving changes ---
+            var allPhotos = db.MemberPhotos.Where(p => p.MemberEmail == m.Email).ToList();
+            if (allPhotos.Count > 4)
+            {
+                var photosToRemove = allPhotos
+                    .OrderByDescending(p => p.UploadDate)
+                    .Skip(4)
+                    .ToList();
+
+                foreach (var photo in photosToRemove)
+                {
+                    // Important: Only delete the file if it's not the current profile picture
+                    if (photo.FileName != m.PhotoURL)
+                    {
+                        hp.DeletePhoto(photo.FileName, "photos");
+                    }
+                }
+                db.MemberPhotos.RemoveRange(photosToRemove);
+                db.SaveChanges();
+            }
 
             TempData["Info"] = "Profile updated successfully.";
             return RedirectToAction();
         }
 
-        // Repopulate photo history for redisplay
+        // Repopulate required VM properties if returning to the view due to an error
         vm.Email = m.Email;
         vm.PhotoURL = m.PhotoURL;
         vm.PhotoHistory = m.MemberPhotos
             .OrderByDescending(p => p.UploadDate)
-            .Take(4)
-            .Select(p => new ProfilePhotoVM
-            {
-                Id = p.Id,
-                FileName = p.FileName,
-                UploadDate = p.UploadDate
-            })
+            .Select(p => new ProfilePhotoVM { Id = p.Id, FileName = p.FileName, UploadDate = p.UploadDate })
             .ToList();
+
         return View(vm);
     }
+
+    // ACTION TO DELETE A PHOTO FROM HISTORY
+    [Authorize(Roles = "Member")]
+    [HttpPost]
+    public async Task<IActionResult> DeleteMemberPhoto(int id)
+    {
+        var member = await db.Members
+            .Include(m => m.MemberPhotos)
+            .FirstOrDefaultAsync(m => m.Email == User.Identity!.Name);
+
+        if (member == null) return Unauthorized();
+
+        var photoToDelete = member.MemberPhotos.FirstOrDefault(p => p.Id == id);
+        if (photoToDelete == null) return NotFound(new { success = false, message = "Photo not found in your history." });
+
+        if (photoToDelete.FileName == member.PhotoURL)
+        {
+            return BadRequest(new { success = false, message = "Cannot delete the currently active profile photo." });
+        }
+
+        try
+        {
+            // Delete the physical file first
+            hp.DeletePhoto(photoToDelete.FileName, "photos");
+
+            // Remove the record from the database
+            db.MemberPhotos.Remove(photoToDelete);
+            await db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Photo deleted successfully." });
+        }
+        catch (Exception ex)
+        {
+            // Log the exception ex
+            return StatusCode(500, new { success = false, message = "An error occurred while deleting the photo." });
+        }
+    }
+
 
     // Helper method to save base64 image
     private string SaveBase64Image(string base64Data, string folder)
@@ -658,18 +657,20 @@ public class AccountController : Controller
         try
         {
             var addressService = HttpContext.RequestServices.GetService<Services.IAddressService>();
-            
+
             if (addressService == null)
             {
-                return Json(new { 
-                    isValid = false, 
+                return Json(new
+                {
+                    isValid = false,
                     errors = new[] { "Address validation service unavailable" }
                 });
             }
 
             var result = await addressService.ValidateAddressAsync(address);
-            
-            return Json(new {
+
+            return Json(new
+            {
                 isValid = result.IsValid,
                 errors = result.Errors,
                 warnings = result.Warnings,
@@ -679,7 +680,8 @@ public class AccountController : Controller
         }
         catch (Exception ex)
         {
-            return Json(new {
+            return Json(new
+            {
                 isValid = false,
                 errors = new[] { "Address validation failed: " + ex.Message }
             });
@@ -692,7 +694,7 @@ public class AccountController : Controller
         try
         {
             var addressService = HttpContext.RequestServices.GetService<Services.IAddressService>();
-            
+
             if (addressService == null || string.IsNullOrWhiteSpace(partialAddress))
             {
                 return Json(new string[0]);
@@ -706,6 +708,4 @@ public class AccountController : Controller
             return Json(new string[0]);
         }
     }
-
-
 }

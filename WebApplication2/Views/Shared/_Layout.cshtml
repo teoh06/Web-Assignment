@@ -7,14 +7,6 @@
     }
 }
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show auto-dismiss" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
 @if (TempData["EditMessage"] != null)
 {
     <div class="alert alert-info alert-dismissible fade show" role="alert">

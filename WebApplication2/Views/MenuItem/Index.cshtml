@@ -8,114 +8,133 @@
 }
 
 <div class="menu-container">
-    <!-- Updated form with consistent parameter names and AJAX functionality -->
-    <form id="filterForm" class="form-inline mb-3" style="display:flex;gap:10px;flex-wrap:wrap;">
-        <input type="text" name="search" id="searchInput" value="@Context.Request.Query["search"]" placeholder="Search name..." class="form-control"/>
-        <select name="categoryId" id="categorySelect" class="form-control">
-            <option value="">All Categories</option>
-            @foreach (var cat in Model.Categories)
-            {
-                var isSelected = Context.Request.Query["categoryId"] == cat.CategoryId.ToString();
-                <option value="@cat.CategoryId" selected="@isSelected">@cat.Name</option>
-            }
-        </select>
-        <input type="number" name="minPrice" id="minPriceInput" value="@Context.Request.Query["minPrice"]" placeholder="Min Price" class="form-control" style="width:120px;" min="0" step="0.01" />
-        <input type="number" name="maxPrice" id="maxPriceInput" value="@Context.Request.Query["maxPrice"]" placeholder="Max Price" class="form-control" style="width:120px;" min="0" step="0.01" />
-        <button type="submit" class="btn btn-primary" style="margin-left: 20px;">Filter</button>
-        <button type="button" id="clearFilters" class="btn btn-secondary">Clear</button>
-    </form>
+    <div class="filter-section">
+        <form id="filterForm" class="filter-form">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" name="search" id="searchInput" value="@Context.Request.Query["search"]" 
+                    placeholder="Search dishes..." class="form-control" />
+            </div>
+            <div class="filters-row">
+                <select name="categoryId" id="categorySelect" class="form-control">
+                    <option value="">All Categories</option>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        var isSelected = Context.Request.Query["categoryId"] == cat.CategoryId.ToString();
+                        <option value="@cat.CategoryId" selected="@isSelected">@cat.Name</option>
+                    }
+                </select>
+                <div class="price-filters">
+                    <input type="number" name="minPrice" id="minPriceInput" 
+                        value="@Context.Request.Query["minPrice"]" placeholder="Min Price" 
+                        class="form-control" min="0" step="0.01" />
+                    <input type="number" name="maxPrice" id="maxPriceInput" 
+                        value="@Context.Request.Query["maxPrice"]" placeholder="Max Price" 
+                        class="form-control" min="0" step="0.01" />
+                </div>
+                <div class="filter-buttons">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <button type="button" id="clearFilters" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
 
-    @if (User.IsInRole("Admin"))
+    @if (isAdmin)
     {
-        <p><a class="btn btn-success mb-3" asp-controller="MenuItem" asp-action="Create">+ Add New Product</a></p>
+        <div class="admin-actions mb-4">
+            <a class="btn btn-success" asp-controller="MenuItem" asp-action="Create">
+                <i class="fas fa-plus"></i> Add New Product
+            </a>
+        </div>
     }
 
-    <!-- Results table -->
-    <table class="table table-hover">
-        <thead>
-            <tr>
-                <th>Photo</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Price</th>
-                @if (isAdmin || isMember)
-                {
-                    <th>Action</th>
-                }
-            </tr>
-        </thead>
-        <tbody id="menuItemsTableBody">
-            @foreach (var item in Model.MenuItems)
-            {
-                <tr>
-                    <td>
-                        <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
-                            <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" class="product-photo" />
-                        </a>
-                    </td>
-                    <td>@item.Name</td>
-                    <td>@item.Category?.Name</td>
-                    <td>@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</td>
-                    @if (isAdmin || isMember)
+    <div class="menu-items-grid" id="menuItemsGrid">
+        @foreach (var item in Model.MenuItems)
+        {
+            <div class="menu-item-card">
+                <div class="item-image">
+                    <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
+                        <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" />
+                    </a>
+                    <span class="item-price">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                    @if (isAdmin && !item.IsActive)
                     {
-                        <td>
-                            @if (isAdmin)
-                            {
-                                <form asp-action="ToggleActive" method="post" style="display:inline;">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@item.MenuItemId" />
-                                    <button type="submit" class="btn btn-sm @(item.IsActive ? "btn-secondary" : "btn-success")">
-                                        @(item.IsActive ? "Inactive" : "Activate")
-                                    </button>
-                                </form>
-                                <a class="btn btn-sm btn-warning" asp-controller="MenuItem" asp-action="Edit" asp-route-id="@item.MenuItemId">Edit</a>
-                                <a class="btn btn-sm btn-danger" asp-controller="MenuItem" asp-action="Delete" asp-route-id="@item.MenuItemId">Delete</a>
-                                <a class="btn btn-sm btn-info" asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">Details</a>
-                            }
-                            else if (isMember)
-                            {
-                                <form asp-controller="Cart" asp-action="Add" method="post" class="add-to-cart-form">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                                    <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px;" class="form-control d-inline-block" />
-                                    <button type="submit" class="btn btn-primary btn-sm mt-1">Add to Cart</button>
-                                </form>
-                            }
-                        </td>
+                        <span class="inactive-badge">Inactive</span>
                     }
-                </tr>
-            }
-        </tbody>
-    </table>
+                </div>
+                <div class="item-info">
+                    <h3 class="item-name">@item.Name</h3>
+                    <p class="item-category">@item.Category?.Name</p>
+                    <div class="item-actions">
+                        @if (isAdmin)
+                        {
+                            <form asp-action="ToggleActive" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.MenuItemId" />
+                                <button type="submit" class="btn btn-sm @(item.IsActive ? "btn-secondary" : "btn-success")">
+                                    @(item.IsActive ? "Deactivate" : "Activate")
+                                </button>
+                            </form>
+                            <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@item.MenuItemId">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@item.MenuItemId">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        }
+                        else if (isMember)
+                        {
+                            <form asp-controller="Cart" asp-action="Add" method="post" class="add-to-cart-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                                <div class="quantity-control">
+                                    <input type="number" name="quantity" value="1" min="1" max="100" class="form-control" />
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-cart-plus"></i> Add to Cart
+                                    </button>
+                                </div>
+                            </form>
+                        }
+                        <a class="btn btn-sm btn-info" asp-action="Details" asp-route-id="@item.MenuItemId">
+                            <i class="fas fa-info-circle"></i> Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 
-    <!-- Loading indicator -->
-    <div id="loadingIndicator" style="display: none; text-align: center; padding: 20px;">
-        <div class="spinner-border" role="status">
-            <span class="sr-only">Loading...</span>
+    <div id="loadingIndicator" class="loading-indicator">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Filter functionality
         document.getElementById('filterForm').addEventListener('submit', function(e) {
             e.preventDefault();
             performFilter();
         });
 
-        // Clear filters
         document.getElementById('clearFilters').addEventListener('click', function() {
             document.getElementById('searchInput').value = '';
             document.getElementById('categorySelect').value = '';
             document.getElementById('minPriceInput').value = '';
-            document.getElementById('maxPriceInput').value = '';  // Correct ID
+            document.getElementById('maxPriceInput').value = '';
             performFilter();
         });
 
-        // Real-time filtering on input change (optional - remove if you prefer manual filtering only)
         document.getElementById('searchInput').addEventListener('input', debounce(performFilter, 500));
         document.getElementById('categorySelect').addEventListener('change', performFilter);
+        document.getElementById('minPriceInput').addEventListener('change', performFilter);
+        document.getElementById('maxPriceInput').addEventListener('change', performFilter);
 
         function performFilter() {
             const search = document.getElementById('searchInput').value;
@@ -123,81 +142,136 @@
             const minPrice = document.getElementById('minPriceInput').value;
             const maxPrice = document.getElementById('maxPriceInput').value;
 
-            // Show loading indicator
             document.getElementById('loadingIndicator').style.display = 'block';
-            document.getElementById('menuItemsTableBody').style.opacity = '0.5';
+            document.getElementById('menuItemsGrid').style.opacity = '0.5';
 
-            // Build query parameters
             const params = new URLSearchParams();
             if (search) params.append('search', search);
             if (categoryId) params.append('categoryId', categoryId);
             if (minPrice) params.append('minPrice', minPrice);
             if (maxPrice) params.append('maxPrice', maxPrice);
 
-            // Make AJAX request
             fetch(`@Url.Action("GetFilteredMenuItems", "MenuItem")?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
-                    updateTable(data);
+                    updateMenuItems(data);
                 })
                 .catch(error => {
                     console.error('Error filtering menu items:', error);
                     alert('Failed to filter menu items. Please try again.');
                 })
                 .finally(() => {
-                    // Hide loading indicator
                     document.getElementById('loadingIndicator').style.display = 'none';
-                    document.getElementById('menuItemsTableBody').style.opacity = '1';
+                    document.getElementById('menuItemsGrid').style.opacity = '1';
                 });
         }
 
-        function updateTable(menuItems) {
-            const tbody = document.getElementById('menuItemsTableBody');
+        function updateMenuItems(items) {
+            const grid = document.getElementById('menuItemsGrid');
             const isAdmin = @Json.Serialize(isAdmin);
             const isMember = @Json.Serialize(isMember);
 
-            if (menuItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No menu items found.</td></tr>';
+            if (items.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <p>No menu items found matching your criteria.</p>
+                    </div>`;
                 return;
             }
 
-            let html = '';
-            menuItems.forEach(item => {
-                // Fix image path - remove leading slash and ensure proper path
-                const imagePath = item.photoURL ? item.photoURL : 'images/default.jpg';
-                const imageUrl = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+            grid.innerHTML = items.map(item => `
+                <div class="menu-item-card">
+                    <div class="item-image">
+                        <a href="/MenuItem/Details/${item.menuItemId}">
+                            <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
+                        </a>
+                        <span class="item-price">${item.price}</span>
+                        ${!item.isActive && isAdmin ? '<span class="inactive-badge">Inactive</span>' : ''}
+                    </div>
+                    <div class="item-info">
+                        <h3 class="item-name">${item.name}</h3>
+                        <p class="item-category">${item.categoryName}</p>
+                        <div class="item-actions">
+                            ${getItemActions(item, isAdmin, isMember)}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
 
-                html += '<tr>';
-                // Make only the image clickable to details
-                html += `<td><a href="/MenuItem/Details/${item.menuItemId}"><img src="/Images/${imageUrl}" alt="${item.name}" class="product-photo"" /></a></td>`;
-                // Item name is NOT clickable
-                html += `<td>${item.name}</td>`;
-                html += `<td>${item.categoryName}</td>`;
-                html += `<td>${item.price}</td>`;
-
-                if (isAdmin || isMember) {
-                    html += '<td>';
-                    if (isAdmin) {
-                        html += `<a href="/MenuItem/Edit/${item.menuItemId}" class="btn btn-sm btn-warning">Edit</a> `;
-                        html += `<a href="/MenuItem/Delete/${item.menuItemId}" class="btn btn-sm btn-danger">Delete</a>`;
-                    }
-                    if (isMember) {
-                        html += `<form class="add-to-cart-form d-inline" action="/Cart/Add" method="post">`;
-                        html += `<input type="hidden" name="__RequestVerificationToken" value="${document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''}" />`;
-                        html += `<input type="hidden" name="menuItemId" value="${item.menuItemId}" />`;
-                        html += `<input type="number" name="quantity" value="1" min="1" max="10" class="form-control d-inline-block m-1" style="width:60px;" />`;
-                        html += `<button type="submit" class="btn btn-sm btn-primary">Add to Cart</button>`;
-                        html += `</form>`;
-                    }
-                    html += '</td>';
-                }
-                html += '</tr>';
-            });
-
-            tbody.innerHTML = html;
+            attachFormListeners();
         }
 
-        // Debounce function to limit API calls during typing
+        function getItemActions(item, isAdmin, isMember) {
+            if (isAdmin) {
+                return `
+                    <form action="/MenuItem/ToggleActive" method="post" class="d-inline">
+                        <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
+                        <input type="hidden" name="id" value="${item.menuItemId}" />
+                        <button type="submit" class="btn btn-sm ${item.isActive ? 'btn-secondary' : 'btn-success'}">
+                            ${item.isActive ? 'Deactivate' : 'Activate'}
+                        </button>
+                    </form>
+                    <a class="btn btn-sm btn-warning" href="/MenuItem/Edit/${item.menuItemId}">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <a class="btn btn-sm btn-danger" href="/MenuItem/Delete/${item.menuItemId}">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                    <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
+                        <i class="fas fa-info-circle"></i> Details
+                    </a>`;
+            } else if (isMember) {
+                return `
+                    <form class="add-to-cart-form">
+                        <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
+                        <input type="hidden" name="menuItemId" value="${item.menuItemId}" />
+                        <div class="quantity-control">
+                            <input type="number" name="quantity" value="1" min="1" max="100" class="form-control" />
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-cart-plus"></i> Add to Cart
+                            </button>
+                        </div>
+                    </form>
+                    <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
+                        <i class="fas fa-info-circle"></i> Details
+                    </a>`;
+            }
+            return `
+                <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
+                    <i class="fas fa-info-circle"></i> Details
+                </a>`;
+        }
+
+        function attachFormListeners() {
+            document.querySelectorAll('.add-to-cart-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    
+                    fetch('/Cart/Add', {
+                        method: 'POST',
+                        headers: {
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: new URLSearchParams(formData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                        } else {
+                            alert(data.message || 'Failed to add to cart.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Something went wrong.');
+                    });
+                });
+            });
+        }
+
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -210,35 +284,7 @@
             };
         }
 
-        // Original cart functionality
-        document.querySelector('.table').addEventListener('submit', function (event) {
-            if (event.target.classList.contains('add-to-cart-form')) {
-                event.preventDefault();
-
-                const form = event.target;
-                const formData = new FormData(form);
-                const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
-
-                fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'RequestVerificationToken': token
-                    },
-                    body: new URLSearchParams([...formData])
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert(data.message);
-                    } else {
-                        alert(data.message || 'Failed to add to cart.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error adding to cart:', error);
-                    alert('Something went wrong.');
-                });
-            }
-        });
+        // Initialize form listeners
+        attachFormListeners();
     </script>
 }
