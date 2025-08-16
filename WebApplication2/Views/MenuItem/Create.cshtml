@@ -1,231 +1,169 @@
-@model WebApplication2.Models.MenuItem
+﻿@model WebApplication2.Models.MenuItem
 @{
     ViewBag.Title = "Add Menu Item";
     var categories = ViewBag.Categories as List<WebApplication2.Models.Category> ?? new List<WebApplication2.Models.Category>();
 }
 
-<div class="create-form-container">
-    <h2 class="create-form-title">Add New Menu Item</h2>
-    
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success">
-            @TempData["SuccessMessage"]
-        </div>
-    }
-    
-    @if (!ViewData.ModelState.IsValid)
-    {
-        <div class="alert alert-danger">
-            <h4>Validation Errors:</h4>
-            <ul>
-                @foreach (var modelState in ViewData.ModelState.Values)
-                {
-                    foreach (var error in modelState.Errors)
-                    {
-                        <li>@error.ErrorMessage</li>
-                    }
-                }
-            </ul>
-        </div>
-    }
-    
-    <form asp-action="Create" method="post" enctype="multipart/form-data" class="create-form">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-info">@TempData["Message"]</div>
+}
 
-        <div class="form-group">
-            <label asp-for="Name">Item Name</label>
-            <input asp-for="Name" class="form-control" placeholder="Enter menu item name" />
-            <span asp-validation-for="Name" class="text-danger"></span>
+
+<div class="container mt-4">
+    <div class="row">
+
+        <!-- Left: Bulk Upload -->
+        <div class="col-md-5">
+            <h3>Bulk Upload Menu Items (TXT)</h3>
+            <div id="bulkUploadMessage"></div>
+
+            <form id="dummyTokenForm" style="display:none;">
+                @Html.AntiForgeryToken()
+            </form>
+
+            <div id="txtDropArea" class="drag-area">
+                <input type="file" id="txtFileInput" name="txtFile" accept=".txt" style="display:none;" />
+                <div id="txtPreviewContent">
+                    <span id="txtDropText">Drag & drop a TXT file here, or click to select.</span>
+                </div>
+            </div>
+            <small class="form-text text-muted">
+                TXT format: Name, Description, Price, CategoryName, OptionalPhotoURL <br />
+                Example 1: Cheeseburger, Juicy beef burger with cheese, 12.50, Main Course, https://example.com/images/cheeseburger.jpg <br />
+                Example 2: Chocolate Cake, Rich chocolate cake slice, 7.00, Desserts, https://example.com/images/chocolatecake.jpg
+            </small>
+            <br />
+            <br />
+            <h3>Multiple Photo Upload</h3>
+            <form id="photoUploadForm" method="post" enctype="multipart/form-data" asp-controller="MenuItem" asp-action="UploadPhotos">
+                @Html.AntiForgeryToken()
+                <div id="photoDropArea" class="drag-area">
+                    <input type="file" id="photoInput" name="photos" accept="image/*" multiple hidden />
+                    <div id="photoDropText">Drag & drop images here or click to select (Max size: 2MB each)</div>
+                    <div id="photoPreview" class="preview-images"></div>
+                </div>
+                <br />
+                <button type="submit" class="btn btn-secondary">Upload Photos</button>
+            </form>
         </div>
 
-        <div class="form-group">
-            <label asp-for="Description">Description</label>
-            <textarea asp-for="Description" class="form-control" placeholder="Enter item description" rows="3"></textarea>
-            <span asp-validation-for="Description" class="text-danger"></span>
+        <!-- Middle: OR -->
+        <div class="col-md-2 text-center d-flex align-items-center justify-content-center">
+            <h4>OR</h4>
         </div>
+
+        <!-- Right: Add New Menu Item -->
+        <div class="col-md-5">
+            <h3>Add New Menu Item</h3>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+            }
+
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="form-group">
+                    <label asp-for="Name">Item Name</label>
+                    <input asp-for="Name" class="form-control" placeholder="Enter menu item name" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Description">Description</label>
+                    <textarea asp-for="Description" class="form-control" placeholder="Enter item description" rows="3"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
 
                 <div class="form-group">
                     <label asp-for="Price">Price</label>
                     <div class="input-group">
-                        <span class="input-group-text">RM</span>
+                        <span class="input-group-text">$</span>
                         <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" placeholder="0.00" />
                     </div>
                     <span asp-validation-for="Price" class="text-danger"></span>
                 </div>
 
-        <div class="form-group">
-            <label asp-for="CategoryId">Category</label>
-            <select asp-for="CategoryId" class="form-control" asp-items="@(new SelectList(categories, "CategoryId", "Name"))">
-                <option value="">-- Select Category --</option>
-            </select>
-            <span asp-validation-for="CategoryId" class="text-danger"></span>
-        </div>
+                <div class="form-group">
+                    <label asp-for="CategoryId">Category</label>
+                    <select asp-for="CategoryId" class="form-control" asp-items="@(new SelectList(categories, "CategoryId", "Name"))">
+                        <option value="">-- Select Category --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
 
                 <div class="form-group">
                     <label for="imageFile">Photo (Optional)</label>
                     <div id="drop-area" class="drag-area">
-                        <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" hidden />
+                        <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" />
                         <div id="preview-content">
                             <span id="drop-text">Drag & drop an image here, or click to select. (Max 2MB)</span>
                             <div id="preview-images" class="preview-images"></div>
                         </div>
-                        <button type="button" id="deletePhoto" class="delete-btn" style="display:none;">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <button type="button" id="deletePhoto" class="btn btn-danger btn-sm" style="display:none;">X</button>
                     </div>
                     <small class="form-text text-muted">Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 2MB.</small>
                     <span asp-validation-for="PhotoURL" class="text-danger"></span>
                 </div>
 
-        <button type="submit" class="btn btn-primary submit-btn">Create Item</button>
-    </form>
+                <button type="submit" class="btn btn-primary submit-btn">Create Item</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
-        // Add form submission debugging
-        document.querySelector('form').addEventListener('submit', function(e) {
-            console.log('Form submitted');
-            console.log('Form data:', new FormData(this));
-            
-            // Log form field values
-            const formData = new FormData(this);
-            for (let [key, value] of formData.entries()) {
-                console.log(`${key}: ${value}`);
-            }
-        });
-        
-        // JavaScript remains the same as it correctly handles the UI part.
-        // The backend fixes will now correctly process the submitted file.
         document.addEventListener('DOMContentLoaded', () => {
-            // Photo Multi-Upload Section
             const photoDropArea = document.getElementById('photoDropArea');
             const photoInput = document.getElementById('photoInput');
             const photoPreview = document.getElementById('photoPreview');
             const photoDropText = document.getElementById('photoDropText');
 
-            // Single Image Upload Section
-            const dropArea = document.getElementById('drop-area');
-            const imageInput = document.getElementById('imageInput');
-            const previewImages = document.getElementById('preview-images');
-            const dropText = document.getElementById('drop-text');
-            const deleteBtn = document.getElementById('deletePhoto');
-
-            function setupDragDrop(dropZone, input, previewArea, textArea, isMultiple = false) {
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    });
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                photoDropArea.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
                 });
-
-                ['dragenter', 'dragover'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, () => {
-                        dropZone.classList.add('active');
-                    });
-                });
-
-                ['dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, () => {
-                        dropZone.classList.remove('active');
-                    });
-                });
-
-                dropZone.addEventListener('click', () => input.click());
-
-                dropZone.addEventListener('drop', (e) => {
-                    if (isMultiple) {
-                        const dt = new DataTransfer();
-                        for (const file of e.dataTransfer.files) {
-                            if (validateFile(file)) {
-                                dt.items.add(file);
-                            }
-                        }
-                        input.files = dt.files;
-                    } else {
-                        const file = e.dataTransfer.files[0];
-                        if (validateFile(file)) {
-                            const dt = new DataTransfer();
-                            dt.items.add(file);
-                            input.files = dt.files;
-                        }
-                    }
-                    updatePreview(input.files, previewArea, textArea, isMultiple);
-                });
-
-                input.addEventListener('change', () => {
-                    updatePreview(input.files, previewArea, textArea, isMultiple);
-                });
-            }
-
-            function validateFile(file) {
-                if (!file.type.startsWith('image/')) {
-                    alert('Please upload image files only.');
-                    return false;
-                }
-                if (file.size > 2 * 1024 * 1024) {
-                    alert('File size should not exceed 2MB.');
-                    return false;
-                }
-                return true;
-            }
-
-            function updatePreview(files, previewArea, textArea, isMultiple) {
-                previewArea.innerHTML = '';
-                if (files.length > 0) {
-                    textArea.style.display = 'none';
-                    Array.from(files).forEach(file => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            const img = document.createElement('img');
-                            img.src = e.target.result;
-                            img.classList.add('preview-image');
-                            if (!isMultiple) {
-                                deleteBtn.style.display = 'block';
-                            }
-                            previewArea.appendChild(img);
-                        };
-                        reader.readAsDataURL(file);
-                    });
-                } else {
-                    textArea.style.display = 'block';
-                    if (!isMultiple) {
-                        deleteBtn.style.display = 'none';
-                    }
-                }
-            }
-
-            function clearPreview() {
-                imageInput.value = ''; // This is crucial to prevent submitting a cleared file
-                previewImages.innerHTML = '';
-                dropText.style.display = 'block';
-                deleteBtn.style.display = 'none';
-            }
-
-            // Setup both drag & drop areas
-            setupDragDrop(photoDropArea, photoInput, photoPreview, photoDropText, true);
-            setupDragDrop(dropArea, imageInput, previewImages, dropText, false);
-
-            // Delete button for single image
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                imageInput.value = '';
-                previewImages.innerHTML = '';
-                dropText.style.display = 'block';
-                deleteBtn.style.display = 'none';
             });
 
-            // Handle TXT file upload
-            const txtDropArea = document.getElementById('txtDropArea');
-            const txtFileInput = document.getElementById('txtFileInput');
-            const txtPreviewContent = document.getElementById('txtPreviewContent');
-            const txtDropText = document.getElementById('txtDropText');
+            ['dragenter', 'dragover'].forEach(eventName => photoDropArea.classList.add('active'));
+            ['dragleave', 'drop'].forEach(eventName => photoDropArea.classList.remove('active'));
 
-            setupDragDrop(txtDropArea, txtFileInput, txtPreviewContent, txtDropText, false);
+            photoDropArea.addEventListener('click', () => photoInput.click());
+
+            photoInput.addEventListener('change', () => {
+                updatePreviews(photoInput.files);
+            });
+
+            photoDropArea.addEventListener('drop', e => {
+                const dt = new DataTransfer();
+                for (const file of e.dataTransfer.files) {
+                    if (file.type.startsWith('image/') && file.size <= 2 * 1024 * 1024) {
+                        dt.items.add(file);
+                    }
+                }
+                photoInput.files = dt.files;
+                updatePreviews(photoInput.files);
+            });
+
+            function updatePreviews(files) {
+                photoPreview.innerHTML = "";
+                for (const file of files) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        photoPreview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
         });
     </script>
+
 
     <style>
         .drag-area {
@@ -234,71 +172,24 @@
             text-align: center;
             cursor: pointer;    
             border-radius: 5px;
-            transition: all 0.3s ease;
+            transition: border-color 0.3s, background-color 0.3s;
             margin-bottom: 10px;
-            position: relative;
-            min-height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
-        .drag-area.active {
-            border-color: var(--primary-brand);
-            background-color: rgba(74, 108, 247, 0.05);
-        }
-
-        .preview-images {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            width: 100%;
-        }
+            .drag-area.active {
+                border-color: #007bff;
+                background-color: #f8f9fa;
+            }
 
         .preview-images img {
-            max-width: 200px;
-            max-height: 200px;
+            max-width: 300px;
+            max-height: 300px;
+            width: auto;
+            height: auto;
             object-fit: contain;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
 
-        .upload-icon {
-            font-size: 2em;
-            color: #666;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .delete-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            z-index: 2;
-            background: none;
-            border: none;
-            color: #dc3545;
-            font-size: 1.2em;
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        .delete-btn:hover {
-            background-color: rgba(220, 53, 69, 0.1);
-        }
-
-        #preview-content {
-            width: 100%;
-        }
-
-        #drop-text {
-            color: #666;
-            margin-top: 10px;
-            display: block;
-        }
     </style>
 }
