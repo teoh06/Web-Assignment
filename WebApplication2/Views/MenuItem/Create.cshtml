@@ -45,14 +45,14 @@
             <span asp-validation-for="Description" class="text-danger"></span>
         </div>
 
-        <div class="form-group">
-            <label asp-for="Price">Price</label>
-            <div class="input-group">
-                <span class="input-group-text">$</span>
-                <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" placeholder="0.00" />
-            </div>
-            <span asp-validation-for="Price" class="text-danger"></span>
-        </div>
+                <div class="form-group">
+                    <label asp-for="Price">Price</label>
+                    <div class="input-group">
+                        <span class="input-group-text">RM</span>
+                        <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" placeholder="0.00" />
+                    </div>
+                    <span asp-validation-for="Price" class="text-danger"></span>
+                </div>
 
         <div class="form-group">
             <label asp-for="CategoryId">Category</label>
@@ -62,19 +62,21 @@
             <span asp-validation-for="CategoryId" class="text-danger"></span>
         </div>
 
-        <div class="form-group">
-            <label for="imageFile">Photo (Optional)</label>
-            <div id="drop-area" class="drag-area">
-                <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" />
-                <div id="preview-content">
-                    <span id="drop-text">Drag & drop an image here, or click to select. (Max 2MB)</span>
-                    <div id="preview-images" class="preview-images"></div>
+                <div class="form-group">
+                    <label for="imageFile">Photo (Optional)</label>
+                    <div id="drop-area" class="drag-area">
+                        <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" hidden />
+                        <div id="preview-content">
+                            <span id="drop-text">Drag & drop an image here, or click to select. (Max 2MB)</span>
+                            <div id="preview-images" class="preview-images"></div>
+                        </div>
+                        <button type="button" id="deletePhoto" class="delete-btn" style="display:none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <small class="form-text text-muted">Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 2MB.</small>
+                    <span asp-validation-for="PhotoURL" class="text-danger"></span>
                 </div>
-                <button type="button" id="deletePhoto" class="btn btn-danger btn-sm" style="display:none;">Remove</button>
-            </div>
-            <small class="form-text text-muted">Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 2MB.</small>
-            <span asp-validation-for="PhotoURL" class="text-danger"></span>
-        </div>
 
         <button type="submit" class="btn btn-primary submit-btn">Create Item</button>
     </form>
@@ -98,55 +100,100 @@
         // JavaScript remains the same as it correctly handles the UI part.
         // The backend fixes will now correctly process the submitted file.
         document.addEventListener('DOMContentLoaded', () => {
+            // Photo Multi-Upload Section
+            const photoDropArea = document.getElementById('photoDropArea');
+            const photoInput = document.getElementById('photoInput');
+            const photoPreview = document.getElementById('photoPreview');
+            const photoDropText = document.getElementById('photoDropText');
+
+            // Single Image Upload Section
             const dropArea = document.getElementById('drop-area');
             const imageInput = document.getElementById('imageInput');
-            const dropText = document.getElementById('drop-text');
             const previewImages = document.getElementById('preview-images');
+            const dropText = document.getElementById('drop-text');
             const deleteBtn = document.getElementById('deletePhoto');
 
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, e => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, false);
-            });
-            ['dragenter', 'dragover'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.add('active')));
-            ['dragleave', 'drop'].forEach(eventName => dropArea.addEventListener(eventName, () => dropArea.classList.remove('active')));
+            function setupDragDrop(dropZone, input, previewArea, textArea, isMultiple = false) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                });
 
-            dropArea.addEventListener('drop', e => {
-                const dt = e.dataTransfer;
-                if (dt.files.length > 0) {
-                    imageInput.files = dt.files;
-                    handleFile(dt.files[0]);
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => {
+                        dropZone.classList.add('active');
+                    });
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => {
+                        dropZone.classList.remove('active');
+                    });
+                });
+
+                dropZone.addEventListener('click', () => input.click());
+
+                dropZone.addEventListener('drop', (e) => {
+                    if (isMultiple) {
+                        const dt = new DataTransfer();
+                        for (const file of e.dataTransfer.files) {
+                            if (validateFile(file)) {
+                                dt.items.add(file);
+                            }
+                        }
+                        input.files = dt.files;
+                    } else {
+                        const file = e.dataTransfer.files[0];
+                        if (validateFile(file)) {
+                            const dt = new DataTransfer();
+                            dt.items.add(file);
+                            input.files = dt.files;
+                        }
+                    }
+                    updatePreview(input.files, previewArea, textArea, isMultiple);
+                });
+
+                input.addEventListener('change', () => {
+                    updatePreview(input.files, previewArea, textArea, isMultiple);
+                });
+            }
+
+            function validateFile(file) {
+                if (!file.type.startsWith('image/')) {
+                    alert('Please upload image files only.');
+                    return false;
                 }
-            });
-
-            imageInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFile(e.target.files[0]);
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('File size should not exceed 2MB.');
+                    return false;
                 }
-            });
+                return true;
+            }
 
-            deleteBtn.addEventListener('click', e => {
-                e.stopPropagation();
-                clearPreview();
-            });
-
-            function handleFile(file) {
-                previewImages.innerHTML = '';
-                if (file) {
-                    dropText.style.display = 'none';
-                    deleteBtn.style.display = 'block';
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.className = 'preview-image';
-                        img.style.maxWidth = '150px';
-                        img.style.maxHeight = '150px';
-                        previewImages.appendChild(img);
-                    };
-                    reader.readAsDataURL(file);
+            function updatePreview(files, previewArea, textArea, isMultiple) {
+                previewArea.innerHTML = '';
+                if (files.length > 0) {
+                    textArea.style.display = 'none';
+                    Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.classList.add('preview-image');
+                            if (!isMultiple) {
+                                deleteBtn.style.display = 'block';
+                            }
+                            previewArea.appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                } else {
+                    textArea.style.display = 'block';
+                    if (!isMultiple) {
+                        deleteBtn.style.display = 'none';
+                    }
                 }
             }
 
@@ -156,6 +203,102 @@
                 dropText.style.display = 'block';
                 deleteBtn.style.display = 'none';
             }
+
+            // Setup both drag & drop areas
+            setupDragDrop(photoDropArea, photoInput, photoPreview, photoDropText, true);
+            setupDragDrop(dropArea, imageInput, previewImages, dropText, false);
+
+            // Delete button for single image
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                imageInput.value = '';
+                previewImages.innerHTML = '';
+                dropText.style.display = 'block';
+                deleteBtn.style.display = 'none';
+            });
+
+            // Handle TXT file upload
+            const txtDropArea = document.getElementById('txtDropArea');
+            const txtFileInput = document.getElementById('txtFileInput');
+            const txtPreviewContent = document.getElementById('txtPreviewContent');
+            const txtDropText = document.getElementById('txtDropText');
+
+            setupDragDrop(txtDropArea, txtFileInput, txtPreviewContent, txtDropText, false);
         });
     </script>
+
+    <style>
+        .drag-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;    
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+            position: relative;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drag-area.active {
+            border-color: var(--primary-brand);
+            background-color: rgba(74, 108, 247, 0.05);
+        }
+
+        .preview-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .preview-images img {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: contain;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+
+        .upload-icon {
+            font-size: 2em;
+            color: #666;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            z-index: 2;
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        #preview-content {
+            width: 100%;
+        }
+
+        #drop-text {
+            color: #666;
+            margin-top: 10px;
+            display: block;
+        }
+    </style>
 }

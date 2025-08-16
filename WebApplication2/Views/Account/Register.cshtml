@@ -131,7 +131,7 @@
         <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     }
     <script>
-        // The same reusable function as in Login.cshtml
+        // Password visibility toggle
         function togglePasswordVisibility(inputId, iconSpan) {
             const passwordInput = document.getElementById(inputId);
             const icon = iconSpan.querySelector('i');
@@ -146,5 +146,116 @@
                 icon.classList.add('fa-eye');
             }
         }
+
+        // Profile picture upload handling
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.querySelector('input[type="file"]');
+            const fileUpload = document.querySelector('.file-upload');
+            const preview = document.querySelector('.upload-preview');
+            const uploadContent = document.querySelector('.upload-content');
+
+            function handleFile(file) {
+                if (!file.type.startsWith('image/')) {
+                    alert('Please upload an image file.');
+                    return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('File size should not exceed 2MB.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    uploadContent.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // Handle file input change
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) handleFile(file);
+            });
+
+            // Handle drag and drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                fileUpload.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                fileUpload.addEventListener(eventName, () => {
+                    fileUpload.classList.add('drag-active');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                fileUpload.addEventListener(eventName, () => {
+                    fileUpload.classList.remove('drag-active');
+                });
+            });
+
+            fileUpload.addEventListener('drop', (e) => {
+                const file = e.dataTransfer.files[0];
+                if (file) handleFile(file);
+            });
+
+            // Add click to remove image
+            preview.addEventListener('click', () => {
+                preview.style.display = 'none';
+                uploadContent.style.display = 'block';
+                fileInput.value = '';
+            });
+        });
     </script>
+
+    <style>
+        .file-upload {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload.drag-active {
+            border-color: var(--primary-brand);
+            background-color: rgba(74, 108, 247, 0.05);
+        }
+
+        .upload-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .upload-preview:hover {
+            opacity: 0.8;
+        }
+
+        .upload-content {
+            padding: 20px;
+        }
+
+        .upload-icon {
+            font-size: 2em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #666;
+        }
+
+        .upload-text strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
 }

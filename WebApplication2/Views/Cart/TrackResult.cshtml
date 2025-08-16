@@ -1,5 +1,4 @@
 @model WebApplication2.Models.TrackOrderVM
-
 @functions {
     public int GetProgress(string status)
     {
@@ -12,6 +11,52 @@
             default: return 10;
         }
     }
+    public string GetAddress(WebApplication2.Models.TrackOrderVM model)
+    {
+        // Prioritize entered address, then fall back to user's profile address
+        if (!string.IsNullOrWhiteSpace(model.Address)) return model.Address;
+        return "Address not specified for tracking";
+    }
+    public string GetAddressDisplay(WebApplication2.Models.TrackOrderVM model)
+    {
+        if (!string.IsNullOrWhiteSpace(model.Address))
+        {
+            return model.Address;
+        }
+        return "No delivery address specified";
+    }
+    public string GetDeliveryTime(WebApplication2.Models.OrderDetailsVM order)
+    {
+        if (order.Status == "Delivered")
+        {
+            return "Delivered!";
+        }
+        
+        // Calculate consistent delivery time based on order date and order number
+        var orderNumber = int.Parse(order.OrderNumber);
+        var deliveryMinutes = 1; // Set to 1 minute for testing
+        var estimatedDeliveryTime = order.OrderDate.AddMinutes(deliveryMinutes);
+        
+        if (DateTime.Now < estimatedDeliveryTime)
+        {
+            return estimatedDeliveryTime.ToString("h:mm tt"); // e.g., "2:45 PM"
+        }
+        else
+        {
+            return "Any moment now...";
+        }
+    }
+    public string GetStatusMessage(string status)
+    {
+        switch (status)
+        {
+            case "Paid": return "✅ Order placed successfully! Preparing your meal...";
+            case "Preparing": return "🍳 Your order is being prepared with care!";
+            case "Out for Delivery": return "🏍️ Your order is on the way!";
+            case "Delivered": return "🎉 Your order has been delivered successfully!";
+            default: return "📋 Processing your order...";
+        }
+    }
 }
 @if (Model.Orders != null && Model.Orders.Any())
 {
@@ -19,7 +64,7 @@
     <ul class="list-group mb-4">
         @foreach (var item in Model.Orders)
         {
-            <li class="list-group-item">
+            <li class="list-group-item text-dark">
                 <strong>Order #: </strong>@item.OrderNumber<br />
                 <strong>Date: </strong>@item.OrderDate<br />
                 <strong>Status: </strong>
@@ -45,31 +90,221 @@
     <div class="order-tracking-details card p-4 mb-4" style="max-width:500px;margin:auto;">
         <h4 class="mb-3">Order #@firstOrder.OrderNumber</h4>
         <div class="progress mb-3" style="height: 20px; background: #eee; border-radius: 10px;">
-            <div class="progress-bar" style="width:@GetProgress(firstOrder.Status)% ; background: var(--accent-green); height: 100%; border-radius: 10px;"></div>
+            <div class="progress-bar" id="progressBar" style="width:@GetProgress(firstOrder.Status)%; background: #4CAF50; height: 100%; border-radius: 10px;"></div>
         </div>
-        <ul class="tracking-steps d-flex justify-content-between mb-3" style="list-style:none; padding:0;">
-            <li class="@(firstOrder.Status == "Paid" ? "active" : "")">Order Placed</li>
-            <li class="@(firstOrder.Status == "Preparing" ? "active" : "")">Preparing</li>
-            <li class="@(firstOrder.Status == "Out for Delivery" ? "active" : "")">Out for Delivery</li>
-            <li class="@(firstOrder.Status == "Delivered" ? "active" : "")">Delivered</li>
+        <ul class="tracking-steps d-flex justify-content-between mb-3" id="trackingSteps" style="list-style:none; padding:0;">
+            <li class="@(GetProgress(firstOrder.Status) >= 25 ? "active" : "")">Order Placed</li>
+            <li class="@(GetProgress(firstOrder.Status) >= 50 ? "active" : "")">Preparing</li>
+            <li class="@(GetProgress(firstOrder.Status) >= 75 ? "active" : "")">Out for Delivery</li>
+            <li class="@(GetProgress(firstOrder.Status) >= 100 ? "active" : "")">Delivered</li>
         </ul>
         <div class="mb-2">
             <strong>Delivery Option:</strong> @firstOrder.DeliveryOption <br />
-            <strong>Delivery Address:</strong> @Model.Address
+            <strong>Delivery Address:</strong> @GetAddress(Model)
         </div>
         <div class="mb-2">
-            <strong>Estimated Delivery Time:</strong> @DateTime.Now.AddMinutes(30).ToString("HH:mm")
+            <strong>Estimated Delivery Time:</strong> <span id="deliveryTime" style="@(firstOrder.Status == "Delivered" ? "color: #4CAF50; font-weight: bold;" : (GetDeliveryTime(firstOrder).Contains("moment") ? "color: #FF9800;" : ""))">@GetDeliveryTime(firstOrder)</span>
         </div>
-        <div class="delivery-motor-animation" style="width:100px;height:60px;margin:auto;position:relative;">
-            <div class="motor-body" style="width:60px;height:30px;background:var(--primary-brand);border-radius:15px 15px 10px 10px;position:absolute;left:20px;top:15px;"></div>
-            <div class="motor-wheel" style="width:18px;height:18px;background:#333;border-radius:50%;position:absolute;left:22px;top:38px;"></div>
-            <div class="motor-wheel" style="width:18px;height:18px;background:#333;border-radius:50%;position:absolute;left:60px;top:38px;"></div>
-            <div class="motor-seat" style="width:20px;height:10px;background:#222;border-radius:5px;position:absolute;left:40px;top:10px;"></div>
-            <div class="motor-rider" style="width:16px;height:16px;background:var(--accent-green);border-radius:50%;position:absolute;left:50px;top:0px;"></div>
-            <div class="motor-handle" style="width:20px;height:4px;background:#222;position:absolute;left:60px;top:20px;border-radius:2px;"></div>
+        <div class="delivery-motor-animation" id="motorAnimation" style="width:200px;height:80px;margin:auto;position:relative;background: linear-gradient(to right, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%);border-radius:10px;overflow:hidden;@(firstOrder.Status == "Delivered" ? "border: 3px solid #4CAF50; background: linear-gradient(to right, #c8e6c9, #a5d6a7, #81c784);" : "")">
+            <!-- Road effect -->
+            <div style="position:absolute;bottom:10px;left:0;right:0;height:2px;background:#333;opacity:0.3;"></div>
+            
+            <!-- Animated motor -->
+            <div id="motorContainer" style="position:absolute;left:10px;top:20px;transition:all 0.1s ease;">
+                <div id="motorBody" style="width:40px;height:20px;background:#2196F3;border-radius:10px 10px 5px 5px;position:relative;"></div>
+                <div id="motorWheel1" class="rotating-wheel" style="width:12px;height:12px;background:#333;border-radius:50%;position:absolute;left:3px;top:18px;"></div>
+                <div id="motorWheel2" class="rotating-wheel" style="width:12px;height:12px;background:#333;border-radius:50%;position:absolute;left:25px;top:18px;"></div>
+                <div id="motorSeat" style="width:12px;height:6px;background:#555;border-radius:3px;position:absolute;left:14px;top:-2px;"></div>
+                <div id="motorRider" style="width:10px;height:10px;background:#4CAF50;border-radius:50%;position:absolute;left:15px;top:-8px;"></div>
+                <div id="motorHandle" style="width:8px;height:2px;background:#333;position:absolute;left:32px;top:8px;border-radius:1px;"></div>
+            </div>
+            
+            <!-- Moving clouds for effect -->
+            <div class="cloud" style="position:absolute;top:5px;left:50px;width:20px;height:8px;background:white;border-radius:50px;opacity:0.6;animation:cloudMove 4s infinite linear;"></div>
+            <div class="cloud" style="position:absolute;top:10px;left:100px;width:15px;height:6px;background:white;border-radius:50px;opacity:0.4;animation:cloudMove 6s infinite linear;"></div>
         </div>
-        <div class="text-center mt-2 text-muted" style="font-size:14px;">Your order is on the way with our motor delivery!</div>
+        <div class="text-center mt-2" style="@(firstOrder.Status == "Delivered" ? "color:#4CAF50;" : (GetDeliveryTime(firstOrder).Contains("moment") ? "color: #FF9800;" : "color:#4CAF50;"))font-weight:bold;font-size:14px;">
+            <span id="deliveryMessage">@GetStatusMessage(firstOrder.Status)</span>
+        </div>
     </div>
+    <style>
+        @@keyframes wheelRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @@keyframes cloudMove {
+            from { transform: translateX(-20px); }
+            to { transform: translateX(200px); }
+        }
+        
+        @@keyframes motorMove {
+            0% { left: 10px; }
+            50% { left: 100px; }
+            100% { left: 10px; }
+        }
+        
+        .rotating-wheel {
+            animation: wheelRotate 0.3s infinite linear;
+        }
+        
+        .cloud {
+            animation: cloudMove 4s infinite linear;
+        }
+        
+        .tracking-steps li.active {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        
+        #motorContainer {
+            animation: motorMove 8s infinite ease-in-out;
+        }
+    </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get order information from server
+            var orderStatus = '@Model.Orders?.FirstOrDefault()?.Status';
+            var orderDateStr = '@Model.Orders?.FirstOrDefault()?.OrderDate.ToString("yyyy-MM-dd HH:mm:ss")';
+            var orderNumber = '@Model.Orders?.FirstOrDefault()?.OrderNumber';
+            
+            var deliveryTimeElement = document.getElementById('deliveryTime');
+            var deliveryMessageElement = document.getElementById('deliveryMessage');
+            var progressBar = document.getElementById('progressBar');
+            var trackingSteps = document.querySelectorAll('#trackingSteps li');
+            
+            // Parse order date
+            var orderDate = new Date(orderDateStr);
+            
+            // Calculate fixed delivery time based on order date (not current time)
+            // Standard delivery time: 1 minute for testing
+            var deliveryMinutes = 1; // Set to 1 minute for testing
+            var estimatedDeliveryTime = new Date(orderDate.getTime() + (deliveryMinutes * 60 * 1000));
+            
+            // Get current progress based on actual status from database
+            var currentProgress = 0;
+            var statusMessage = '';
+            var isCompleted = false;
+            
+            switch(orderStatus) {
+                case 'Paid':
+                    currentProgress = 25;
+                    statusMessage = '✅ Order placed successfully! Preparing your meal...';
+                    break;
+                case 'Preparing':
+                    currentProgress = 50;
+                    statusMessage = '🍳 Your order is being prepared with care!';
+                    break;
+                case 'Out for Delivery':
+                    currentProgress = 75;
+                    statusMessage = '🏍️ Your order is on the way!';
+                    break;
+                case 'Delivered':
+                    currentProgress = 100;
+                    statusMessage = '🎉 Your order has been delivered successfully!';
+                    isCompleted = true;
+                    break;
+                default:
+                    currentProgress = 10;
+                    statusMessage = '📋 Processing your order...';
+            }
+            
+            // Set initial display based on actual order status
+            if (progressBar) {
+                progressBar.style.width = currentProgress + '%';
+                if (isCompleted) {
+                    progressBar.style.background = '#4CAF50';
+                }
+            }
+            
+            // Activate appropriate tracking steps
+            trackingSteps.forEach(function(li, index) {
+                if ((index + 1) * 25 <= currentProgress) {
+                    li.classList.add('active');
+                }
+            });
+            
+            // Set delivery message
+            deliveryMessageElement.innerHTML = statusMessage;
+            if (isCompleted) {
+                deliveryMessageElement.style.color = '#4CAF50';
+            }
+            
+            // Display delivery time
+            if (isCompleted) {
+                deliveryTimeElement.textContent = 'Delivered!';
+                deliveryTimeElement.style.color = '#4CAF50';
+                deliveryTimeElement.style.fontWeight = 'bold';
+            } else {
+                // Show consistent estimated delivery time
+                var now = new Date();
+                if (now < estimatedDeliveryTime) {
+                    // Order is still pending - show estimated time
+                    deliveryTimeElement.textContent = estimatedDeliveryTime.toLocaleTimeString('en-US', {
+                        hour12: true,
+                        hour: 'numeric',
+                        minute: '2-digit'
+                    });
+                } else {
+                    // Estimated time has passed but not yet delivered
+                    deliveryTimeElement.textContent = 'Any moment now...';
+                    deliveryTimeElement.style.color = '#FF9800';
+                    deliveryMessageElement.innerHTML = '⏰ Running a bit late, but your order is on the way!';
+                    deliveryMessageElement.style.color = '#FF9800';
+                }
+            }
+            
+            // Add some visual enhancement for completed orders
+            if (isCompleted) {
+                setTimeout(function() {
+                    var motorAnimation = document.getElementById('motorAnimation');
+                    if (motorAnimation) {
+                        motorAnimation.style.border = '3px solid #4CAF50';
+                        motorAnimation.style.background = 'linear-gradient(to right, #c8e6c9, #a5d6a7, #81c784)';
+                    }
+                }, 500);
+            }
+            
+            // Optional: Add real-time countdown for deliveries (entire 1-minute window)
+            if (!isCompleted && orderStatus === 'Out for Delivery') {
+                var timeUntilDelivery = estimatedDeliveryTime.getTime() - new Date().getTime();
+                var minutesLeft = Math.floor(timeUntilDelivery / (1000 * 60));
+                
+                if (minutesLeft <= 1 && timeUntilDelivery > 0) {
+                    // Show live countdown for imminent deliveries
+                    var countdownInterval = setInterval(function() {
+                        var now = new Date();
+                        var timeLeft = estimatedDeliveryTime.getTime() - now.getTime();
+                        
+                        if (timeLeft > 0) {
+                            var minutesRemaining = Math.floor(timeLeft / (1000 * 60));
+                            var secondsRemaining = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                            
+                            if (minutesRemaining > 0) {
+                                deliveryTimeElement.textContent = minutesRemaining + ' min ' + secondsRemaining + ' sec';
+                            } else {
+                                deliveryTimeElement.textContent = secondsRemaining + ' seconds';
+                            }
+                            
+                            if (minutesRemaining === 0 && secondsRemaining <= 30) {
+                                deliveryMessageElement.innerHTML = '🏃‍♂️ Almost at your door!';
+                                deliveryMessageElement.style.color = '#FF5722';
+                            }
+                        } else {
+                            clearInterval(countdownInterval);
+                            deliveryTimeElement.textContent = 'Should be delivered now!';
+                            deliveryTimeElement.style.color = '#4CAF50';
+                        }
+                    }, 1000);
+                }
+            }
+        });
+    </script>
 }
 else
 {

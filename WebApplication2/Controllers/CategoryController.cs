@@ -186,4 +186,25 @@ public class CategoryController : Controller
         }
         return RedirectToAction("Edit", new { id = categoryId });
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult EditPersonalizationOption(int optionId, int categoryId, string optionName)
+    {
+        var option = db.PersonalizationOptions.Find(optionId);
+        if (option == null || option.CategoryId != categoryId)
+        {
+            TempData["ErrorMessage"] = "Personalization option not found.";
+            return RedirectToAction("Edit", new { id = categoryId });
+        }
+        if (string.IsNullOrWhiteSpace(optionName))
+        {
+            TempData["ErrorMessage"] = "Option name cannot be empty.";
+            return RedirectToAction("Edit", new { id = categoryId });
+        }
+        option.Name = optionName.Trim();
+        db.SaveChanges();
+        TempData["SuccessMessage"] = $"Personalization option updated.";
+        return RedirectToAction("Edit", new { id = categoryId });
+    }
 }

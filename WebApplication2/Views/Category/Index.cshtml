@@ -2,40 +2,37 @@
 @{
     ViewBag.Title = "Categories";
 }
-
 <main>
-    <div class="category-header">
-        <h1 class="category-title">Manage Categories</h1>
-        <a asp-action="Create" class="create-link"><i class="fas fa-plus"></i> Create New Category</a>
+    <div class="category-header d-flex align-items-center justify-content-between mb-4">
+        <h1 class="category-title" style="font-family:'Victor Mono',monospace;font-size:2.2rem;color:var(--primary-brand);margin:0;">Manage Categories</h1>
+        <a asp-action="Create" class="btn btn-primary btn-lg"><i class="fas fa-plus me-2"></i> Create New Category</a>
     </div>
-
     @if (Model.Any())
     {
-        <ul class="category-grid">
+        <div class="category-grid row" style="gap:32px;">
             @foreach (var item in Model)
             {
-                <li class="category-card">
-                    <div class="category-card-content">
-                        <h2 class="category-name">@item.Name</h2>
-                        <div class="category-card-actions">
-                            <a asp-action="Edit" asp-route-id="@item.CategoryId" class="card-action-btn btn-warning in-the-middle">
-                                <i class="fas fa-edit me-2"></i> Edit
-                            </a>
-                            <a asp-action="Details" asp-route-id="@item.CategoryId" class="card-action-btn btn-info in-the-middle">
-                                <i class="fas fa-info-circle me-2"></i> Details
-                            </a>
-                            <a asp-action="Delete" asp-route-id="@item.CategoryId" class="card-action-btn delete-btn in-the-middle">
-                                <i class="fas fa-trash-alt me-2"></i> Delete
-                            </a>
+                <div class="col-md-4 mb-4">
+                    <div class="card category-card shadow-sm h-100" style="border-radius:16px;overflow:hidden;">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div>
+                                <h2 class="category-name card-title mb-2" style="color:var(--primary-brand);font-size:1.5rem;">@item.Name</h2>
+                            </div>
+                            <div class="mt-3 d-flex gap-2">
+                                <a asp-action="Edit" asp-route-id="@item.CategoryId" class="btn btn-warning btn-sm"><i class="fas fa-edit me-2"></i> Edit</a>
+                                <a asp-action="Details" asp-route-id="@item.CategoryId" class="btn btn-info btn-sm"><i class="fas fa-info-circle me-2"></i> Details</a>
+                                <a asp-action="Delete" asp-route-id="@item.CategoryId" class="btn btn-danger btn-sm"><i class="fas fa-trash-alt me-2"></i> Delete</a>
+                            </div>
                         </div>
                     </div>
-                </li>
+                </div>
             }
-        </ul>
+        </div>
     }
     else
     {
-        <div class="text-center mt-5">
+        <div class="empty-state mt-5">
+            <i class="fas fa-folder-open"></i>
             <p class="text-muted">No categories found. Start by creating a new one!</p>
         </div>
     }

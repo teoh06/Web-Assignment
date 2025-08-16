@@ -5,29 +5,30 @@
 @{
     ViewBag.Title = "Welcome to QuickBite";
     WebApplication2.Models.Member member = null;
+    List<WebApplication2.Models.MenuItem> topSell = db.MenuItems.OrderByDescending(m => db.CartItems.Where(c => c.MenuItemId == m.MenuItemId).Count()).Take(5).ToList();
+    List<WebApplication2.Models.MenuItem> favorites = new List<WebApplication2.Models.MenuItem>();
     if (User.IsInRole("Member"))
     {
         member = db.Members.Find(User.Identity!.Name);
+        var favIds = db.MenuItemFavorites.Where(f => f.MemberEmail == User.Identity.Name).Select(f => f.MenuItemId).ToList();
+        favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId)).ToList();
     }
 }
-
 <div class="page-container">
     <div class="menu-container">
-
         @if (User.IsInRole("Member") && member != null)
         {
             <p class="nice-word">
                 Hi @member.Name
             </p>
         }
-
         <div class="jumbotron text-center">
             <p>Order your favorite meals for in-house dining with ease!</p>
             @if (User.IsInRole("Member"))
             {
                 <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Browse Menu</a>
             }
-			else if (User.IsInRole("Admin"))
+            else if (User.IsInRole("Admin"))
             {
                 <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Edit Menu</a>
             }
@@ -35,11 +36,8 @@
             {
                 <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Browse Menu</a>
             }
-            
-            
         </div>
     </div>
-
     <h3 class="in-the-middle" style="font-family: 'Victor Mono', monospace;">Featured Menu</h3>
     <br>
     <div class="home-menu-display">
@@ -61,8 +59,52 @@
             </div>
         }
     </div>
+    <hr />
+    <h3 class="in-the-middle" style="font-family: 'Victor Mono', monospace;">Top Sell Items</h3>
+    <div class="home-menu-display">
+        @foreach (var item in topSell)
+        {
+            <div class="col-md-4 mb-4">
+                <a href="/MenuItem/Details/@item.MenuItemId" class="card-link-wrapper">
+                    <div class="card h-100 theme-card">
+                        <img src="/Images/@(item.PhotoURL ?? "default.jpg")" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
+                        <div class="card-body">
+                            <h5 class="card-title in-the-middle">@item.Name</h5>
+                            <p class="card-text">@item.Description</p>
+                        </div>
+                        <div class="card-footer">
+                            <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+    @if (User.IsInRole("Member") && favorites.Any())
+    {
+        <hr />
+        <h3 class="in-the-middle" style="font-family: 'Victor Mono', monospace;">Your Favorites</h3>
+        <div class="home-menu-display">
+            @foreach (var item in favorites)
+            {
+                <div class="col-md-4 mb-4">
+                    <a href="/MenuItem/Details/@item.MenuItemId" class="card-link-wrapper">
+                        <div class="card h-100 theme-card">
+                            <img src="/Images/@(item.PhotoURL ?? "default.jpg")" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
+                            <div class="card-body">
+                                <h5 class="card-title in-the-middle">@item.Name</h5>
+                                <p class="card-text">@item.Description</p>
+                            </div>
+                            <div class="card-footer">
+                                <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    }
 </div>
-
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const word = document.querySelector('.nice-word');

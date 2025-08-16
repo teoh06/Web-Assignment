@@ -441,46 +441,90 @@ namespace WebApplication2.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
-
-        [AllowAnonymous]
-        [HttpGet]
-        public IActionResult GetFilteredMenuItems(string? search, int? categoryId, decimal? minPrice, decimal? maxPrice)
+    [HttpPost]
+    public IActionResult ToggleFavorite(int menuItemId)
+    {
+        if (!User.Identity.IsAuthenticated) return Unauthorized();
+        var email = User.Identity.Name;
+        var fav = db.MenuItemFavorites.FirstOrDefault(f => f.MenuItemId == menuItemId && f.MemberEmail == email);
+        if (fav != null)
         {
-            try
+            db.MenuItemFavorites.Remove(fav);
+            db.SaveChanges();
+            return Json(new { favorited = false });
+        }
+        else
+        {
+            db.MenuItemFavorites.Add(new MenuItemFavorite { MenuItemId = menuItemId, MemberEmail = email });
+            db.SaveChanges();
+            return Json(new { favorited = true });
+        }
+    }
+
+    [HttpGet]
+    public IActionResult GetUserFavorites()
+    {
+        if (!User.Identity.IsAuthenticated) return Unauthorized();
+        var email = User.Identity.Name;
+        var favorites = db.MenuItemFavorites.Where(f => f.MemberEmail == email)
+            .Select(f => f.MenuItemId).ToList();
+        return Json(favorites);
+    }
+
+    [HttpGet]
+    public IActionResult GetTopSellItems(int count = 5)
+    {
+        var topItems = db.MenuItems
+            .OrderByDescending(m => db.CartItems.Where(c => c.MenuItemId == m.MenuItemId).Count())
+            .Take(count)
+            .Select(m => new {
+                m.MenuItemId,
+                m.Name,
+                m.PhotoURL,
+                m.Price,
+                m.Description
+            }).ToList();
+        return Json(topItems);
+    }
+
+    [AllowAnonymous]
+    [HttpGet]
+    public IActionResult GetFilteredMenuItems(string? search, int? categoryId, decimal? minPrice, decimal? maxPrice)
+    {
+        try
+        {
+            var query = db.MenuItems
+                .Include(m => m.Category)
+                .AsQueryable();
+
+            // Only search by name
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                var query = db.MenuItems
-                    .Include(m => m.Category)
-                    .AsQueryable();
+                query = query.Where(m => m.Name.Contains(search));
+            }
 
-                // Only search by name
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                    query = query.Where(m => m.Name.Contains(search));
-                }
-
-                // You can keep price filters if needed
-                if (minPrice.HasValue)
-                {
-                    query = query.Where(m => m.Price >= minPrice);
-                }
+            // You can keep price filters if needed
+            if (minPrice.HasValue)
+            {
+                query = query.Where(m => m.Price >= minPrice);
+            }
 
                 if (maxPrice.HasValue)
                 {
                     query = query.Where(m => m.Price <= maxPrice);
                 }
 
-                var items = query
-                    .OrderBy(m => m.Name)
-                    .Select(m => new
-                    {
-                        menuItemId = m.MenuItemId,
-                        name = m.Name,
-                        photoURL = m.PhotoURL,
-                        categoryName = m.Category.Name,
-                        price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))
-                    })
-                    .ToList();
+            var items = query
+                .OrderBy(m => m.Name)
+                .Select(m => new
+                {
+                    menuItemId = m.MenuItemId,
+                    name = m.Name,
+                    photoURL = m.PhotoURL,
+                    categoryName = m.Category.Name,
+                    price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))
+                })
+                .ToList();
 
                 return Json(items);
             }
