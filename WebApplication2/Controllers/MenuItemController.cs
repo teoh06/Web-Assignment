@@ -543,6 +543,35 @@ public class MenuItemController : Controller
         return RedirectToAction("Create");
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult UploadPhotos(List<IFormFile> photos)
+    {
+        if (photos == null || photos.Count == 0)
+        {
+            TempData["Message"] = "No files selected.";
+            return RedirectToAction("Create");
+        }
+
+        var uploadPath = Path.Combine(env.WebRootPath, "images");
+        if (!Directory.Exists(uploadPath))
+            Directory.CreateDirectory(uploadPath);
+
+        foreach (var photo in photos)
+        {
+            if (photo.Length > 0)
+            {
+                var filePath = Path.Combine(uploadPath, Path.GetFileName(photo.FileName));
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    photo.CopyTo(stream);
+                }
+            }
+        }
+
+        TempData["Message"] = "Photos uploaded successfully!";
+        return RedirectToAction("Create");
+    }
 
 
 }
