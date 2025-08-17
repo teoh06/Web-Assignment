@@ -156,4 +156,51 @@ public class AdminController : Controller
         return File(stream.ToArray(), "application/pdf", "SalesReport.pdf");
     }
 
+    [HttpGet]
+    public IActionResult SalesChartData()
+    {
+        var data = _context.Orders
+            .SelectMany(o => o.OrderItems)
+            .GroupBy(i => i.MenuItem.Category.Name)
+            .Select(g => new {
+                Category = g.Key,
+                Total = g.Sum(x => x.UnitPrice * x.Quantity)
+            })
+            .OrderByDescending(x => x.Total)
+            .ToList();
+        return Json(new {
+            labels = data.Select(x => x.Category).ToArray(),
+            values = data.Select(x => (double)x.Total).ToArray()
+        });
+    }
+    [HttpGet]
+    public IActionResult MembersChartData()
+    {
+        var adminCount = _context.Admins.Count();
+        var memberCount = _context.Members.Count();
+        var total = adminCount + memberCount;
+        return Json(new {
+            labels = new[] { "Admins", "Members" },
+            values = new[] { adminCount, memberCount }
+        });
+    }
+
+    [HttpGet]
+    public IActionResult TopMenuChartData()
+    {
+        var data = _context.OrderItems
+            .GroupBy(i => i.MenuItem.Name)
+            .Select(g => new {
+                Name = g.Key,
+                Quantity = g.Sum(x => x.Quantity)
+            })
+            .OrderByDescending(x => x.Quantity)
+            .Take(8)
+            .ToList();
+        return Json(new {
+            labels = data.Select(x => x.Name).ToArray(),
+            values = data.Select(x => x.Quantity).ToArray()
+        });
+    }
+
 }

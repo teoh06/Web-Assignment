@@ -1,17 +1,35 @@
 ﻿@{
     ViewData["Title"] = "Admin Dashboard";
 }
-
 <p>Welcome, @User.Identity.Name!</p>
-
 <div class="mb-4">
     <button class="btn btn-primary" onclick="showSection('users')">Manage Users</button>
     <button class="btn btn-success ms-3" onclick="showSection('sales')">Sales Summary</button>
 </div>
-
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card p-3 mb-3 chart-card-flex">
+            <h5 class="mb-3">Sales by Category</h5>
+            <div class="chart-flex-row">
+                <canvas id="salesPieChart" height="180" width="180"></canvas>
+                <div id="salesPieLegend" class="chart-legend-list"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 mb-3 chart-card-flex">
+            <h5 class="mb-3">Top Selling Menu Items</h5>
+            <div class="chart-flex-row">
+                <canvas id="topMenuChart" height="180" width="180"></canvas>
+                <div id="topMenuLegend" class="chart-legend-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
 <div id="section-users" class="admin-section" style="display:none;"></div>
 <div id="section-sales" class="admin-section" style="display:none;"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 function showSection(section) {
     document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
@@ -19,7 +37,6 @@ function showSection(section) {
     if (section === 'users') loadSection('/Admin/ManageUsers', 'section-users');
     if (section === 'sales') loadSection('/Admin/SalesSummary', 'section-sales');
 }
-
 function loadSection(url, target) {
     fetch(url)
         .then(r => r.text())
@@ -27,5 +44,71 @@ function loadSection(url, target) {
 }
 // Show sales by default
 showSection('sales');
+const salesColors = [
+    '#FF6B35', '#F7931E', '#4CAF50', '#E53E3E', '#4299E1', '#ED8936', '#48BB78', '#A0AEC0'
+];
+const menuColors = [
+    '#4299E1', '#FF6B35', '#4CAF50', '#A0AEC0', '#F7931E', '#E53E3E', '#ED8936', '#48BB78'
+];
+// Chart: Sales by Category
+fetch('/Admin/SalesChartData')
+    .then(r => r.json())
+    .then(data => {
+        new Chart(document.getElementById('salesPieChart'), {
+            type: 'pie',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: salesColors
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                responsive: false,
+                maintainAspectRatio: false
+            }
+        });
+        // Custom legend
+        let legendHtml = '';
+        data.labels.forEach((label, i) => {
+            legendHtml += `<div class='chart-legend-item'>`
+                + `<span class='chart-legend-color' style='background:${salesColors[i % salesColors.length]}'></span>`
+                + `<span class='chart-legend-label'>${label}</span>`
+                + `<span class='chart-legend-value'>RM${data.values[i].toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`
+                + `</div>`;
+        });
+        document.getElementById('salesPieLegend').innerHTML = legendHtml;
+    });
+// Chart: Top Selling Menu Items
+fetch('/Admin/TopMenuChartData')
+    .then(r => r.json())
+    .then(data => {
+        new Chart(document.getElementById('topMenuChart'), {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: menuColors
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                responsive: false,
+                maintainAspectRatio: false
+            }
+        });
+        // Custom legend
+        let legendHtml = '';
+        data.labels.forEach((label, i) => {
+            legendHtml += `<div class='chart-legend-item'>`
+                + `<span class='chart-legend-color' style='background:${menuColors[i % menuColors.length]}'></span>`
+                + `<span class='chart-legend-label'>${label}</span>`
+                + `<span class='chart-legend-value'>${data.values[i]}</span>`
+                + `</div>`;
+        });
+        document.getElementById('topMenuLegend').innerHTML = legendHtml;
+    });
 </script>
 
