@@ -708,4 +708,11 @@ public class AccountController : Controller
             return Json(new string[0]);
         }
     }
+
+    [Authorize]
+    [HttpGet]
+    public IActionResult GetFavoriteListPartial()
+    {
+        return PartialView("GetFavoriteListPartial");
+    }
 }

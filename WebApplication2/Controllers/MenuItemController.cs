@@ -12,14 +12,12 @@ using Microsoft.Extensions.Logging;
 
 namespace WebApplication2.Controllers;
 
-[Authorize(Roles = "Admin")]
 public class MenuItemController : Controller
 {
     private readonly DB db;
     private readonly IWebHostEnvironment env;
     private readonly ILogger<MenuItemController> logger;
 
-    // *** FIX: Inject IWebHostEnvironment to handle file paths correctly ***
     public MenuItemController(DB db, IWebHostEnvironment env, ILogger<MenuItemController> logger)
     {
         this.db = db;
@@ -45,6 +43,7 @@ public class MenuItemController : Controller
 
         var items = query
             .Include(m => m.Category)
+            .Include(m => m.MenuItemRatings) // Include ratings for average calculation
             .OrderBy(m => m.Name)
             .ToList();
 
@@ -58,6 +57,7 @@ public class MenuItemController : Controller
     }
 
 
+    [Authorize(Roles = "Admin")]
     public IActionResult Create()
     {
         ViewBag.Categories = db.Categories.ToList();
@@ -66,6 +66,7 @@ public class MenuItemController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([Bind("Name,Description,Price,CategoryId,PhotoURL")] MenuItem menuItem, IFormFile imageFile)
     {
         logger.LogInformation("Create action called with MenuItem: {@MenuItem}", menuItem);
@@ -151,6 +152,7 @@ public class MenuItemController : Controller
         }
     }
 
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Edit(int id)
     {
         var menuItem = await db.MenuItems.FindAsync(id);
@@ -164,6 +166,7 @@ public class MenuItemController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Edit(int id, [Bind("MenuItemId,Name,Description,Price,CategoryId,PhotoURL")] MenuItem menuItem, IFormFile? imageFile, bool removeImage = false)
     {
         logger.LogInformation("Edit action called with id: {Id}, MenuItem: {@MenuItem}", id, menuItem);
@@ -442,6 +445,7 @@ public class MenuItemController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = "Member")]
     public IActionResult ToggleFavorite(int menuItemId)
     {
         if (!User.Identity.IsAuthenticated) return Unauthorized();
@@ -497,21 +501,31 @@ public class MenuItemController : Controller
                 .Include(m => m.Category)
                 .AsQueryable();
 
-            // Only search by name
+            // Search by name, description, or category name
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(m => m.Name.Contains(search));
+                query = query.Where(m => m.Name.Contains(search) || m.Description.Contains(search) || m.Category.Name.Contains(search));
             }
 
-            // You can keep price filters if needed
+            if (categoryId.HasValue && categoryId.Value > 0)
+            {
+                query = query.Where(m => m.CategoryId == categoryId.Value);
+            }
+
             if (minPrice.HasValue)
             {
-                query = query.Where(m => m.Price >= minPrice);
+                query = query.Where(m => m.Price >= minPrice.Value);
             }
 
             if (maxPrice.HasValue)
             {
-                query = query.Where(m => m.Price <= maxPrice);
+                query = query.Where(m => m.Price <= maxPrice.Value);
+            }
+
+            // Hide inactive items for non-admins
+            if (!User.IsInRole("Admin"))
+            {
+                query = query.Where(m => m.IsActive);
             }
 
             var items = query
@@ -522,7 +536,8 @@ public class MenuItemController : Controller
                     name = m.Name,
                     photoURL = m.PhotoURL,
                     categoryName = m.Category.Name,
-                    price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))
+                    price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY")),
+                    isActive = m.IsActive
                 })
                 .ToList();
 

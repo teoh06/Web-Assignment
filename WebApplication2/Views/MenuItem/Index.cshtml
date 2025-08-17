@@ -1,5 +1,6 @@
 @model WebApplication2.Models.MenuItemIndexVM
 @using System.Globalization;
+@using System.Linq
 
 @{
     ViewBag.Title = "Menu";
@@ -53,15 +54,31 @@
         </div>
     }
 
+    @using System.Text
+    @functions {
+        string GetStarHtml(double avg) {
+            int full = (int)Math.Floor(avg);
+            bool half = avg - full >= 0.5;
+            int empty = 5 - full - (half ? 1 : 0);
+            var html = new StringBuilder();
+            for (int i = 0; i < full; i++) html.Append("<span class='star-full'>&#9733;</span>");
+            if (half) html.Append("<span class='star-half'>&#9733;</span>");
+            for (int i = 0; i < empty; i++) html.Append("<span class='star-empty'>&#9734;</span>");
+            return html.ToString();
+        }
+    }
     <div class="menu-items-grid" id="menuItemsGrid">
         @foreach (var item in Model.MenuItems)
         {
+            var ratings = item.MenuItemRatings ?? new List<WebApplication2.Models.MenuItemRating>();
+            double avgRating = ratings.Count > 0 ? ratings.Average(r => r.Value) : 0;
             <div class="menu-item-card">
                 <div class="item-image">
                     <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
                         <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" />
                     </a>
                     <span class="item-price">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                    <span class="item-rating">@Html.Raw(GetStarHtml(avgRating)) <span class="avg-rating">@avgRating.ToString("0.0")</span></span>
                     @if (isAdmin && !item.IsActive)
                     {
                         <span class="inactive-badge">Inactive</span>
@@ -152,13 +169,16 @@
             if (maxPrice) params.append('maxPrice', maxPrice);
 
             fetch(`@Url.Action("GetFilteredMenuItems", "MenuItem")?${params.toString()}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
                 .then(data => {
                     updateMenuItems(data);
                 })
                 .catch(error => {
                     console.error('Error filtering menu items:', error);
-                    alert('Failed to filter menu items. Please try again.');
+                    document.getElementById('menuItemsGrid').innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><p>Failed to filter menu items. Please try again.</p></div>`;
                 })
                 .finally(() => {
                     document.getElementById('loadingIndicator').style.display = 'none';
@@ -171,7 +191,7 @@
             const isAdmin = @Json.Serialize(isAdmin);
             const isMember = @Json.Serialize(isMember);
 
-            if (items.length === 0) {
+            if (!items || items.length === 0) {
                 grid.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-search"></i>
@@ -187,7 +207,7 @@
                             <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
                         </a>
                         <span class="item-price">${item.price}</span>
-                        ${!item.isActive && isAdmin ? '<span class="inactive-badge">Inactive</span>' : ''}
+                        ${isAdmin && !item.isActive ? '<span class="inactive-badge">Inactive</span>' : ''}
                     </div>
                     <div class="item-info">
                         <h3 class="item-name">${item.name}</h3>
@@ -248,7 +268,6 @@
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const formData = new FormData(this);
-                    
                     fetch('/Cart/Add', {
                         method: 'POST',
                         headers: {
@@ -288,3 +307,11 @@
         attachFormListeners();
     </script>
 }
+
+<style>
+.item-rating { display: block; margin-top: 6px; font-size: 1.1em; color: #ffd700; }
+.star-full { color: #ffd700; }
+.star-half { color: #ffd700; opacity: 0.6; }
+.star-empty { color: #b0b8c1; }
+.avg-rating { color: #fff; font-size: 0.95em; margin-left: 4px; }
+</style>

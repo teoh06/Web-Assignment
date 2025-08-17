@@ -1,0 +1,28 @@
+@inject DB db
+@{
+    var favIds = db.MenuItemFavorites.Where(f => f.MemberEmail == User.Identity.Name).Select(f => f.MenuItemId).ToList();
+    var favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId)).ToList();
+}
+@if (favorites.Any())
+{
+    <div class="favorite-list-grid">
+        @foreach (var item in favorites)
+        {
+            <div class="favorite-card">
+                <a href="/MenuItem/Details/@item.MenuItemId">
+                    <img src="/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" class="favorite-img" />
+                </a>
+                <div class="favorite-info">
+                    <div class="favorite-name">@item.Name</div>
+                    <div class="favorite-category">@item.Category?.Name</div>
+                    <div class="favorite-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                    <a href="/MenuItem/Details/@item.MenuItemId" class="btn btn-sm btn-info">Details</a>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="empty-favorite">You have not added any favorites yet.</div>
+}

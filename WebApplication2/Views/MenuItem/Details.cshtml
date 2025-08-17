@@ -5,6 +5,11 @@
     var menuItem = Model.MenuItem;
     var db = Context.RequestServices.GetService(typeof(DB)) as DB;
     var options = db.PersonalizationOptions.Where(o => o.CategoryId == menuItem.CategoryId).ToList();
+    bool isFav = false;
+    if (User.Identity.IsAuthenticated)
+    {
+        isFav = db.MenuItemFavorites.Any(f => f.MenuItemId == menuItem.MenuItemId && f.MemberEmail == User.Identity.Name);
+    }
 }
 @if (TempData["EditMessage"] != null)
 {
@@ -12,22 +17,24 @@
         @Html.Raw(TempData["EditMessage"])
     </div>
 }
-<div class="card mb-4 menuitem-details-card">
-    <div class="row g-0">
-        <div class="col-md-5">
+<div class="menuitem-details-main">
+    <div class="menuitem-details-flex">
+        <div class="menuitem-gallery-card">
             <div id="menuitem-gallery" class="swiper-container">
                 <div class="swiper-wrapper">
                     @if (menuItem.MenuItemImages != null && menuItem.MenuItemImages.Count > 0)
                     {
-                        var img = menuItem.MenuItemImages.First();
-                        <div class="swiper-slide">
-                            <img src="/images/@img.FileName" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
-                        </div>
+                        foreach (var img in menuItem.MenuItemImages)
+                        {
+                            <div class="swiper-slide">
+                                <img src="/images/@img.FileName" class="img-fluid menuitem-photo" alt="@menuItem.Name">
+                            </div>
+                        }
                     }
                     else if (!string.IsNullOrEmpty(menuItem.PhotoURL))
                     {
                         <div class="swiper-slide">
-                            <img src="@(menuItem.PhotoURL.StartsWith("http") ? menuItem.PhotoURL : "/images/" + menuItem.PhotoURL)" class="img-fluid rounded-start menuitem-photo mx-2 my-2 mt-4" alt="@menuItem.Name">
+                            <img src="@(menuItem.PhotoURL.StartsWith("http") ? menuItem.PhotoURL : "/images/" + menuItem.PhotoURL)" class="img-fluid menuitem-photo" alt="@menuItem.Name">
                         </div>
                     }
                 </div>
@@ -36,95 +43,89 @@
                 <div class="swiper-button-next"></div>
             </div>
         </div>
-        <div class="col-md-7">
-            <div class="card-body m-3">
-                <h3 class="card-title mb-4">@menuItem.Name</h3>
-                <h5 class="card-subtitle mb-2 mt-4 my-muted">@menuItem.Category?.Name</h5>
-                <p class="card-text">@menuItem.Description</p>
-                <h4 class="text-success">@menuItem.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</h4>
-                <br>
-
-                @if (User.IsInRole("Member"))
-                {
-                <div class="mb-2">
-                    <button class="btn btn-outline-danger btn-sm" onclick="toggleFavorite(this)"><span id="fav-icon">♡</span> Favorite</button>
-                </div>
-                <div class="mb-2 rating-summary">
-                    <span id="avg-rating" class="fw-bold">@Model.AverageRating.ToString("0.0")</span> / 5
-                    <span class="ms-2">(@Model.RatingsCount ratings)</span>
-                </div>
-                <div class="mb-2">
-                    <label>Rate this item:</label>
-                    <span id="user-rating">
-                        @for (int i = 1; i <= 5; i++)
-                        {
-                            <span class="star" data-value="@i" style="font-size:1.5em; cursor:pointer; color:gold;">☆</span>
-                        }
-                    </span>
-                </div>
-                }
-                else
-                {
-                    <p><b>Only Member can order.</b></p>
-                }
-
-                @if (User.IsInRole("Admin"))
-                {
-                    <a href="@Url.Action("Edit", new { id = menuItem.MenuItemId })" class="btn btn-primary">Edit</a>
-                }
-                <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
-                @if (User.IsInRole("Member"))
-                {
-                    <form asp-controller="Cart" asp-action="Add" method="post" style="display:inline" id="addToCartForm">
-                        <input type="hidden" name="menuItemId" value="@menuItem.MenuItemId" />
-                        <input type="number" name="quantity" value="1" min="1" max="100" style="width:60px" />
-                        @if (options.Any())
-                        {
-                            <div class="mb-2">
-                                <label>Personalization:</label>
-                                <div>
-                                    @foreach (var opt in options)
-                                    {
-                                        <label class="me-2">
-                                            <input type="checkbox" name="personalizations" value="@opt.Name" /> @opt.Name
-                                        </label>
-                                    }
-                                </div>
-                            </div>
-                        }
-                        <input type="hidden" name="SelectedPersonalizations" id="SelectedPersonalizations" />
-                        <button type="submit" class="btn btn-success" onclick="collectPersonalizations(event)">Add to Cart</button>
-                    </form>
-                }
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card mt-4 menuitem-comments-card">
-    <div class="card-header my-muted">Comments</div>
-    <div class="card-body">
-        <div id="comments-list">
-        <div id="comments-list">
-            @foreach (var c in Model.Comments)
+        <div class="menuitem-info-card">
+            <h2 class="menuitem-title">@menuItem.Name</h2>
+            <div class="menuitem-category">@menuItem.Category?.Name</div>
+            <div class="menuitem-price">@menuItem.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+            <div class="menuitem-desc">@menuItem.Description</div>
+            <hr>
+            @if (User.IsInRole("Member"))
             {
-                <div class="mb-2 comment-item"><b>@c.Member?.Name (Foodie Voice)</b>: @c.Content <span class="my-muted small">(@c.CommentedAt.ToShortTimeString())</span></div>
+                <div class="menuitem-actions">
+                    <button id="favoriteBtn" class="btn btn-outline-danger btn-sm @(isFav ? "btn-danger" : "")" data-id="@menuItem.MenuItemId" onclick="toggleFavorite(this); return false;">
+                        <span id="fav-icon">@(isFav ? "♥" : "♡")</span> Favorite
+                    </button>
+                    <div class="rating-summary mb-2">
+                        <span id="avg-rating" class="fw-bold">@Model.AverageRating.ToString("0.0")</span> / 5
+                        <span class="ms-2">(@Model.RatingsCount ratings)</span>
+                    </div>
+                    <div class="mb-2">
+                        <label>Rate this item:</label>
+                        <span id="user-rating">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <span class="star" data-value="@i" style="font-size:1.5em; cursor:pointer; color:#d4aa46;">☆</span>
+                            }
+                        </span>
+                    </div>
+                </div>
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <a href="@Url.Action("Edit", new { id = menuItem.MenuItemId })" class="btn btn-primary">Edit</a>
+            }
+            <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
+            @if (User.IsInRole("Member"))
+            {
+                <form asp-controller="Cart" asp-action="Add" method="post" id="addToCartForm" class="add-to-cart-form">
+                    <input type="hidden" name="menuItemId" value="@menuItem.MenuItemId" />
+                    <div class="quantity-row mb-2">
+                        <label>Quantity:</label>
+                        <input type="number" name="quantity" value="1" min="1" max="100" class="form-control d-inline-block" style="width:70px; margin-left:10px;" />
+                    </div>
+                    @if (options.Any())
+                    {
+                        <div class="mb-2">
+                            <label>Personalization:</label>
+                            <div class="personalization-options">
+                                @foreach (var opt in options)
+                                {
+                                    <label class="me-2">
+                                        <input type="checkbox" name="personalizations" value="@opt.Name" /> @opt.Name
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    }
+                    <input type="hidden" name="SelectedPersonalizations" id="SelectedPersonalizations" />
+                    <button type="submit" class="btn btn-success" onclick="collectPersonalizations(event)">Add to Cart</button>
+                </form>
             }
         </div>
-        @if (User.Identity!.IsAuthenticated)
-        {
-            <form id="comment-form" onsubmit="addComment(event)">
-                <div class="input-group">
-                    <input type="text" id="comment-input" class="form-control" placeholder="Add a comment..." maxlength="200" required />
-                    <button type="submit" class="btn btn-outline-primary">Post</button>
-                </div>
-            </form>
-        }
-        else
-        {
-            <div class="my-muted">Login to add a comment.</div>
-        }
     </div>
+    <div class="menuitem-comments-card card mt-4">
+        <div class="card-header my-muted">Comments</div>
+        <div class="card-body">
+            <div id="comments-list">
+                @foreach (var c in Model.Comments)
+                {
+                    <div class="mb-2 comment-item"><b>@c.Member?.Name (Foodie Voice)</b>: @c.Content <span class="my-muted small">(@c.CommentedAt.ToShortTimeString())</span></div>
+                }
+            </div>
+            @if (User.Identity!.IsAuthenticated)
+            {
+                <form id="comment-form" onsubmit="addComment(event)">
+                    <div class="input-group">
+                        <input type="text" id="comment-input" class="form-control" placeholder="Add a comment..." maxlength="200" required />
+                        <button type="submit" class="btn btn-outline-primary">Post</button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <div class="my-muted">Login to add a comment.</div>
+            }
+        </div>
     </div>
 </div>
 
@@ -145,17 +146,51 @@
         slidesPerView: 1,
         spaceBetween: 10,
     });
+function getAntiForgeryToken() {
+    // Try to get the token from the form if present
+    var token = $('input[name="__RequestVerificationToken"]').val();
+    if (!token) {
+        // Try to get from layout if not present in this form
+        token = $("form input[name='__RequestVerificationToken']").first().val();
+    }
+    return token;
+}
+function refreshFavoriteList() {
+    if ($('#favoriteList').length) {
+        $.get('/Account/GetFavoriteListPartial', function(html) {
+            $('#favoriteList').html(html);
+        });
+    }
+}
 function toggleFavorite(btn) {
     var icon = document.getElementById('fav-icon');
-    if (icon.textContent === '♡') {
-        icon.textContent = '♥';
-        btn.classList.remove('btn-outline-danger');
-        btn.classList.add('btn-danger');
-    } else {
-        icon.textContent = '♡';
-        btn.classList.remove('btn-danger');
-        btn.classList.add('btn-outline-danger');
-    }
+    var menuItemId = $(btn).data('id');
+    var token = getAntiForgeryToken();
+    $.ajax({
+        url: '/MenuItem/ToggleFavorite',
+        type: 'POST',
+        data: {
+            menuItemId: menuItemId,
+            __RequestVerificationToken: token
+        },
+        xhrFields: { withCredentials: true },
+        success: function(data) {
+            if (data.favorited) {
+                icon.textContent = '♥';
+                btn.classList.remove('btn-outline-danger');
+                btn.classList.add('btn-danger');
+            } else {
+                icon.textContent = '♡';
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-outline-danger');
+            }
+            refreshFavoriteList();
+            if (typeof showFeedback === 'function') showFeedback(data.favorited ? 'Added to favorites!' : 'Removed from favorites!', 'info');
+        },
+        error: function(xhr) {
+            alert('Failed to update favorite. Please log in and try again.');
+        }
+    });
 }
 // Star rating AJAX
 const stars = document.querySelectorAll('.star');
@@ -203,13 +238,11 @@ function addComment(e) {
         });
     }
 }
-
 function collectPersonalizations(e) {
     var checked = Array.from(document.querySelectorAll('input[name="personalizations"]:checked')).map(x => x.value);
     document.getElementById('SelectedPersonalizations').value = checked.join(',');
 }
-
-document.getElementById('addToCartForm').addEventListener('submit', function(e) {
+document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     collectPersonalizations(e);
     var form = e.target;

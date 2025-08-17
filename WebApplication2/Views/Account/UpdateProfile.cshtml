@@ -4,167 +4,196 @@
     ViewBag.Title = "Account | Update Profile";
 }
 
-<div class="menu-container">
+<div class="profile-page-flex">
+    <div class="profile-main-card">
+        <form class="tidy-form" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly"></div>
 
-    <form class="tidy-form" method="post" enctype="multipart/form-data">
-        <div asp-validation-summary="ModelOnly"></div>
+            <div class="profile-photo-wrapper">
+                <label class="upload" onclick="openPhotoPopup()">
+                    <img src="@(string.IsNullOrEmpty(Model.PhotoURL) ? "/photos/default.png" : $"/photos/{Model.PhotoURL}")"
+                         id="currentProfilePhoto"
+                         alt="Profile Photo"
+                         onerror="this.src='/photos/default.png'">
+                </label>
+                <br><small>Click photo to change or view history</small><br>
+                <span asp-validation-for="ProfilePicture" class="field-validation-error"></span>
 
-        <div class="profile-photo-wrapper">
-            <label class="upload" onclick="openPhotoPopup()">
-                <img src="@(string.IsNullOrEmpty(Model.PhotoURL) ? "/photos/default.png" : $"/photos/{Model.PhotoURL}")"
-                     id="currentProfilePhoto"
-                     alt="Profile Photo"
-                     onerror="this.src='/photos/default.png'">
-            </label>
-            <br><small>Click photo to change or view history</small><br>
-            <span asp-validation-for="ProfilePicture" class="field-validation-error"></span>
+                <input type="hidden" id="selectedPhotoPath" name="SelectedPhotoPath" value="">
+                <input type="file" id="newPhotoInput" asp-for="ProfilePicture"
+                       accept="image/jpeg, image/png, image/jpg, image/webp, image/gif, image/bmp, image/svg+xml, image/tiff"
+                       class="hidden">
 
-            <input type="hidden" id="selectedPhotoPath" name="SelectedPhotoPath" value="">
-            <input type="file" id="newPhotoInput" asp-for="ProfilePicture"
-                   accept="image/jpeg, image/png, image/jpg, image/webp, image/gif, image/bmp, image/svg+xml, image/tiff"
-                   class="hidden">
-
-            <input type="hidden" id="processedImageData" name="ProcessedImageData" value="">
-        </div>
-
-        <div class="form-fields">
-            <div class="field-row">
-                <label asp-for="Email">Email</label>
-                <div class="email-display">@Model.Email</div>
+                <input type="hidden" id="processedImageData" name="ProcessedImageData" value="">
             </div>
 
-            <div class="field-row">
-                <label asp-for="Address">Address</label>
-                <div class="address-input-container">
-                    <input asp-for="Address" class="form-input address-input"
-                           placeholder="Enter your full address (e.g., 123 Main Street, City, State ZIP)"
-                           autocomplete="street-address"
-                           data-validation-url="/Account/ValidateAddress"
-                           data-suggestions-url="/Account/GetAddressSuggestions">
-                    <div class="address-suggestions" id="addressSuggestions" hidden></div>
-                    <div class="address-validation-feedback" id="addressFeedback" hidden></div>
+            <div class="form-fields">
+                <div class="field-row">
+                    <label asp-for="Email">Email</label>
+                    <div class="email-display">@Model.Email</div>
                 </div>
-                <span asp-validation-for="Address" class="field-validation-error"></span>
+
+                <div class="field-row">
+                    <label asp-for="Address">Address</label>
+                    <div class="address-input-container">
+                        <input asp-for="Address" class="form-input address-input"
+                               placeholder="Enter your full address (e.g., 123 Main Street, City, State ZIP)"
+                               autocomplete="street-address"
+                               data-validation-url="/Account/ValidateAddress"
+                               data-suggestions-url="/Account/GetAddressSuggestions">
+                        <div class="address-suggestions" id="addressSuggestions" hidden></div>
+                        <div class="address-validation-feedback" id="addressFeedback" hidden></div>
+                    </div>
+                    <span asp-validation-for="Address" class="field-validation-error"></span>
+                </div>
+
+                <div class="field-row">
+                    <label asp-for="Name">Name</label>
+                    <input asp-for="Name" class="form-input" autofocus>
+                    <span asp-validation-for="Name" class="field-validation-error"></span>
+                </div>
             </div>
 
-            <div class="field-row">
-                <label asp-for="Name">Name</label>
-                <input asp-for="Name" class="form-input" autofocus>
-                <span asp-validation-for="Name" class="field-validation-error"></span>
+            <div class="form-buttons">
+                <button type="submit" class="btn-primary">Update</button>
+                <button type="reset" class="btn-secondary">Reset</button>
             </div>
-        </div>
-
-        <div class="form-buttons">
-            <button type="submit" class="btn-primary">Update</button>
-            <button type="reset" class="btn-secondary">Reset</button>
-        </div>
-    </form>
-
-    <hr />
-
-    <section class="danger-zone">
-        <h3>Delete Account</h3>
-        <p>Once you delete your account, you will receive an email to finalize the process. There is a grace period for recovery.</p>
-        <form id="deleteAccountForm" asp-controller="Account" asp-action="InitiateAccountDeletion" method="post">
-            <button class="delete-button" type="submit">Delete Your Account</button>
         </form>
-    </section>
-</div>
 
-<div class="photo-popup-overlay" id="photoPopup">
-    <div class="photo-popup">
-        <div class="popup-header">
-            <h3>Profile Photo</h3>
-            <button class="close-popup" onclick="closePhotoPopup()">&times;</button>
-        </div>
+        <hr />
 
-        <div class="upload-new-section" onclick="document.getElementById('newPhotoInput').click()">
-            <div style="font-size: 32px; margin-bottom: 10px;">📷</div>
-            <strong>Upload New Photo</strong>
-            <p>Click to select a new image</p>
-        </div>
-
-        <div id="imageProcessingSection" style="display:none; text-align:center; margin:20px 0; padding:20px; background:var(--bg-secondary); border-radius:10px;">
-            <div style="max-width:400px; margin:0 auto;">
-                <img id="cropperImage" style="max-width:100%; display:block;" />
-            </div>
-            <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                <button type="button" class="popup-btn popup-btn-primary" onclick="cropImage()">
-                    <i class="fas fa-crop"></i> Apply Crop
-                </button>
-                <button type="button" class="popup-btn popup-btn-secondary" onclick="rotateImage(-90)">
-                    <i class="fas fa-undo"></i> Rotate Left
-                </button>
-                <button type="button" class="popup-btn popup-btn-secondary" onclick="rotateImage(90)">
-                    <i class="fas fa-redo"></i> Rotate Right
-                </button>
-                <button type="button" class="popup-btn popup-btn-secondary" onclick="flipImage('horizontal')">
-                    <i class="fas fa-arrows-alt-h"></i> Flip H
-                </button>
-                <button type="button" class="popup-btn popup-btn-secondary" onclick="flipImage('vertical')">
-                    <i class="fas fa-arrows-alt-v"></i> Flip V
-                </button>
-                <button type="button" class="popup-btn popup-btn-danger" onclick="resetImage()">
-                    <i class="fas fa-times"></i> Reset
-                </button>
-            </div>
-        </div>
-
-        <div class="photo-history-section">
-            <h4>📁 Previous Photos</h4>
-            <div class="photo-history-grid" id="photoHistoryGrid">
-                @{
-                    // Combine current photo with history for a complete list of selectable photos
-                    var allUserPhotos = new List<ProfilePhotoVM>();
-                    if (!string.IsNullOrEmpty(Model.PhotoURL) && Model.PhotoURL != "default.png")
+        <section class="danger-zone">
+            <h3>Delete Account</h3>
+            <p>Once you delete your account, you will receive an email to finalize the process. There is a grace period for recovery.</p>
+            <form id="deleteAccountForm" asp-controller="Account" asp-action="InitiateAccountDeletion" method="post">
+                <button class="delete-button" type="submit">Delete Your Account</button>
+            </form>
+        </section>
+    </div>
+    <div class="profile-favorites-card">
+        <h2 class="favorite-title">Your Favorite Dishes</h2>
+        <div id="favoriteList">
+        @if (User.IsInRole("Member"))
+        {
+            @inject DB db
+            var favIds = db.MenuItemFavorites.Where(f => f.MemberEmail == User.Identity.Name).Select(f => f.MenuItemId).ToList();
+            var favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId)).ToList();
+            if (favorites.Any())
+            {
+                <div class="favorite-list-grid">
+                    @foreach (var item in favorites)
                     {
-                        // Find the ID of the current photo from history if it exists
-                        var currentPhotoInHistory = Model.PhotoHistory.FirstOrDefault(p => p.FileName == Model.PhotoURL);
-                        allUserPhotos.Add(new ProfilePhotoVM
-                        {
-                            Id = currentPhotoInHistory?.Id ?? 0, // Use 0 or another indicator if not in history
-                            FileName = Model.PhotoURL,
-                            UploadDate = currentPhotoInHistory?.UploadDate ?? DateTime.Now
-                        });
-                    }
-                    allUserPhotos.AddRange(Model.PhotoHistory);
-
-                    // Display unique photos only, ordered by date
-                    var uniquePhotos = allUserPhotos
-                    .GroupBy(p => p.FileName)
-                    .Select(g => g.First())
-                    .OrderByDescending(p => p.UploadDate);
-                }
-                @if (uniquePhotos.Any())
-                {
-                    foreach (var photo in uniquePhotos)
-                    {
-                        bool isCurrent = photo.FileName == Model.PhotoURL;
-                        <div class="history-photo" data-photo-path="/photos/@photo.FileName"
-                             data-photo-id="@photo.Id" onclick="selectHistoryPhoto(this)">
-                            <img src="/photos/@photo.FileName" alt="Profile Photo" onerror="this.style.display='none'">
-                            @if (isCurrent)
-                            {
-                                <div class="current-photo-indicator">✓</div>
-                            }
-                            <div class="photo-date">@photo.UploadDate.ToString("MMM yyyy")</div>
+                        <div class="favorite-card">
+                            <a href="/MenuItem/Details/@item.MenuItemId">
+                                <img src="/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" class="favorite-img" />
+                            </a>
+                            <div class="favorite-info">
+                                <div class="favorite-name">@item.Name</div>
+                                <div class="favorite-category">@item.Category?.Name</div>
+                                <div class="favorite-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                                <a href="/MenuItem/Details/@item.MenuItemId" class="btn btn-sm btn-info">Details</a>
+                            </div>
                         </div>
                     }
-                }
-                else
-                {
-                    <p style="text-align:center; color: var(--text-secondary);">No photo history available.</p>
-                }
-            </div>
-        </div>
-
-        <div class="popup-actions">
-            <button class="popup-btn popup-btn-primary default-button" onclick="applySelectedPhoto()">Apply Selected</button>
-            <button class="popup-btn popup-btn-secondary" onclick="closePhotoPopup()">Cancel</button>
-            <button class="popup-btn popup-btn-danger" onclick="deleteSelectedPhoto()">Delete Photo</button>
+                </div>
+            }
+            else
+            {
+                <div class="empty-favorite">You have not added any favorites yet.</div>
+            }
+        }
         </div>
     </div>
 </div>
+
+<style>
+.profile-page-flex {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    align-items: flex-start;
+    justify-content: center;
+    margin: 40px auto;
+    max-width: 1400px;
+}
+.profile-main-card {
+    flex: 2;
+    background: #181f2a;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px #0002;
+    padding: 32px;
+    color: #fff;
+    min-width: 400px;
+}
+.profile-favorites-card {
+    flex: 1;
+    background: #181f2a;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px #0002;
+    padding: 32px;
+    color: #fff;
+    min-width: 320px;
+    max-width: 420px;
+}
+.favorite-title {
+    font-family: 'Victor Mono', monospace;
+    font-size: 1.5rem;
+    color: var(--primary-brand);
+    margin-bottom: 18px;
+}
+.favorite-list-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+.favorite-card {
+    background: #222a36;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px #0003;
+    padding: 18px;
+    display: flex;
+    gap: 18px;
+    align-items: center;
+}
+.favorite-img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: #222a36;
+}
+.favorite-info {
+    flex: 1;
+    text-align: left;
+}
+.favorite-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 2px;
+}
+.favorite-category {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+}
+.favorite-price {
+    color: var(--accent-green);
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+.empty-favorite {
+    color: #b0b8c1;
+    font-style: italic;
+    margin-top: 12px;
+}
+@@media (max-width: 900px) {
+    .profile-page-flex { flex-direction: column; gap: 24px; }
+    .profile-main-card, .profile-favorites-card { min-width: 100%; max-width: 100%; }
+    .favorite-list-grid { flex-direction: row; flex-wrap: wrap; gap: 18px; }
+    .favorite-card { flex-direction: column; align-items: flex-start; }
+}
+</style>
 
 @section Scripts {
     <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
@@ -332,6 +361,24 @@
         // Close popup when clicking outside
         document.getElementById('photoPopup').addEventListener('click', function(e) {
             if (e.target === this) { closePhotoPopup(); }
+        });
+
+        // Refresh favorite list after favorite is toggled
+        function refreshFavoriteList() {
+            $.get('/Account/GetFavoriteListPartial', function(html) {
+                $('#favoriteList').html(html);
+            });
+        }
+        // Listen for favorite button click on menu page
+        $(document).on('click', '.menu-card-fav-btn', function() {
+            var btn = $(this);
+            var id = btn.data('id');
+            $.post('/MenuItem/ToggleFavorite', { menuItemId: id }, function(data) {
+                if (data.favorited !== undefined) {
+                    // Optionally update button UI here
+                    refreshFavoriteList(); // Refresh profile favorite list
+                }
+            });
         });
     </script>
 }

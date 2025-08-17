@@ -123,6 +123,9 @@ public class MenuItem
 
     // --- Add IsActive property for menu item filtering ---
     public bool IsActive { get; set; } = true;
+
+    // --- Add ratings navigation property ---
+    public ICollection<MenuItemRating> MenuItemRatings { get; set; } = new List<MenuItemRating>();
 }
 
 
