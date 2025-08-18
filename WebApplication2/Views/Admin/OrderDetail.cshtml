@@ -1,0 +1,35 @@
+@model WebApplication2.Models.Order
+@{
+    ViewBag.Title = "Order Detail";
+}
+<div class="container py-4">
+    <h2>Order Detail - #@Model.OrderId</h2>
+    <div class="mb-3"><b>Date:</b> @Model.OrderDate.ToString("yyyy-MM-dd HH:mm")</div>
+    <div class="mb-3"><b>Member:</b> @Model.MemberEmail</div>
+    <div class="mb-3"><b>Status:</b> @Model.Status</div>
+    <div class="mb-3"><b>Delivery Address:</b> @Model.DeliveryAddress</div>
+    <div class="mb-3"><b>Delivery Option:</b> @Model.DeliveryOption</div>
+    <h4>Items</h4>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Menu Item</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model.OrderItems)
+        {
+            <tr>
+                <td>@item.MenuItem.Name</td>
+                <td>@item.Quantity</td>
+                <td>@item.UnitPrice.ToString("C", new System.Globalization.CultureInfo("en-MY"))</td>
+                <td>@((item.UnitPrice * item.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY")))</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <a asp-action="Orders" class="btn btn-secondary">Back to Orders</a>
+</div>

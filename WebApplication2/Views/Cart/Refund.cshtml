@@ -1,0 +1,32 @@
+@model WebApplication2.Controllers.OrderRefundVM
+@{
+    ViewBag.Title = "Order Refund Request";
+}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="mb-4">Order Refund Request</h2>
+            <form asp-action="Refund" method="post">
+                <div class="mb-3">
+                    <label asp-for="OrderId" class="form-label"></label>
+                    <input asp-for="OrderId" class="form-control" placeholder="Enter your order number">
+                    <span asp-validation-for="OrderId" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Reason" class="form-label"></label>
+                    <textarea asp-for="Reason" class="form-control" rows="4" placeholder="Describe the reason for your refund request"></textarea>
+                    <span asp-validation-for="Reason" class="text-danger"></span>
+                </div>
+                <button type="submit" class="btn btn-danger">Submit Refund Request</button>
+                <a asp-action="History" class="btn btn-secondary ms-2">Back to Order History</a>
+            </form>
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success mt-3">@TempData["Success"]</div>
+            }
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

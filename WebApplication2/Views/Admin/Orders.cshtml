@@ -1,0 +1,47 @@
+@model IEnumerable<WebApplication2.Models.Order>
+@{
+    ViewBag.Title = "Order Maintenance";
+    var selectedStatus = Context.Request.Query["status"].ToString();
+}
+<div class="container py-4">
+    <h2>Order Listing & Maintenance</h2>
+    <form method="get" class="mb-3">
+        <label for="statusFilter">Filter by Status:</label>
+        <select name="status" id="statusFilter" onchange="this.form.submit()" class="form-select w-auto d-inline-block ms-2">
+            <option value="" selected="@(string.IsNullOrEmpty(selectedStatus))">All</option>
+            <option value="Pending" selected="@(selectedStatus == "Pending")">Pending</option>
+            <option value="Preparing" selected="@(selectedStatus == "Preparing")">Preparing</option>
+            <option value="Served" selected="@(selectedStatus == "Served")">Served</option>
+            <option value="Cancelled" selected="@(selectedStatus == "Cancelled")">Cancelled</option>
+            <option value="Refunded" selected="@(selectedStatus == "Refunded")">Refunded</option>
+        </select>
+    </form>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Date</th>
+                <th>Member</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var order in Model)
+        {
+            <tr>
+                <td>@order.OrderId</td>
+                <td>@order.OrderDate.ToString("yyyy-MM-dd HH:mm")</td>
+                <td>@order.MemberEmail</td>
+                <td>@order.Status</td>
+                <td>@order.OrderItems.Sum(i => i.UnitPrice * i.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY"))</td>
+                <td>
+                    <a asp-action="OrderDetail" asp-route-id="@order.OrderId" class="btn btn-sm btn-info">Detail</a>
+                    <a asp-action="UpdateOrderStatus" asp-route-id="@order.OrderId" class="btn btn-sm btn-warning">Update Status</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

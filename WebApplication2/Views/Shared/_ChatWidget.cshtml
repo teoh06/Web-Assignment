@@ -1,0 +1,134 @@
+@inject DB db
+@{
+    string displayName = "Guest";
+    if (User.Identity.IsAuthenticated && User.IsInRole("Member"))
+    {
+        var member = db.Members.Find(User.Identity.Name);
+        if (member != null && !string.IsNullOrEmpty(member.Email))
+        {
+            var email = member.Email;
+            int atIdx = email.IndexOf('@');
+            displayName = atIdx > 2 ? email.Substring(0, 2) + "***" + email.Substring(atIdx) : email;
+        }
+    }
+    else if (User.Identity.IsAuthenticated)
+    {
+        displayName = User.Identity.Name;
+    }
+}
+
+<div id="chatWidget" class="chat-widget">
+    <div id="chatHeader" class="chat-header">
+        <i class="fas fa-comments"></i> Customer Support Chat
+    </div>
+    <div id="chatBody" class="chat-body">
+        <div id="chatMessages" class="chat-messages">
+            <!-- Messages will appear here -->
+        </div>
+        <div class="chat-input-container">
+            <input id="chatInput" class="chat-input" type="text" placeholder="Type your message..." />
+            <button id="chatSendBtn" class="chat-send-btn">Send</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+<script>
+    // --- Chat history persistence ---
+    function saveChatHistory() {
+        sessionStorage.setItem('chatHistory', document.getElementById('chatMessages').innerHTML);
+    }
+    function loadChatHistory() {
+        var history = sessionStorage.getItem('chatHistory');
+        if (history) document.getElementById('chatMessages').innerHTML = history;
+    }
+    function clearChatHistory() {
+        document.getElementById('chatMessages').innerHTML = '';
+        sessionStorage.removeItem('chatHistory');
+    }
+    loadChatHistory();
+
+    document.getElementById('chatHeader').onclick = function() {
+        var body = document.getElementById('chatBody');
+        body.style.display = body.style.display === 'none' ? 'block' : 'none';
+    };
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl('/chathub')
+        .build();
+
+    function getAutoReply(message) {
+        message = message.toLowerCase();
+        if (message.includes('clear') || message.includes('reset') || message.includes('remove chat')) {
+            clearChatHistory();
+            return "Support: Chat history cleared.";
+        }
+        if (message.includes('track') && message.includes('order')) {
+            return "Support: You can track your order status <a href='/Cart/Track' target='_blank'>here</a>.";
+        }
+        if (message.includes('order status')) {
+            return "Support: Please visit <a href='/Cart/Track' target='_blank'>Track Order</a> to check your order status.";
+        }
+        if (message.includes('refund') || message.includes('money back')) {
+            return "Support: To request a refund, please go to <a href='/Cart/Refund' target='_blank'>Order Refund</a> and provide your order number and reason.";
+        }
+        if (message.includes('menu') || message.includes('food') || message.includes('recommend')) {
+            return "Support: You can browse our menu on the <a href='/MenuItem' target='_blank'>Menu</a> page. Let us know if you need recommendations!";
+        }
+        if (message.includes('delivery') || message.includes('address')) {
+            return "Support: Delivery usually takes 30-45 minutes. You can check or update your delivery address in your <a href='/Account/UpdateProfile' target='_blank'>profile</a>.";
+        }
+        if (message.includes('payment') || message.includes('pay')) {
+            return "Support: We accept cash and card payments. If you have payment issues, please describe them.";
+        }
+        if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
+            return "Support: Hello! How can we assist you today?";
+        }
+        if (message.includes('cancel') || message.includes('remove order')) {
+            return "Support: To cancel an order, please provide your order number. We'll check if cancellation is possible.";
+        }
+        if (message.includes('account') || message.includes('profile') || message.includes('update')) {
+            return "Support: For account issues, you can update your profile or reset your password from the <a href='/Account/UpdateProfile' target='_blank'>Account</a> menu.";
+        }
+        if (message.includes('contact') || message.includes('support') || message.includes('help')) {
+            return "Support: You can reach us here or email support@quickbite.com. An admin will respond soon.";
+        }
+        if (message.includes('order') && message.includes('history')) {
+            return "Support: You can view your past orders on the <a href='/Cart/History' target='_blank'>Order History</a> page.";
+        }
+        if (message.includes('receipt')) {
+            return "Support: You can view and email your receipt from the <a href='/Cart/History' target='_blank'>Order History</a> page.";
+        }
+        return "Support: Thank you for your message. An admin will respond to your request soon.";
+    }
+
+    connection.on('ReceiveMessage', function (user, message) {
+        const msgDiv = document.createElement('div');
+        msgDiv.innerHTML = `<b>${user}:</b> ${message}`;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        saveChatHistory();
+        // Enhanced auto-reply logic
+        if (user !== 'Support' && message.trim() !== '') {
+            setTimeout(function() {
+                const autoMsg = document.createElement('div');
+                autoMsg.innerHTML = getAutoReply(message);
+                document.getElementById('chatMessages').appendChild(autoMsg);
+                document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                saveChatHistory();
+            }, 800);
+        }
+    });
+
+    connection.start();
+
+    document.getElementById('chatSendBtn').onclick = function () {
+        const input = document.getElementById('chatInput');
+        const message = input.value;
+        if (message.trim() === '') return;
+        connection.invoke('SendMessage', '@displayName', message);
+        input.value = '';
+    };
+</script>
+
+              

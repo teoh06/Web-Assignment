@@ -141,23 +141,65 @@ public class Helper
 
     public void SendEmail(MailMessage mail)
     {
-        // TODO
-        string user = cf["Smtp:User"] ?? "";
-        string pass = cf["Smtp:Pass"] ?? "";
-        string name = cf["Smtp:Name"] ?? "";
-        string host = cf["Smtp:Host"] ?? "";
-        int port = cf.GetValue<int>("Smtp:Port");
-
-        // TODO
-        mail.From = new MailAddress(user, name);
-        using var smtp = new SmtpClient(host, port)
+        try
         {
-            Host = host,
-            Port = port,
-            Credentials = new NetworkCredential(user, pass),
-            EnableSsl = true,
-        };
-        smtp.Send(mail);
+            string user = cf["Smtp:User"] ?? "";
+            string pass = cf["Smtp:Pass"] ?? "";
+            string name = cf["Smtp:Name"] ?? "";
+            string host = cf["Smtp:Host"] ?? "";
+            int port = cf.GetValue<int>("Smtp:Port");
+
+            // Validate SMTP settings
+            if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass) || string.IsNullOrEmpty(host))
+                throw new InvalidOperationException("SMTP settings are not properly configured.");
+
+            mail.From = new MailAddress(user, name);
+            mail.ReplyToList.Add(new MailAddress(user, name));
+            
+            // Add essential email headers
+            mail.Headers.Add("X-Priority", "1");
+            mail.Headers.Add("X-MSMail-Priority", "High");
+            mail.Headers.Add("Importance", "High");
+            mail.Headers.Add("X-Mailer", "Microsoft ASP.NET");
+            
+            mail.IsBodyHtml = true;
+            
+            // Set content type for HTML email
+            var htmlView = AlternateView.CreateAlternateViewFromString(mail.Body, null, "text/html");
+            mail.AlternateViews.Clear();
+            mail.AlternateViews.Add(htmlView);
+            
+            // Add plain text version
+            var plainText = System.Text.RegularExpressions.Regex.Replace(mail.Body, "<[^>]+>", string.Empty);
+            var plainView = AlternateView.CreateAlternateViewFromString(plainText, null, "text/plain");
+            mail.AlternateViews.Add(plainView);
+
+            using var smtp = new SmtpClient
+            {
+                Host = host,
+                Port = port,
+                EnableSsl = true,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(user, pass),
+                Timeout = 30000 // 30 seconds timeout
+            };
+
+            smtp.Send(mail);
+        }
+        catch (SmtpException ex)
+        {
+            // Provide detailed SMTP error information
+            var error = $"SMTP Error: {ex.Message}";
+            if (ex.InnerException != null)
+                error += $"\nInner Error: {ex.InnerException.Message}";
+            
+            throw new Exception($"Failed to send email. {error}", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Email sending failed: {ex.Message}", ex);
+        }
     }
 
 

@@ -9,6 +9,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 using System;
+using System.Net.Mail;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace WebApplication2.Controllers
 {
@@ -252,10 +258,83 @@ namespace WebApplication2.Controllers
                 TempData["LastCardNumber"] = vm.CardNumber;
             }
 
+            // --- Send receipt email ---
+            var receiptVm = new ReceiptVM
+            {
+                OrderId = order.OrderId,
+                Date = order.OrderDate,
+                Items = cart.Select(x => new CartItemVM
+                {
+                    MenuItemId = x.MenuItemId,
+                    Name = x.Name,
+                    Price = x.Price,
+                    Quantity = x.Quantity,
+                    SelectedPersonalizations = x.SelectedPersonalizations
+                }).ToList(),
+                Total = cart.Sum(x => x.Price * x.Quantity),
+                PaymentMethod = vm.PaymentMethod,
+                MemberEmail = member?.Email ?? User.Identity.Name,
+                Status = order.Status,
+                PhoneNumber = vm.PhoneNumber,
+                DeliveryInstructions = vm.DeliveryInstructions,
+                CardNumber = vm.CardNumber,
+                DeliveryOption = vm.DeliveryOption,
+                DeliveryAddress = vm.DeliveryAddress
+            };
+            try
+            {
+                string html = await RenderViewToStringAsync("Receipt", receiptVm);
+                var mail = new MailMessage
+                {
+                    Subject = $"Your Order Receipt - #{order.OrderId.ToString().PadLeft(6, '0')}",
+                    Body = html,
+                    IsBodyHtml = true
+                };
+                var recipient = member?.Email;
+                if (string.IsNullOrWhiteSpace(recipient))
+                    recipient = "bait2173.email@gmail.com";
+                mail.To.Add(recipient);
+                var helper = HttpContext.RequestServices.GetService<Helper>();
+                if (helper == null)
+                {
+                    TempData["Error"] = "Email service is not available. Please contact support.";
+                }
+                else
+                {
+                    helper.SendEmail(mail);
+                    TempData["Info"] = "A copy of your receipt has been sent to your email.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Failed to send receipt email: {ex.Message}";
+            }
+
             HttpContext.Session.Remove(CartSessionKey);
             ClearCartCookie();
             TempData["Success"] = $"Order #{order.OrderId} placed successfully! Thank you for your purchase.";
             return RedirectToAction("Receipt", new { id = order.OrderId });
+        }
+
+        // --- Helper to render Razor view to string for email ---
+        private async Task<string> RenderViewToStringAsync(string viewName, object model)
+        {
+            var serviceProvider = HttpContext.RequestServices;
+            var viewEngine = serviceProvider.GetService<ICompositeViewEngine>();
+            var tempDataProvider = serviceProvider.GetService<ITempDataProvider>();
+            var actionContext = new ActionContext(HttpContext, RouteData, ControllerContext.ActionDescriptor);
+            using var sw = new StringWriter();
+            var viewResult = viewEngine.FindView(actionContext, $"Cart/{viewName}", false);
+            if (!viewResult.Success)
+                throw new InvalidOperationException($"View '{viewName}' not found.");
+            var viewDictionary = new ViewDataDictionary(new Microsoft.AspNetCore.Mvc.ModelBinding.EmptyModelMetadataProvider(), new ModelStateDictionary())
+            {
+                Model = model
+            };
+            var tempData = new TempDataDictionary(HttpContext, tempDataProvider);
+            var viewContext = new ViewContext(actionContext, viewResult.View, viewDictionary, tempData, sw, new HtmlHelperOptions());
+            await viewResult.View.RenderAsync(viewContext);
+            return sw.ToString();
         }
 
         // -------------------
@@ -495,6 +574,108 @@ namespace WebApplication2.Controllers
         {
             HttpContext.Response.Cookies.Delete(CartCookieKey);
         }
+
+        // POST: /Cart/SendReceiptEmail
+        [HttpPost]
+        [Authorize(Roles = "Member")]
+        public async Task<IActionResult> SendReceiptEmail(int id)
+        {
+            var order = await _db.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+                .FirstOrDefaultAsync(o => o.OrderId == id && o.MemberEmail == User.Identity.Name);
+            if (order == null)
+            {
+                TempData["Error"] = "Order not found or you do not have access.";
+                return RedirectToAction("History");
+            }
+            var receiptItems = order.OrderItems.Select(oi => new CartItemVM
+            {
+                MenuItemId = oi.MenuItemId,
+                Name = oi.MenuItem.Name,
+                Price = oi.UnitPrice,
+                Quantity = oi.Quantity,
+                SelectedPersonalizations = oi.SelectedPersonalizations
+            }).ToList();
+            var vm = new ReceiptVM
+            {
+                OrderId = order.OrderId,
+                Date = order.OrderDate,
+                Items = receiptItems,
+                Total = receiptItems.Sum(item => item.Price * item.Quantity),
+                PaymentMethod = order.PaymentMethod,
+                MemberEmail = order.MemberEmail,
+                Status = order.Status,
+                PhoneNumber = null,
+                DeliveryInstructions = null,
+                CardNumber = null,
+                DeliveryOption = order.DeliveryOption,
+                DeliveryAddress = order.DeliveryAddress
+            };
+            try
+            {
+                string html = await RenderViewToStringAsync("Receipt", vm);
+                var mail = new MailMessage
+                {
+                    Subject = $"Your Order Receipt - #{order.OrderId.ToString().PadLeft(6, '0')}",
+                    Body = html,
+                    IsBodyHtml = true
+                };
+                mail.To.Add("bait2173.email@gmail.com"); // Always send to this email
+                var helper = HttpContext.RequestServices.GetService<Helper>();
+                if (helper == null)
+                {
+                    TempData["Error"] = "Email service is not available. Please contact support.";
+                }
+                else
+                {
+                    helper.SendEmail(mail);
+                    TempData["Info"] = "A copy of your receipt has been sent to your email.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Failed to send receipt email: {ex.Message}";
+            }
+            return RedirectToAction("History");
+        }
+
+        // -------------------
+        // Refund request page
+        // -------------------
+        [Authorize(Roles = "Member")]
+        [HttpGet]
+        public IActionResult Refund()
+        {
+            return View();
+        }
+
+        // POST: /Cart/Refund
+        [Authorize(Roles = "Member")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Refund(OrderRefundVM vm)
+        {
+            if (!ModelState.IsValid)
+                return View(vm);
+
+            var order = await _db.Orders.FirstOrDefaultAsync(o => o.OrderId == vm.OrderId && o.MemberEmail == User.Identity.Name);
+            if (order == null)
+            {
+                ModelState.AddModelError("OrderId", "Order not found or you do not have access.");
+                return View(vm);
+            }
+            if (order.Status == "Refunded" || order.Status == "Cancelled")
+            {
+                ModelState.AddModelError("OrderId", "Order is already refunded or cancelled.");
+                return View(vm);
+            }
+            order.Status = "Refunded";
+            await _db.SaveChangesAsync();
+            TempData["Success"] = $"Refund request for Order #{order.OrderId} submitted. Reason: {vm.Reason}";
+            // Optionally, notify admin or save refund request to DB
+            return RedirectToAction("History");
+        }
     }
 
     // =======================
@@ -604,5 +785,17 @@ namespace WebApplication2.Controllers
         public decimal UnitPrice { get; set; }
         public string PhotoURL { get; set; }
         public string? SelectedPersonalizations { get; set; }
+    }
+
+    public class OrderRefundVM
+    {
+        [Required]
+        [Display(Name = "Order Number")]
+        public int OrderId { get; set; }
+
+        [Required]
+        [StringLength(500)]
+        [Display(Name = "Reason for Refund")]
+        public string Reason { get; set; }
     }
 }
