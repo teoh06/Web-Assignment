@@ -89,6 +89,7 @@
             <a href="/MenuItem/Index">Manage Menu Items</a>
             <a href="/Category/Index">Manage Categories</a>
             <a class="nav-link default-button" asp-controller="Admin" asp-action="Index">Admin Panel</a>
+            <a href="/Admin/Orders">Order Maintenance</a>
         }
         <div></div>
 
@@ -214,8 +215,8 @@
         });
     </script>
 
-
     @RenderSection("foot", false)
     @RenderSection("Scripts", required: false)
+    @await Html.PartialAsync("_ChatWidget")
 </body>
 </html>

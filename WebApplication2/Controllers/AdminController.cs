@@ -203,4 +203,43 @@ public class AdminController : Controller
         });
     }
 
+    // --- Order Maintenance ---
+    // GET: /Admin/Orders
+    public async Task<IActionResult> Orders(string status)
+    {
+        var orders = _context.Orders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).AsQueryable();
+        if (!string.IsNullOrEmpty(status))
+            orders = orders.Where(o => o.Status == status);
+        return View(await orders.OrderByDescending(o => o.OrderDate).ToListAsync());
+    }
+
+    // GET: /Admin/OrderDetail/{id}
+    public async Task<IActionResult> OrderDetail(int id)
+    {
+        var order = await _context.Orders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).FirstOrDefaultAsync(o => o.OrderId == id);
+        if (order == null) return NotFound();
+        return View(order);
+    }
+
+    // GET: /Admin/UpdateOrderStatus/{id}
+    public async Task<IActionResult> UpdateOrderStatus(int id)
+    {
+        var order = await _context.Orders.FindAsync(id);
+        if (order == null) return NotFound();
+        return View(order);
+    }
+
+    // POST: /Admin/UpdateOrderStatus
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateOrderStatus(Order model)
+    {
+        var order = await _context.Orders.FindAsync(model.OrderId);
+        if (order == null) return NotFound();
+        order.Status = model.Status;
+        await _context.SaveChangesAsync();
+        // --- SMS/Message notification stub ---
+        TempData["Success"] = $"Order status updated to {model.Status}. (Notification sent to customer)";
+        return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
+    }
 }

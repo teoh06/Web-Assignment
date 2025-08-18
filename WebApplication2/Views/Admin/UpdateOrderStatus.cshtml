@@ -1,0 +1,26 @@
+@model WebApplication2.Models.Order
+@{
+    ViewBag.Title = "Update Order Status";
+}
+<div class="container py-4">
+    <h2>Update Status for Order #@Model.OrderId</h2>
+    <form asp-action="UpdateOrderStatus" method="post">
+        <input type="hidden" asp-for="OrderId" />
+        <div class="mb-3">
+            <label for="Status" class="form-label">Status</label>
+            <select asp-for="Status" class="form-select">
+                <option value="Pending">Pending</option>
+                <option value="Preparing">Preparing</option>
+                <option value="Served">Served</option>
+                <option value="Cancelled">Cancelled</option>
+                <option value="Refunded">Refunded</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Status</button>
+        <a asp-action="Orders" class="btn btn-secondary ms-2">Back to Orders</a>
+    </form>
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success mt-3">@TempData["Success"]</div>
+    }
+</div>

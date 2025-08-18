@@ -61,9 +61,7 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.SupportedUICultures = options.SupportedCultures;
 });
 builder.Services.AddControllersWithViews();
-
-
-
+builder.Services.AddSignalR();
 
 // Build the app AFTER all services are registered
 var app = builder.Build();
@@ -97,5 +95,6 @@ app.MapDefaultControllerRoute();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+app.MapHub<WebApplication2.ChatHub>("/chathub");
 
 app.Run();

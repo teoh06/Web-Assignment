@@ -55,6 +55,10 @@ else
                         <div class="d-flex justify-content-end align-items-center mt-3">
                             <h4 class="mb-0 me-3">Total: @order.Total.ToString("C", new CultureInfo("en-MY"))</h4>
                             <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">View Receipt</a>
+                            <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" style="display:inline-block; margin-left:8px;">
+                                <button type="submit" class="btn btn-sm btn-success">Send to Email</button>
+                            </form>
+                            <a asp-action="Refund" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-danger ms-2">Request Refund</a>
                         </div>
                     </div>
                 </div>
