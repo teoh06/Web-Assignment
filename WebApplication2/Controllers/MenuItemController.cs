@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -67,10 +67,11 @@ public class MenuItemController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Create([Bind("Name,Description,Price,CategoryId,PhotoURL")] MenuItem menuItem, IFormFile imageFile)
+    public async Task<IActionResult> Create([Bind("Name,Description,Price,CategoryId,PhotoURL,StockQuantity")] MenuItem menuItem, IFormFile imageFile, string processedImageData)
     {
         logger.LogInformation("Create action called with MenuItem: {@MenuItem}", menuItem);
-        logger.LogInformation("ImageFile is null: {IsNull}", imageFile == null);
+        logger.LogInformation("ImageFile is null: {IsNull}, ProcessedImageData is null: {ProcessedImageDataIsNull}", 
+            imageFile == null, string.IsNullOrEmpty(processedImageData));
 
         if (!ModelState.IsValid)
         {
@@ -111,7 +112,18 @@ public class MenuItemController : Controller
                 return View(menuItem);
             }
 
-            if (imageFile != null)
+            // Handle image upload - prioritize processed image data over file upload
+            if (!string.IsNullOrEmpty(processedImageData))
+            {
+                string? fileName = await SaveProcessedImage(processedImageData);
+                if (fileName == null)
+                {
+                    ViewBag.Categories = db.Categories.ToList();
+                    return View(menuItem);
+                }
+                menuItem.PhotoURL = fileName;
+            }
+            else if (imageFile != null)
             {
                 string? fileName = await SaveImage(imageFile);
                 if (fileName == null)
@@ -167,10 +179,11 @@ public class MenuItemController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Edit(int id, [Bind("MenuItemId,Name,Description,Price,CategoryId,PhotoURL")] MenuItem menuItem, IFormFile? imageFile, bool removeImage = false)
+    public async Task<IActionResult> Edit(int id, [Bind("MenuItemId,Name,Description,Price,CategoryId,PhotoURL,StockQuantity")] MenuItem menuItem, IFormFile? imageFile, bool removeImage = false, string processedImageData = null)
     {
         logger.LogInformation("Edit action called with id: {Id}, MenuItem: {@MenuItem}", id, menuItem);
-        logger.LogInformation("ImageFile is null: {IsNull}, RemoveImage: {RemoveImage}", imageFile == null, removeImage);
+        logger.LogInformation("ImageFile is null: {IsNull}, RemoveImage: {RemoveImage}, ProcessedImageData is null: {ProcessedImageDataIsNull}", 
+            imageFile == null, removeImage, string.IsNullOrEmpty(processedImageData));
 
         if (id != menuItem.MenuItemId)
         {
@@ -236,11 +249,12 @@ public class MenuItemController : Controller
                 return View(menuItem);
             }
 
-            // Update text fields
+            // Update fields
             menuItemToUpdate.Name = menuItem.Name;
             menuItemToUpdate.Description = menuItem.Description;
             menuItemToUpdate.Price = menuItem.Price;
             menuItemToUpdate.CategoryId = menuItem.CategoryId;
+            menuItemToUpdate.StockQuantity = menuItem.StockQuantity;
 
             if (removeImage)
             {
@@ -250,6 +264,22 @@ public class MenuItemController : Controller
                     DeleteImage(menuItemToUpdate.PhotoURL);
                 }
                 menuItemToUpdate.PhotoURL = null;
+            }
+            else if (!string.IsNullOrEmpty(processedImageData))
+            {
+                // Delete old photo before saving the processed one
+                if (!string.IsNullOrEmpty(menuItemToUpdate.PhotoURL))
+                {
+                    DeleteImage(menuItemToUpdate.PhotoURL);
+                }
+                // Save the processed photo
+                string? fileName = await SaveProcessedImage(processedImageData);
+                if (fileName == null)
+                {
+                    ViewBag.Categories = db.Categories.ToList();
+                    return View(menuItem); // Return with error
+                }
+                menuItemToUpdate.PhotoURL = fileName;
             }
             else if (imageFile != null)
             {
@@ -357,6 +387,57 @@ public class MenuItemController : Controller
         {
             System.IO.File.Delete(filePath);
             logger.LogInformation("Deleted image file: {Path}", filePath);
+        }
+    }
+    
+    // Helper method to save processed image data (base64)
+    private async Task<string?> SaveProcessedImage(string base64Image)
+    {
+        logger.LogInformation("SaveProcessedImage called with base64 data");
+        
+        try
+        {
+            // Validate the base64 string
+            if (string.IsNullOrEmpty(base64Image) || !base64Image.StartsWith("data:image/"))
+            {
+                ModelState.AddModelError("processedImageData", "Invalid image data format.");
+                return null;
+            }
+            
+            // Extract the actual base64 data (remove the data:image/xxx;base64, prefix)
+            var base64Data = base64Image.Substring(base64Image.IndexOf(',') + 1);
+            var imageBytes = Convert.FromBase64String(base64Data);
+            
+            // Check file size (2MB limit)
+            if (imageBytes.Length == 0 || imageBytes.Length > 2 * 1024 * 1024)
+            {
+                ModelState.AddModelError("processedImageData", "File size must be between 1 byte and 2MB.");
+                return null;
+            }
+            
+            var uploadsFolder = Path.Combine(env.WebRootPath, "images");
+            
+            // Ensure the directory exists
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+            
+            // Generate a unique filename
+            var uniqueFileName = Guid.NewGuid().ToString() + ".jpg";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+            
+            // Save the file
+            await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+            logger.LogInformation("Processed image saved successfully: {FileName}", uniqueFileName);
+            
+            return uniqueFileName;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error saving processed image: {Message}", ex.Message);
+            ModelState.AddModelError("processedImageData", $"Error saving processed image: {ex.Message}");
+            return null;
         }
     }
 
@@ -537,7 +618,8 @@ public class MenuItemController : Controller
                     photoURL = m.PhotoURL,
                     categoryName = m.Category.Name,
                     price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY")),
-                    isActive = m.IsActive
+                    isActive = m.IsActive,
+                    stockQuantity = m.StockQuantity
                 })
                 .ToList();
 
@@ -586,6 +668,13 @@ public class MenuItemController : Controller
                 categories.Add(category);
             }
 
+            // Try to parse stock quantity if available (6th column), default to 0 if not provided
+            int stockQuantity = 0;
+            if (parts.Length >= 6 && int.TryParse(parts[5].Trim(), out var parsedStock))
+            {
+                stockQuantity = parsedStock;
+            }
+
             db.MenuItems.Add(new MenuItem
             {
                 Name = name,
@@ -593,7 +682,8 @@ public class MenuItemController : Controller
                 Price = price,
                 CategoryId = category.CategoryId,
                 PhotoURL = string.IsNullOrEmpty(photoURL) ? null : photoURL,
-                IsActive = true
+                IsActive = true,
+                StockQuantity = stockQuantity
             });
         }
 

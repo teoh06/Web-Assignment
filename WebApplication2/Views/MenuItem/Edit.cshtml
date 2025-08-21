@@ -64,15 +64,22 @@
         </div>
 
         <div class="form-group">
+            <label asp-for="StockQuantity">Stock Quantity</label>
+            <input asp-for="StockQuantity" class="form-control" type="number" min="0" placeholder="Enter stock quantity" />
+            <span asp-validation-for="StockQuantity" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
             <label for="imageFile">Photo (Optional)</label>
             <div id="drop-area" class="drag-area">
                 <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" />
+                <input type="hidden" id="processedImageData" name="processedImageData" />
                 <div id="preview-content">
                     <span id="drop-text" style="display: @(string.IsNullOrEmpty(Model.PhotoURL) ? "block" : "none");">Drag & drop an image here, or click to select. (Max 2MB)</span>
                     <div id="preview-images" class="preview-images">
                         @if (!string.IsNullOrEmpty(Model.PhotoURL))
                         {
-                            <img src="/images/@Model.PhotoURL" class="preview-image" style="max-width: 150px; max-height: 150px;" alt="Current Image" />
+                            <img src="/images/@Model.PhotoURL" class="preview-image" id="previewImage" style="max-width: 150px; max-height: 150px;" alt="Current Image" />
                         }
                     </div>
                 </div>
@@ -80,6 +87,42 @@
             </div>
             <small class="form-text text-muted">Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 2MB.</small>
             <span asp-validation-for="PhotoURL" class="text-danger"></span>
+            
+            <!-- Image Processing Controls -->
+            <div id="imageProcessingControls" class="mt-3" style="display: @(string.IsNullOrEmpty(Model.PhotoURL) ? "none" : "block");">
+                <h5>Image Processing</h5>
+                
+                <!-- Resize Controls -->
+                <div class="form-row mb-2">
+                    <div class="col">
+                        <label for="resizeWidth">Width (px)</label>
+                        <input type="number" id="resizeWidth" class="form-control form-control-sm" placeholder="Width" min="10" max="2000" />
+                    </div>
+                    <div class="col">
+                        <label for="resizeHeight">Height (px)</label>
+                        <input type="number" id="resizeHeight" class="form-control form-control-sm" placeholder="Height" min="10" max="2000" />
+                    </div>
+                    <div class="col-auto d-flex align-items-end">
+                        <button type="button" id="resizeBtn" class="btn btn-sm btn-primary">Resize</button>
+                    </div>
+                </div>
+                
+                <!-- Rotate Controls -->
+                <div class="btn-group mb-2">
+                    <button type="button" id="rotateLeftBtn" class="btn btn-sm btn-secondary">Rotate Left</button>
+                    <button type="button" id="rotateRightBtn" class="btn btn-sm btn-secondary">Rotate Right</button>
+                </div>
+                
+                <!-- Crop Controls -->
+                <div class="btn-group mb-2">
+                    <button type="button" id="enableCropBtn" class="btn btn-sm btn-secondary">Enable Crop</button>
+                    <button type="button" id="cropBtn" class="btn btn-sm btn-success" style="display: none;">Apply Crop</button>
+                    <button type="button" id="cancelCropBtn" class="btn btn-sm btn-danger" style="display: none;">Cancel Crop</button>
+                </div>
+                
+                <!-- Reset Button -->
+                <button type="button" id="resetBtn" class="btn btn-sm btn-warning">Reset Image</button>
+            </div>
         </div>
 
         <button type="submit" class="btn btn-primary submit-btn">Save Changes</button>
@@ -89,6 +132,9 @@
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    
     <script>
         // Add form submission debugging
         document.querySelector('form').addEventListener('submit', function(e) {
@@ -109,6 +155,29 @@
             const previewImages = document.getElementById('preview-images');
             const deleteBtn = document.getElementById('deletePhoto');
             const removeImageInput = document.getElementById('removeImage'); // Get the hidden input
+            const processingControls = document.getElementById('imageProcessingControls');
+            const processedImageData = document.getElementById('processedImageData');
+            
+            // Image processing elements
+            const resizeBtn = document.getElementById('resizeBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+            const rotateRightBtn = document.getElementById('rotateRightBtn');
+            const enableCropBtn = document.getElementById('enableCropBtn');
+            const cropBtn = document.getElementById('cropBtn');
+            const cancelCropBtn = document.getElementById('cancelCropBtn');
+            
+            let originalImage = null;
+            let currentImage = null;
+            let cropper = null;
+            
+            // Initialize with existing image if present
+            if (previewImages.querySelector('img')) {
+                const existingImg = previewImages.querySelector('img');
+                // We can't directly access the image data from server-side images due to CORS
+                // So we'll just enable the processing controls without setting originalImage
+                processingControls.style.display = 'block';
+            }
 
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, e => {
@@ -136,28 +205,67 @@
             deleteBtn.addEventListener('click', e => {
                 e.stopPropagation();
                 clearPreview();
-                // *** FIX: Set the hidden input value to true on delete ***
+                // Set the hidden input value to true on delete
                 removeImageInput.value = 'true';
+                processingControls.style.display = 'none';
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
             });
+            
+            // Image processing event handlers
+            resizeBtn.addEventListener('click', resizeImage);
+            resetBtn.addEventListener('click', resetImage);
+            rotateLeftBtn.addEventListener('click', () => rotateImage(-90));
+            rotateRightBtn.addEventListener('click', () => rotateImage(90));
+            enableCropBtn.addEventListener('click', enableCrop);
+            cropBtn.addEventListener('click', applyCrop);
+            cancelCropBtn.addEventListener('click', cancelCrop);
 
             function handleFile(file) {
+                if (!file || !file.type.startsWith('image/')) {
+                    return;
+                }
+                
                 previewImages.innerHTML = '';
                 if (file) {
                     dropText.style.display = 'none';
                     deleteBtn.style.display = 'block';
-                    // *** FIX: If a new file is chosen, we are NOT removing the old one (we are replacing) ***
+                    // If a new file is chosen, we are NOT removing the old one (we are replacing)
                     removeImageInput.value = 'false';
+                    
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.className = 'preview-image';
-                        img.style.maxWidth = '150px';
-                        img.style.maxHeight = '150px';
-                        previewImages.appendChild(img);
+                        // Store original image data
+                        originalImage = e.target.result;
+                        currentImage = originalImage;
+                        
+                        // Update preview
+                        updatePreview(currentImage);
+                        
+                        // Show processing controls
+                        processingControls.style.display = 'block';
                     };
                     reader.readAsDataURL(file);
                 }
+            }
+            
+            function updatePreview(imageData) {
+                previewImages.innerHTML = '';
+                dropText.style.display = 'none';
+                deleteBtn.style.display = 'block';
+                
+                const img = document.createElement('img');
+                img.src = imageData;
+                img.id = 'previewImage';
+                img.className = 'preview-image';
+                img.style.maxWidth = '150px';
+                img.style.maxHeight = '150px';
+                previewImages.appendChild(img);
+                
+                // Store processed image data
+                processedImageData.value = imageData;
             }
 
             function clearPreview() {
@@ -165,6 +273,148 @@
                 previewImages.innerHTML = '';
                 dropText.style.display = 'block';
                 deleteBtn.style.display = 'none';
+                processedImageData.value = '';
+            }
+            
+            function resizeImage() {
+                const width = parseInt(document.getElementById('resizeWidth').value);
+                const height = parseInt(document.getElementById('resizeHeight').value);
+                
+                if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+                    alert('Please enter valid dimensions');
+                    return;
+                }
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                const img = new Image();
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    currentImage = canvas.toDataURL('image/jpeg');
+                    updatePreview(currentImage);
+                    
+                    // Destroy cropper if active
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                        enableCropBtn.style.display = 'block';
+                        cropBtn.style.display = 'none';
+                        cancelCropBtn.style.display = 'none';
+                    }
+                };
+                img.src = currentImage || document.getElementById('previewImage').src;
+            }
+            
+            function resetImage() {
+                if (originalImage) {
+                    currentImage = originalImage;
+                    updatePreview(currentImage);
+                    
+                    // Destroy cropper if active
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                        enableCropBtn.style.display = 'block';
+                        cropBtn.style.display = 'none';
+                        cancelCropBtn.style.display = 'none';
+                    }
+                }
+            }
+            
+            function rotateImage(degrees) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                const img = new Image();
+                img.onload = function() {
+                    // For 90 or 270 degree rotations, swap width and height
+                    if (Math.abs(degrees) === 90 || Math.abs(degrees) === 270) {
+                        canvas.width = img.height;
+                        canvas.height = img.width;
+                    } else {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                    }
+                    
+                    // Translate and rotate
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.rotate(degrees * Math.PI / 180);
+                    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                    
+                    currentImage = canvas.toDataURL('image/jpeg');
+                    updatePreview(currentImage);
+                    
+                    // Destroy cropper if active
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                        enableCropBtn.style.display = 'block';
+                        cropBtn.style.display = 'none';
+                        cancelCropBtn.style.display = 'none';
+                    }
+                };
+                img.src = currentImage || document.getElementById('previewImage').src;
+            }
+            
+            function enableCrop() {
+                const image = document.getElementById('previewImage');
+                if (!image) return;
+                
+                // Initialize cropper
+                cropper = new Cropper(image, {
+                    aspectRatio: NaN, // Free aspect ratio
+                    viewMode: 1,      // Restrict crop box to not exceed the size of the canvas
+                    guides: true,
+                    highlight: true,
+                    dragMode: 'crop'
+                });
+                
+                // Show/hide buttons
+                enableCropBtn.style.display = 'none';
+                cropBtn.style.display = 'inline-block';
+                cancelCropBtn.style.display = 'inline-block';
+            }
+            
+            function applyCrop() {
+                if (!cropper) return;
+                
+                // Get cropped canvas
+                const canvas = cropper.getCroppedCanvas();
+                if (!canvas) return;
+                
+                // Update current image with cropped version
+                currentImage = canvas.toDataURL('image/jpeg');
+                
+                // Destroy cropper
+                cropper.destroy();
+                cropper = null;
+                
+                // Update preview with cropped image
+                updatePreview(currentImage);
+                
+                // Show/hide buttons
+                enableCropBtn.style.display = 'block';
+                cropBtn.style.display = 'none';
+                cancelCropBtn.style.display = 'none';
+            }
+            
+            function cancelCrop() {
+                if (!cropper) return;
+                
+                // Destroy cropper
+                cropper.destroy();
+                cropper = null;
+                
+                // Restore current image
+                updatePreview(currentImage || document.getElementById('previewImage').src);
+                
+                // Show/hide buttons
+                enableCropBtn.style.display = 'block';
+                cropBtn.style.display = 'none';
+                cancelCropBtn.style.display = 'none';
             }
         });
     </script>

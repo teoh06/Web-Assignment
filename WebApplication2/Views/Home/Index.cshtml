@@ -1,4 +1,4 @@
-﻿@inject DB db
+@inject DB db
 @model List<WebApplication2.Controllers.FeaturedMenuItemVM>
 @using System.Globalization;
 
@@ -14,95 +14,118 @@
         favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId)).ToList();
     }
 }
-<div class="page-container">
-    <div class="menu-container">
+<div class="hero-container">
+    <div class="welcome-banner">
         @if (User.IsInRole("Member") && member != null)
         {
-            <p class="nice-word">
-                Hi @member.Name
-            </p>
+            <h2 class="nice-word">Welcome back, @member.Name</h2>
         }
-        <div class="jumbotron text-center">
-            <p>Order your favorite meals for in-house dining with ease!</p>
+        else
+        {
+            <h2 class="nice-word">Welcome to QuickBite</h2>
+        }
+        <p class="tagline">Delicious meals, delivered with speed</p>
+        
+        <div class="cta-container">
             @if (User.IsInRole("Member"))
             {
-                <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Browse Menu</a>
+                <a href="/MenuItem" class="cta-button">Browse Menu</a>
             }
             else if (User.IsInRole("Admin"))
             {
-                <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Edit Menu</a>
+                <a href="/MenuItem" class="cta-button">Manage Menu</a>
             }
             else
             {
-                <a href="/MenuItem" class="btn btn-success btn-lg browse-menu-title">Browse Menu</a>
+                <a href="/MenuItem" class="cta-button">Explore Our Menu</a>
             }
         </div>
     </div>
-    <h3 class="in-the-middle" style="font-family: 'Victor Mono', monospace;">Featured Menu</h3>
-    <br>
-    <div class="home-menu-display">
-        @foreach (var item in Model)
-        {
-            <div class="col-md-4 mb-4">
-                <a href="/MenuItem/Details/@item.MenuItemId" class="card-link-wrapper">
-                    <div class="card h-100 theme-card">
-                        <img src="@item.Image" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
-                        <div class="card-body">
-                            <h5 class="card-title in-the-middle">@item.Name</h5>
-                            <p class="card-text">@item.Description</p>
-                        </div>
+</div>
+
+<div class="content-container">
+    <!-- Featured Menu Section -->
+    <section class="menu-section featured-section">
+        <div class="section-header">
+            <h2>Featured Menu</h2>
+            <p class="section-description">Our chef's special selections just for you</p>
+        </div>
+        
+        <div class="card-grid">
+            @foreach (var item in Model)
+            {
+                <a href="/MenuItem/Details/@item.MenuItemId" class="menu-card">
+                    <div class="card-image-container">
+                        <img src="@item.Image" alt="@item.Name" class="card-image">
+                        <div class="card-badge" style="margin: 10px auto;">Featured</div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">@item.Name</h3>
+                        <p class="card-description">@(item.Description?.Length > 60 ? item.Description.Substring(0, 60) + "..." : item.Description)</p>
                         <div class="card-footer">
-                            <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                            <span class="card-price">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
                         </div>
                     </div>
                 </a>
-            </div>
-        }
-    </div>
-    <hr />
-    <h3 class="in-the-middle" style="font-family: 'Victor Mono', monospace; margin: 40px;">Top Sell Items</h3>
-    <div class="home-menu-display">
-        @foreach (var item in topSell)
-        {
-            <div class="col-md-4 mb-4">
-                <a href="/MenuItem/Details/@item.MenuItemId" class="card-link-wrapper">
-                    <div class="card h-100 theme-card">
-                        <img src="/Images/@(item.PhotoURL ?? "default.jpg")" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
-                        <div class="card-body">
-                            <h5 class="card-title in-the-middle">@item.Name</h5>
-                            <p class="card-text">@item.Description</p>
-                        </div>
+            }
+        </div>
+    </section>
+
+    <!-- Top Selling Items Section -->
+    <section class="menu-section bestsellers-section">
+        <div class="section-header">
+            <h2>Most Popular</h2>
+            <p class="section-description">Our customers' favorite choices</p>
+        </div>
+        
+        <div class="card-grid">
+            @foreach (var item in topSell)
+            {
+                <a href="/MenuItem/Details/@item.MenuItemId" class="menu-card">
+                    <div class="card-image-container">
+                        <img src="/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" class="card-image">
+                        <div class="card-badge bestseller" style="margin: 10px auto;">Top Seller</div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">@item.Name</h3>
+                        <p class="card-description">@(item.Description?.Length > 60 ? item.Description.Substring(0, 60) + "..." : item.Description)</p>
                         <div class="card-footer">
-                            <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                            <span class="card-price">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
                         </div>
                     </div>
                 </a>
-            </div>
-        }
-    </div>
+            }
+        </div>
+    </section>
+
+    <!-- Favorites Section (Only for logged-in members) -->
     @if (User.IsInRole("Member") && favorites.Any())
     {
-        <hr />
-        <h3 class="in-the-middle" style="font-family: 'Victor Mono', monospace;">Your Favorites</h3>
-        <div class="home-menu-display">
-            @foreach (var item in favorites)
-            {
-                <div class="col-md-4 mb-4">
-                    <a href="/MenuItem/Details/@item.MenuItemId" class="card-link-wrapper">
-                        <div class="card h-100 theme-card">
-                            <img src="/Images/@(item.PhotoURL ?? "default.jpg")" class="card-img-top" alt="@item.Name" style="height:180px;object-fit:cover;">
-                            <div class="card-body">
-                                <h5 class="card-title in-the-middle">@item.Name</h5>
-                                <p class="card-text">@item.Description</p>
-                            </div>
+        <section class="menu-section favorites-section">
+            <div class="section-header">
+                <h2>Your Favorites</h2>
+                <p class="section-description">Quick access to your preferred dishes</p>
+            </div>
+            
+            <div class="card-grid">
+                @foreach (var item in favorites)
+                {
+                    <a href="/MenuItem/Details/@item.MenuItemId" class="menu-card">
+                        <div class="card-image-container">
+                            <img src="/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" class="card-image">
+                            <div class="card-badge favorite">Favorite</div>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-title">@item.Name</h3>
+                            <p class="card-description">@(item.Description?.Length > 60 ? item.Description.Substring(0, 60) + "..." : item.Description)</p>
                             <div class="card-footer">
-                                <span class="fw-bold">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
+                                <span class="card-price">@item.Price.ToString("C", new CultureInfo("en-MY"))</span>
                             </div>
                         </div>
                     </a>
-                </div>
-            }
-        </div>
+                }
+            </div>
+        </section>
     }
 </div>
 <script>

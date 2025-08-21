@@ -83,10 +83,19 @@
                     {
                         <span class="inactive-badge">Inactive</span>
                     }
+                    @if (item.StockQuantity <= 0)
+                    {
+                        <span class="out-of-stock-badge">Out of Stock</span>
+                    }
+                    else if (item.StockQuantity < 10)
+                    {
+                        <span class="low-stock-badge">Low Stock: @item.StockQuantity left</span>
+                    }
                 </div>
                 <div class="item-info">
                     <h3 class="item-name">@item.Name</h3>
                     <p class="item-category">@item.Category?.Name</p>
+                    <p class="item-stock">Stock: @item.StockQuantity</p>
                     <div class="item-actions">
                         @if (isAdmin)
                         {
@@ -208,10 +217,13 @@
                         </a>
                         <span class="item-price">${item.price}</span>
                         ${isAdmin && !item.isActive ? '<span class="inactive-badge">Inactive</span>' : ''}
+                        ${item.stockQuantity <= 0 ? '<span class="out-of-stock-badge">Out of Stock</span>' : ''}
+                        ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
                     </div>
                     <div class="item-info">
                         <h3 class="item-name">${item.name}</h3>
                         <p class="item-category">${item.categoryName}</p>
+                        <p class="item-stock">Stock: ${item.stockQuantity}</p>
                         <div class="item-actions">
                             ${getItemActions(item, isAdmin, isMember)}
                         </div>
@@ -314,4 +326,7 @@
 .star-half { color: #ffd700; opacity: 0.6; }
 .star-empty { color: #b0b8c1; }
 .avg-rating { color: #fff; font-size: 0.95em; margin-left: 4px; }
+.out-of-stock-badge { position: absolute; top: 10px; right: 10px; background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+.low-stock-badge { position: absolute; top: 10px; right: 10px; background-color: #ffc107; color: #212529; padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+.item-stock { color: #6c757d; font-size: 0.9em; margin-top: 5px; }
 </style>
