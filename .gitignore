@@ -342,3 +342,5 @@ FodyWeavers.xsd
 # /Migrations/*.cs
 # !/Migrations/*ModelSnapshot.cs
 
+/WebApplication2/wwwroot/photos/13e0de85ac7241d7b902175b9453c7d4.jpg
+/.gitignore
