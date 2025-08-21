@@ -1,4 +1,14 @@
-@model List<WebApplication2.Models.User>
+﻿@model List<WebApplication2.Models.User>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
 
 <h3>Manage Users</h3>
 
@@ -30,6 +40,7 @@
                     }
                 </td>
                 <td>
+                    @* 删除按钮 *@
                     @if (!u.IsPendingDeletion)
                     {
                         <form asp-controller="Account" asp-action="Delete" method="post" style="display:inline">
@@ -42,6 +53,14 @@
                         <form asp-controller="Account" asp-action="Restore" method="post" style="display:inline">
                             <input type="hidden" name="token" value="@u.DeletionToken" />
                             <button type="submit" class="btn btn-success btn-sm">Restore</button>
+                        </form>
+                    }
+
+                    @if (u.Role != "Admin" && !u.IsPendingDeletion)
+                    {
+                        <form asp-controller="Admin" asp-action="PromoteToAdmin" method="post" style="display:inline">
+                            <input type="hidden" name="email" value="@u.Email" />
+                            <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Promote this user to Admin?')">Promote to Admin</button>
                         </form>
                     }
                 </td>
