@@ -15,18 +15,22 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using WebApplication2.Services; // Add this for IEmailService
+// ReceiptVM is in the WebApplication2.Models namespace
 
 namespace WebApplication2.Controllers
 {
     public class CartController : Controller
     {
         private readonly DB _db;
+        private readonly IEmailService _emailService; // Add this line
         private const string CartSessionKey = "CartItems";
         private const string CartCookieKey = "MemberCart";
 
-        public CartController(DB db)
+        public CartController(DB db, IEmailService emailService) // Update constructor
         {
             _db = db;
+            _emailService = emailService; // Initialize email service
         }
 
         // -------------------
@@ -277,33 +281,31 @@ namespace WebApplication2.Controllers
                 Status = order.Status,
                 PhoneNumber = vm.PhoneNumber,
                 DeliveryInstructions = vm.DeliveryInstructions,
-                CardNumber = vm.CardNumber,
+                // Mask the card number for security - only show last 4 digits
+                CardNumber = vm.PaymentMethod == "Card" && !string.IsNullOrEmpty(vm.CardNumber) 
+                    ? "**** **** **** " + vm.CardNumber.Substring(Math.Max(0, vm.CardNumber.Length - 4)) 
+                    : "",
                 DeliveryOption = vm.DeliveryOption,
                 DeliveryAddress = vm.DeliveryAddress
             };
             try
             {
                 string html = await RenderViewToStringAsync("Receipt", receiptVm);
-                var mail = new MailMessage
-                {
-                    Subject = $"Your Order Receipt - #{order.OrderId.ToString().PadLeft(6, '0')}",
-                    Body = html,
-                    IsBodyHtml = true
-                };
+                
+                // Use the injected email service instead of direct mail message
+                string subject = $"Your Order Receipt - #{order.OrderId.ToString().PadLeft(6, '0')}";
                 var recipient = member?.Email;
                 if (string.IsNullOrWhiteSpace(recipient))
+                    recipient = User.Identity.Name;
+                
+                // Ensure recipient is not null or empty
+                if (string.IsNullOrWhiteSpace(recipient))
                     recipient = "bait2173.email@gmail.com";
-                mail.To.Add(recipient);
-                var helper = HttpContext.RequestServices.GetService<Helper>();
-                if (helper == null)
-                {
-                    TempData["Error"] = "Email service is not available. Please contact support.";
-                }
-                else
-                {
-                    helper.SendEmail(mail);
-                    TempData["Info"] = "A copy of your receipt has been sent to your email.";
-                }
+                    
+                // Log email sending attempt
+                Console.WriteLine($"Attempting to send email to: {recipient}");
+                await _emailService.SendEmailAsync(recipient, subject, html);
+                TempData["Info"] = "A copy of your receipt has been sent to your email.";
             }
             catch (Exception ex)
             {
@@ -324,13 +326,34 @@ namespace WebApplication2.Controllers
             var tempDataProvider = serviceProvider.GetService<ITempDataProvider>();
             var actionContext = new ActionContext(HttpContext, RouteData, ControllerContext.ActionDescriptor);
             using var sw = new StringWriter();
+            
+            // First try to find the view with the controller-specific path
             var viewResult = viewEngine.FindView(actionContext, $"Cart/{viewName}", false);
+            
+            // If not found, try to find the view without the controller prefix
             if (!viewResult.Success)
-                throw new InvalidOperationException($"View '{viewName}' not found.");
+            {
+                viewResult = viewEngine.FindView(actionContext, viewName, false);
+            }
+            
+            // If still not found, throw an exception
+            if (!viewResult.Success)
+            {
+                // Log more details about the view search
+                Console.WriteLine($"Failed to find view '{viewName}'. Searched locations:");
+                foreach (var location in viewResult.SearchedLocations)
+                {
+                    Console.WriteLine($"- {location}");
+                }
+                throw new InvalidOperationException($"View '{viewName}' not found. Make sure it exists in the Views/Cart directory.");
+            }
+            
+            // Add ViewData for email rendering to indicate this is for email
             var viewDictionary = new ViewDataDictionary(new Microsoft.AspNetCore.Mvc.ModelBinding.EmptyModelMetadataProvider(), new ModelStateDictionary())
             {
                 Model = model
             };
+            viewDictionary["IsEmailReceipt"] = true; // Flag to indicate this is for email
             var tempData = new TempDataDictionary(HttpContext, tempDataProvider);
             var viewContext = new ViewContext(actionContext, viewResult.View, viewDictionary, tempData, sw, new HtmlHelperOptions());
             await viewResult.View.RenderAsync(viewContext);
@@ -356,8 +379,11 @@ namespace WebApplication2.Controllers
                 return RedirectToAction("MyOrders", "Account");
             }
 
+            // Get member information to ensure we have the correct phone number
+            var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+            
             string paymentMethod = order.PaymentMethod ?? TempData["LastPaymentMethod"] as string ?? "-";
-            string phoneNumber = TempData["LastPhoneNumber"] as string;
+            string phoneNumber = TempData["LastPhoneNumber"] as string ?? member?.PhoneNumber;
             string deliveryInstructions = TempData["LastDeliveryInstructions"] as string;
             string cardNumber = TempData["LastCardNumber"] as string;
             string deliveryOption = TempData["LastDeliveryOption"] as string;
@@ -578,17 +604,26 @@ namespace WebApplication2.Controllers
         // POST: /Cart/SendReceiptEmail
         [HttpPost]
         [Authorize(Roles = "Member")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SendReceiptEmail(int id)
         {
+            // Log the request
+            Console.WriteLine($"SendReceiptEmail requested for order ID: {id} by user: {User.Identity.Name}");
+            
             var order = await _db.Orders
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.MenuItem)
                 .FirstOrDefaultAsync(o => o.OrderId == id && o.MemberEmail == User.Identity.Name);
+                
             if (order == null)
             {
                 TempData["Error"] = "Order not found or you do not have access.";
                 return RedirectToAction("History");
             }
+            
+            // Get member information to ensure we have the correct email
+            var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+            
             var receiptItems = order.OrderItems.Select(oi => new CartItemVM
             {
                 MenuItemId = oi.MenuItemId,
@@ -597,6 +632,7 @@ namespace WebApplication2.Controllers
                 Quantity = oi.Quantity,
                 SelectedPersonalizations = oi.SelectedPersonalizations
             }).ToList();
+            
             var vm = new ReceiptVM
             {
                 OrderId = order.OrderId,
@@ -606,37 +642,46 @@ namespace WebApplication2.Controllers
                 PaymentMethod = order.PaymentMethod,
                 MemberEmail = order.MemberEmail,
                 Status = order.Status,
-                PhoneNumber = null,
+                PhoneNumber = member?.PhoneNumber,
                 DeliveryInstructions = null,
-                CardNumber = null,
+                CardNumber = null, // For security, we don't include full card number in emails
                 DeliveryOption = order.DeliveryOption,
                 DeliveryAddress = order.DeliveryAddress
             };
+            
             try
             {
                 string html = await RenderViewToStringAsync("Receipt", vm);
-                var mail = new MailMessage
-                {
-                    Subject = $"Your Order Receipt - #{order.OrderId.ToString().PadLeft(6, '0')}",
-                    Body = html,
-                    IsBodyHtml = true
-                };
-                mail.To.Add("bait2173.email@gmail.com"); // Always send to this email
-                var helper = HttpContext.RequestServices.GetService<Helper>();
-                if (helper == null)
-                {
-                    TempData["Error"] = "Email service is not available. Please contact support.";
-                }
-                else
-                {
-                    helper.SendEmail(mail);
-                    TempData["Info"] = "A copy of your receipt has been sent to your email.";
-                }
+                string subject = $"Your Order Receipt - #{order.OrderId.ToString().PadLeft(6, '0')}";
+                
+                // Use member email as primary recipient
+                var recipient = member?.Email;
+                
+                // Fallback to order email if member email is not available
+                if (string.IsNullOrWhiteSpace(recipient))
+                    recipient = order.MemberEmail;
+                    
+                // Final fallback to user identity
+                if (string.IsNullOrWhiteSpace(recipient))
+                    recipient = User.Identity.Name;
+                
+                // Log the email recipient for debugging
+                Console.WriteLine($"Sending receipt email to: {recipient}");
+                
+                await _emailService.SendEmailAsync(recipient, subject, html);
+                TempData["Success"] = "A copy of your receipt has been sent to your email.";
+                Console.WriteLine("Email sent successfully");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Error sending receipt email: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 TempData["Error"] = $"Failed to send receipt email: {ex.Message}";
             }
+            
             return RedirectToAction("History");
         }
 
@@ -650,6 +695,31 @@ namespace WebApplication2.Controllers
             return View();
         }
 
+        // POST: /Cart/GetDeliveryOption
+        [HttpPost]
+        public async Task<IActionResult> GetDeliveryOption(string OrderNumber, string Address)
+        {
+            if (string.IsNullOrWhiteSpace(OrderNumber))
+            {
+                return Json(new { success = false, message = "Order number is required." });
+            }
+            
+            if (int.TryParse(OrderNumber, out int orderId))
+            {
+                var order = await _db.Orders
+                    .Where(o => o.OrderId == orderId && o.MemberEmail == User.Identity.Name)
+                    .FirstOrDefaultAsync();
+                    
+                if (order != null)
+                {
+                    return Json(new { success = true, deliveryOption = order.DeliveryOption });
+                }
+            }
+            
+            // Default to delivery if order not found
+            return Json(new { success = false, deliveryOption = "Delivery" });
+        }
+        
         // POST: /Cart/Refund
         [Authorize(Roles = "Member")]
         [HttpPost]
@@ -746,21 +816,7 @@ namespace WebApplication2.Controllers
         public List<CartItemVM> CartItems { get; set; } = new List<CartItemVM>();
     }
 
-    public class ReceiptVM
-    {
-        public int OrderId { get; set; }
-        public DateTime Date { get; set; }
-        public List<CartItemVM> Items { get; set; } = new List<CartItemVM>();
-        public decimal Total { get; set; }
-        public string PaymentMethod { get; set; }
-        public string MemberEmail { get; set; }
-        public string Status { get; set; }
-        public string PhoneNumber { get; set; }
-        public string DeliveryInstructions { get; set; }
-        public string CardNumber { get; set; }
-        public string DeliveryOption { get; set; }
-        public string DeliveryAddress { get; set; }
-    }
+    // ReceiptVM is now defined in Models/ViewModels.cs
 
     public class OrderHistoryVM
     {

@@ -5,6 +5,28 @@
     ViewBag.Title = "Order History";
 }
 
+@section Scripts {
+    <script src="/js/email-receipt.js"></script>
+}
+
+<!-- Notification alerts for success/error messages -->
+<div class="container mt-3">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+</div>
+
 <!-- Displays a message if no orders exist;
 otherwise, lists each past order with details,
 items, total price, and a link to view the receipt,
@@ -55,8 +77,12 @@ else
                         <div class="d-flex justify-content-end align-items-center mt-3">
                             <h4 class="mb-0 me-3">Total: @order.Total.ToString("C", new CultureInfo("en-MY"))</h4>
                             <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">View Receipt</a>
-                            <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" style="display:inline-block; margin-left:8px;">
-                                <button type="submit" class="btn btn-sm btn-success">Send to Email</button>
+                            <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" style="display:inline-block; margin-left:8px;" class="email-form">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-success email-button">
+                                    <i class="fas fa-envelope me-1"></i> Send to Email
+                                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                </button>
                             </form>
                             <a asp-action="Refund" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-danger ms-2">Request Refund</a>
                         </div>

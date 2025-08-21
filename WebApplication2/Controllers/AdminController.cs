@@ -242,4 +242,36 @@ public class AdminController : Controller
         TempData["Success"] = $"Order status updated to {model.Status}. (Notification sent to customer)";
         return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
     }
+    
+    // Example of using OTP for a sensitive admin action
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteUser(string id)
+    {
+        // Instead of directly deleting, redirect to OTP verification
+        string returnUrl = Url.Action("ConfirmDeleteUser", "Admin", new { id });
+        return RedirectToAction("RequestOtp", "Account", new { 
+            email = User.Identity.Name, 
+            action = "delete a user account", 
+            returnUrl 
+        });
+    }
+
+    // This action will be called after OTP verification
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ConfirmDeleteUser(string id)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        
+        // Now perform the actual deletion
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
+        
+        TempData["Success"] = "User deleted successfully.";
+        return RedirectToAction("ManageUsers");
+    }
 }

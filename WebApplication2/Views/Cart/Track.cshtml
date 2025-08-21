@@ -45,7 +45,8 @@
                 </div>
             </form>
             <div id="deliveryAnimation" style="display:none; text-align:center; margin-top:30px; padding: 20px; background: linear-gradient(135deg, #F7931E 30%, #FF6B35 100%); border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <div id="animationBox" style="width:250px;height:80px;margin:auto;position:relative;background: linear-gradient(to right, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%);border-radius:10px;overflow:hidden;">
+                <!-- Delivery Animation -->
+                <div id="deliveryAnimationBox" class="animation-box" style="display:none; width:250px;height:80px;margin:auto;position:relative;background: linear-gradient(to right, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%);border-radius:10px;overflow:hidden;">
                     <!-- Road lines -->
                     <div style="position:absolute;bottom:15px;left:0;right:0;height:2px;background:#333;opacity:0.3;"></div>
                     <div style="position:absolute;bottom:12px;left:10px;width:20px;height:1px;background:#fff;opacity:0.5;animation:roadLine 1s infinite linear;"></div>
@@ -62,6 +63,32 @@
                         <div class="smoke" style="position:absolute;left:-5px;top:15px;width:8px;height:8px;background:#ddd;border-radius:50%;opacity:0.6;animation:smoke 0.8s infinite;"></div>
                     </div>
                 </div>
+                
+                <!-- Pickup Animation -->
+                <div id="pickupAnimationBox" class="animation-box" style="display:none; width:250px;height:80px;margin:auto;position:relative;background: linear-gradient(to right, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);border-radius:10px;overflow:hidden;">
+                    <!-- Counter/Kitchen area -->
+                    <div style="position:absolute;top:10px;left:20px;width:80px;height:30px;background:#795548;border-radius:5px;"></div>
+                    <div style="position:absolute;top:40px;left:20px;width:80px;height:5px;background:#5D4037;border-radius:2px;"></div>
+                    
+                    <!-- Chef -->
+                    <div id="chef" style="position:absolute;top:15px;left:40px;width:15px;height:20px;">
+                        <div style="width:15px;height:15px;background:#FFCCBC;border-radius:50%;position:relative;">
+                            <!-- Chef hat -->
+                            <div style="position:absolute;top:-10px;left:0;width:15px;height:10px;background:white;border-radius:5px 5px 0 0;"></div>
+                        </div>
+                        <div style="width:15px;height:5px;background:#795548;position:relative;top:0;"></div>
+                    </div>
+                    
+                    <!-- Food package -->
+                    <div id="foodPackage" style="position:absolute;top:25px;left:70px;width:20px;height:15px;background:#FFECB3;border:1px solid #FFC107;border-radius:3px;transform-origin:center;animation:packagePulse 2s infinite ease-in-out;"></div>
+                    
+                    <!-- Customer -->
+                    <div id="customer" style="position:absolute;top:25px;right:40px;width:15px;height:30px;">
+                        <div style="width:15px;height:15px;background:#BBDEFB;border-radius:50%;"></div>
+                        <div style="width:15px;height:15px;background:#2196F3;border-radius:3px 3px 0 0;position:relative;top:0;"></div>
+                    </div>
+                </div>
+                
                 <div id="animationStatus" style="margin-top:15px;font-weight:bold;color:white;font-size:16px;"></div>
             </div>
             <div id="orderResult"></div>
@@ -112,12 +139,40 @@
         }
     }
     
+    @@keyframes packagePulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    
+    @@keyframes chefCooking {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(2px); }
+        50% { transform: translateX(0); }
+        75% { transform: translateX(-2px); }
+        100% { transform: translateX(0); }
+    }
+    
+    @@keyframes customerWaiting {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(2px); }
+        100% { transform: translateY(0); }
+    }
+    
     .wheel {
         animation: wheelRotate 0.2s infinite linear;
     }
     
     .smoke {
         animation: smoke 0.8s infinite;
+    }
+    
+    #chef {
+        animation: chefCooking 1s infinite ease-in-out;
+    }
+    
+    #customer {
+        animation: customerWaiting 2s infinite ease-in-out;
     }
     
     .field-row {
@@ -276,32 +331,77 @@
         var formData = new FormData();
         formData.append('OrderNumber', orderNumber);
         formData.append('Address', address);
+        
+        // Get animation elements
         var animationBox = document.getElementById('deliveryAnimation');
+        var deliveryAnimBox = document.getElementById('deliveryAnimationBox');
+        var pickupAnimBox = document.getElementById('pickupAnimationBox');
         var motorBody = document.getElementById('motorBody');
         var motorWheel1 = document.getElementById('motorWheel1');
         var motorWheel2 = document.getElementById('motorWheel2');
         var status = document.getElementById('animationStatus');
         var orderResult = document.getElementById('orderResult');
+        
+        // Clear previous results
         orderResult.innerHTML = '';
-        animationBox.style.display = 'block';
-        motorBody.style.left = '30px';
-        motorWheel1.style.left = '32px';
-        motorWheel2.style.left = '70px';
-        status.textContent = 'Order is being delivered...';
-        var distance = 60;
-        var duration = 2000;
-        var start = null;
-        function animateMotor(ts) {
-            if (!start) start = ts;
-            var progress = ts - start;
-            var percent = Math.min(progress / duration, 1);
-            var move = 30 + percent * distance;
-            motorBody.style.left = move + 'px';
-            motorWheel1.style.left = (move + 2) + 'px';
-            motorWheel2.style.left = (move + 40) + 'px';
-            if (percent < 1) {
+        
+        // First, make a preliminary request to get the delivery option
+        fetch('/Cart/GetDeliveryOption', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Show animation box
+            animationBox.style.display = 'block';
+            
+            // Determine which animation to show based on delivery option
+            var isDelivery = data.deliveryOption === 'Delivery';
+            
+            if (isDelivery) {
+                // Show delivery animation
+                deliveryAnimBox.style.display = 'block';
+                pickupAnimBox.style.display = 'none';
+                status.textContent = 'Order is being delivered...';
+                
+                // Setup delivery animation
+                motorBody.style.left = '30px';
+                motorWheel1.style.left = '32px';
+                motorWheel2.style.left = '70px';
+                
+                // Animate delivery
+                var distance = 60;
+                var duration = 2000;
+                var start = null;
+                
+                function animateMotor(ts) {
+                    if (!start) start = ts;
+                    var progress = ts - start;
+                    var percent = Math.min(progress / duration, 1);
+                    var move = 30 + percent * distance;
+                    motorBody.style.left = move + 'px';
+                    motorWheel1.style.left = (move + 2) + 'px';
+                    motorWheel2.style.left = (move + 40) + 'px';
+                    
+                    if (percent < 1) {
+                        window.requestAnimationFrame(animateMotor);
+                    } else {
+                        completeAnimation();
+                    }
+                }
+                
                 window.requestAnimationFrame(animateMotor);
             } else {
+                // Show pickup animation
+                deliveryAnimBox.style.display = 'none';
+                pickupAnimBox.style.display = 'block';
+                status.textContent = 'Preparing your order for pickup...';
+                
+                // For pickup, we'll just show the animation for a fixed duration
+                setTimeout(completeAnimation, 2000);
+            }
+            
+            function completeAnimation() {
                 status.textContent = 'Checking order status...';
                 fetch('/Cart/Track', {
                     method: 'POST',
@@ -317,7 +417,36 @@
                     orderResult.innerHTML = '<div class="text-danger">Failed to track order. Please try again.</div>';
                 });
             }
-        }
-        window.requestAnimationFrame(animateMotor);
+        })
+        .catch(() => {
+            // If we can't determine the delivery option, default to delivery animation
+            animationBox.style.display = 'block';
+            deliveryAnimBox.style.display = 'block';
+            pickupAnimBox.style.display = 'none';
+            status.textContent = 'Checking your order...';
+            
+            // Setup delivery animation
+            motorBody.style.left = '30px';
+            motorWheel1.style.left = '32px';
+            motorWheel2.style.left = '70px';
+            
+            // Animate for a short time then proceed
+            setTimeout(function() {
+                status.textContent = 'Checking order status...';
+                fetch('/Cart/Track', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(html => {
+                    animationBox.style.display = 'none';
+                    orderResult.innerHTML = html;
+                })
+                .catch(() => {
+                    animationBox.style.display = 'none';
+                    orderResult.innerHTML = '<div class="text-danger">Failed to track order. Please try again.</div>';
+                });
+            }, 2000);
+        });
     }
 </script>

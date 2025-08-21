@@ -1,0 +1,145 @@
+/* Email Receipt Styles - Optimized for email clients */
+
+/* Reset styles for email clients */
+body, div, table, td, p, a, li, blockquote {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+
+table, td {
+    mso-table-lspace: 0pt;
+    mso-table-rspace: 0pt;
+}
+
+img {
+    -ms-interpolation-mode: bicubic;
+    border: 0;
+    height: auto;
+    line-height: 100%;
+    outline: none;
+    text-decoration: none;
+}
+
+/* Base container */
+.email-receipt-container {
+    width: 100% !important;
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    line-height: 1.5 !important;
+    color: #333333 !important;
+}
+
+/* Header */
+.email-receipt-header {
+    text-align: center !important;
+    padding: 20px !important;
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+.email-receipt-logo {
+    max-height: 60px !important;
+    margin-bottom: 10px !important;
+}
+
+/* Section styles */
+.email-section {
+    margin-bottom: 20px !important;
+    padding: 15px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+.email-section-title {
+    color: #0d6efd !important;
+    font-size: 18px !important;
+    margin-bottom: 15px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+/* Info table styles */
+.email-info-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 15px !important;
+}
+
+.email-info-table td {
+    padding: 8px !important;
+    vertical-align: top !important;
+}
+
+.email-info-label {
+    width: 40% !important;
+    color: #6c757d !important;
+    font-weight: bold !important;
+}
+
+.email-info-value {
+    width: 60% !important;
+}
+
+/* Status badge */
+.email-status-badge {
+    display: inline-block !important;
+    padding: 4px 8px !important;
+    background-color: #d1e7dd !important;
+    color: #0f5132 !important;
+    border-radius: 4px !important;
+    font-size: 14px !important;
+}
+
+/* Order items table */
+.email-order-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 15px !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+.email-order-table th {
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+    padding: 10px !important;
+    text-align: left !important;
+    font-weight: bold !important;
+}
+
+.email-order-table td {
+    border: 1px solid #dee2e6 !important;
+    padding: 10px !important;
+    vertical-align: top !important;
+}
+
+.email-item-name {
+    font-weight: bold !important;
+}
+
+.email-personalizations {
+    font-size: 14px !important;
+    color: #6c757d !important;
+    margin-top: 5px !important;
+}
+
+.email-total-row {
+    background-color: #f8f9fa !important;
+    font-weight: bold !important;
+}
+
+.email-total-amount {
+    color: #0d6efd !important;
+    font-weight: bold !important;
+}
+
+/* Footer */
+.email-receipt-footer {
+    text-align: center !important;
+    padding-top: 20px !important;
+    margin-top: 20px !important;
+    border-top: 1px solid #dee2e6 !important;
+    color: #6c757d !important;
+    font-size: 14px !important;
+}

@@ -57,6 +57,11 @@ public class User
     public DateTime? DeletionRequestDate { get; set; }
     [MaxLength(100)]
     public string? DeletionToken { get; set; }
+    
+    // OTP related fields
+    [MaxLength(6)]
+    public string? OtpCode { get; set; }
+    public DateTime? OtpExpiry { get; set; }
 }
 
 public class Admin : User
@@ -73,6 +78,10 @@ public class Member : User
     // New Address Field
     [MaxLength(200)]
     public string? Address { get; set; }
+    
+    // Phone number for order notifications
+    [MaxLength(15)]
+    public string? PhoneNumber { get; set; }
 
     // Navigation property for photo history
     public ICollection<MemberPhoto> MemberPhotos { get; set; } = new List<MemberPhoto>();

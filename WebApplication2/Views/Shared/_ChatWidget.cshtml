@@ -20,115 +20,644 @@
 <div id="chatWidget" class="chat-widget">
     <div id="chatHeader" class="chat-header">
         <i class="fas fa-comments"></i> Customer Support Chat
+        <div class="chat-controls">
+            <button id="chatClearBtn" title="Clear chat history"><i class="fas fa-trash"></i></button>
+            <button id="chatMinimizeBtn" title="Minimize chat"><i class="fas fa-minus"></i></button>
+        </div>
     </div>
     <div id="chatBody" class="chat-body">
         <div id="chatMessages" class="chat-messages">
             <!-- Messages will appear here -->
         </div>
+        <div id="chatSuggestions" class="chat-suggestions">
+            <!-- Quick suggestion buttons will appear here -->
+        </div>
         <div class="chat-input-container">
             <input id="chatInput" class="chat-input" type="text" placeholder="Type your message..." />
+            <button id="chatUploadBtn" class="chat-upload-btn" title="Upload image"><i class="fas fa-image"></i></button>
             <button id="chatSendBtn" class="chat-send-btn">Send</button>
         </div>
+        <input type="file" id="chatFileInput" accept="image/*" style="display: none;" />
     </div>
 </div>
 
+<style>
+    .chat-widget {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 350px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        z-index: 1000;
+        overflow: hidden;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .chat-header {
+        background-color: #4CAF50;
+        color: white;
+        padding: 15px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .chat-controls {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .chat-controls button {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .chat-body {
+        max-height: 400px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-messages {
+        padding: 15px;
+        overflow-y: auto;
+        max-height: 300px;
+        flex-grow: 1;
+    }
+    
+    .chat-messages div {
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        border-radius: 18px;
+        max-width: 80%;
+        word-wrap: break-word;
+    }
+    
+    .chat-messages .user-message {
+        background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+        margin-left: auto;
+        border-bottom-right-radius: 5px;
+    }
+    
+    .chat-messages .support-message {
+        background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+        margin-right: auto;
+        border-bottom-left-radius: 5px;
+    }
+    
+    .chat-input-container {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #eee;
+    }
+    
+    .chat-input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        outline: none;
+    }
+    
+    .chat-send-btn, .chat-upload-btn {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        margin-left: 5px;
+        border-radius: 20px;
+        cursor: pointer;
+    }
+    
+    .chat-upload-btn {
+        padding: 10px 12px;
+    }
+    
+    .chat-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        padding: 10px;
+        border-top: 1px solid #eee;
+    }
+    
+    .suggestion-btn {
+        background-color: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    
+    .suggestion-btn:hover {
+        background-color: #e0e0e0;
+    }
+    
+    .chat-image {
+        max-width: 200px;
+        max-height: 150px;
+        border-radius: 10px;
+        margin: 5px 0;
+    }
+    
+    .menu-item-card {
+        display: flex;
+        background-color: #f9f9f9;
+        border-radius: 6px;
+        padding: 5px;
+        margin: 5px 0;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        max-width: 100%;
+        overflow: hidden;
+        align-items: center;
+    }
+    
+    .menu-item-image {
+        width: 40px;
+        height: 40px;
+        border-radius: 3px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+    
+    .menu-item-details {
+        margin-left: 6px;
+        flex-grow: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        max-width: calc(100% - 50px);
+    }
+    
+    .menu-item-name {
+        font-weight: bold;
+        margin-bottom: 2px;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+    
+    .menu-item-price {
+        color: #4CAF50;
+        font-weight: bold;
+        font-size: 11px;
+        margin-top: 1px;
+    }
+    
+    .menu-item-description {
+        font-size: 10px;
+        color: #666;
+        margin-bottom: 1px;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: 14px;
+    }
+    
+    .order-status-card {
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .order-status-header {
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #333;
+    }
+    
+    .order-status-progress {
+        height: 10px;
+        background-color: #eee;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        overflow: hidden;
+    }
+    
+    .order-status-bar {
+        height: 100%;
+        background-color: #4CAF50;
+        border-radius: 5px;
+        transition: width 0.5s ease;
+    }
+    
+    .order-status-details {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .typing-indicator {
+        display: flex;
+        padding: 10px;
+        align-items: center;
+    }
+    
+    .typing-indicator span {
+        height: 8px;
+        width: 8px;
+        background-color: #aaa;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+        animation: typing 1s infinite ease-in-out;
+    }
+    
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @@keyframes typing {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+        100% { transform: translateY(0); }
+    }
+</style>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 <script>
     // --- Chat history persistence ---
     function saveChatHistory() {
         sessionStorage.setItem('chatHistory', document.getElementById('chatMessages').innerHTML);
     }
+    
     function loadChatHistory() {
         var history = sessionStorage.getItem('chatHistory');
-        if (history) document.getElementById('chatMessages').innerHTML = history;
+        if (history) {
+            document.getElementById('chatMessages').innerHTML = history;
+        } else {
+            // Welcome message if no history
+            addSupportMessage("👋 Welcome to QuickBite support! How can I help you today?");
+            showSuggestions(['Menu recommendations', 'Track my order', 'Delivery options', 'Payment methods']);
+        }
     }
+    
     function clearChatHistory() {
         document.getElementById('chatMessages').innerHTML = '';
         sessionStorage.removeItem('chatHistory');
+        addSupportMessage("Chat history cleared. How can I help you today?");
+        showSuggestions(['Menu recommendations', 'Track my order', 'Delivery options', 'Payment methods']);
     }
-    loadChatHistory();
-
-    document.getElementById('chatHeader').onclick = function() {
-        var body = document.getElementById('chatBody');
-        body.style.display = body.style.display === 'none' ? 'block' : 'none';
-    };
-
-    const connection = new signalR.HubConnectionBuilder()
-        .withUrl('/chathub')
-        .build();
-
+    
+    // --- Message handling functions ---
+    function addUserMessage(message) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'user-message';
+        msgDiv.innerHTML = `<b>You:</b> ${message}`;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+    }
+    
+    function addSupportMessage(message) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = message;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        saveChatHistory();
+    }
+    
+    function showTypingIndicator() {
+        const indicator = document.createElement('div');
+        indicator.className = 'typing-indicator support-message';
+        indicator.id = 'typingIndicator';
+        indicator.innerHTML = `<span></span><span></span><span></span>`;
+        document.getElementById('chatMessages').appendChild(indicator);
+        scrollToBottom();
+    }
+    
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) indicator.remove();
+    }
+    
+    function scrollToBottom() {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // --- Suggestion buttons ---
+    function showSuggestions(suggestions) {
+        const suggestionsContainer = document.getElementById('chatSuggestions');
+        suggestionsContainer.innerHTML = '';
+        
+        suggestions.forEach(suggestion => {
+            const btn = document.createElement('button');
+            btn.className = 'suggestion-btn';
+            btn.textContent = suggestion;
+            btn.onclick = function() {
+                handleUserInput(suggestion);
+            };
+            suggestionsContainer.appendChild(btn);
+        });
+    }
+    
+    // --- Enhanced auto-reply logic ---
     function getAutoReply(message) {
         message = message.toLowerCase();
+        let response = "";
+        let suggestions = [];
+        
+        // Clear chat command
         if (message.includes('clear') || message.includes('reset') || message.includes('remove chat')) {
             clearChatHistory();
-            return "Support: Chat history cleared.";
+            return { response: "Chat history cleared.", suggestions: ['Menu recommendations', 'Track my order', 'Delivery options'] };
         }
-        if (message.includes('track') && message.includes('order')) {
-            return "Support: You can track your order status <a href='/Cart/Track' target='_blank'>here</a>.";
+        
+        // Order tracking
+        if ((message.includes('track') && message.includes('order')) || message.includes('where') && message.includes('order')) {
+            response = "You can track your order status <a href='/Cart/Track' target='_blank'>here</a>. Would you like me to help you with anything else about your order?";
+            suggestions = ['Order status', 'Delivery time', 'Cancel order', 'Order issues'];
+            
+            // Show a sample order tracking card
+            response += `
+            <div class="order-status-card">
+                <div class="order-status-header">Order #12345 Status</div>
+                <div class="order-status-progress">
+                    <div class="order-status-bar" style="width: 75%;"></div>
+                </div>
+                <div class="order-status-details">
+                    <span>Order Placed</span>
+                    <span>Preparing</span>
+                    <span>Out for Delivery</span>
+                    <span>Delivered</span>
+                </div>
+                <div style="margin-top: 10px; font-size: 14px;">Current Status: <strong>Out for Delivery</strong></div>
+                <div style="margin-top: 5px; font-size: 12px;">Estimated Delivery: <strong>12:45 PM</strong></div>
+            </div>`;
+            
+            return { response, suggestions };
         }
-        if (message.includes('order status')) {
-            return "Support: Please visit <a href='/Cart/Track' target='_blank'>Track Order</a> to check your order status.";
+        
+        // Menu recommendations
+        if (message.includes('menu') || message.includes('food') || message.includes('recommend') || message.includes('special')) {
+            response = "You can browse our full menu on the <a href='/MenuItem' target='_blank'>Menu</a> page. Here are some popular items our customers love:";
+            suggestions = ['Burger options', 'Vegetarian options', 'Desserts', 'Beverages'];
+            
+            // Show sample menu items with images
+            response += `
+            <div class="menu-item-card">
+                <img src="/images/burger.jpg" class="menu-item-image" alt="Classic Burger">
+                <div class="menu-item-details">
+                    <div class="menu-item-name">Classic Burger</div>
+                    <div class="menu-item-description">Beef patty with special sauce</div>
+                    <div class="menu-item-price">RM8.99</div>
+                </div>
+            </div>
+            <div class="menu-item-card">
+                <img src="/images/pizza.jpg" class="menu-item-image" alt="Pepperoni Pizza">
+                <div class="menu-item-details">
+                    <div class="menu-item-name">Pepperoni Pizza</div>
+                    <div class="menu-item-description">Thin crust with mozzarella</div>
+                    <div class="menu-item-price">RM12.99</div>
+                </div>
+            </div>
+            <div class="menu-item-card">
+                <img src="/images/salad.jpg" class="menu-item-image" alt="Fresh Garden Salad">
+                <div class="menu-item-details">
+                    <div class="menu-item-name">Fresh Garden Salad</div>
+                    <div class="menu-item-description">Mixed greens with dressing</div>
+                    <div class="menu-item-price">RM6.99</div>
+                </div>
+            </div>`;
+            
+            return { response, suggestions };
         }
-        if (message.includes('refund') || message.includes('money back')) {
-            return "Support: To request a refund, please go to <a href='/Cart/Refund' target='_blank'>Order Refund</a> and provide your order number and reason.";
+        
+        // Delivery information
+        if (message.includes('delivery') || message.includes('address') || message.includes('shipping')) {
+            response = "We offer both delivery and pickup options. Delivery usually takes 30-45 minutes depending on your location. You can update your delivery address in your <a href='/Account/UpdateProfile' target='_blank'>profile</a>.";
+            suggestions = ['Delivery time', 'Change address', 'Delivery fee', 'Pickup options'];
+            return { response, suggestions };
         }
-        if (message.includes('menu') || message.includes('food') || message.includes('recommend')) {
-            return "Support: You can browse our menu on the <a href='/MenuItem' target='_blank'>Menu</a> page. Let us know if you need recommendations!";
+        
+        // Payment options
+        if (message.includes('payment') || message.includes('pay') || message.includes('card') || message.includes('cash')) {
+            response = "We accept various payment methods including credit/debit cards and cash on delivery. All online payments are securely processed.";
+            suggestions = ['Payment issues', 'Add payment method', 'Cash on delivery', 'Receipt'];
+            return { response, suggestions };
         }
-        if (message.includes('delivery') || message.includes('address')) {
-            return "Support: Delivery usually takes 30-45 minutes. You can check or update your delivery address in your <a href='/Account/UpdateProfile' target='_blank'>profile</a>.";
+        
+        // Greetings
+        if (message.includes('hello') || message.includes('hi') || message.includes('hey') || message.includes('morning') || message.includes('afternoon') || message.includes('evening')) {
+            response = "Hello! How can I assist you with your food order today?";
+            suggestions = ['Menu recommendations', 'Track my order', 'Delivery options', 'Payment methods'];
+            return { response, suggestions };
         }
-        if (message.includes('payment') || message.includes('pay')) {
-            return "Support: We accept cash and card payments. If you have payment issues, please describe them.";
-        }
-        if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
-            return "Support: Hello! How can we assist you today?";
-        }
+        
+        // Order cancellation
         if (message.includes('cancel') || message.includes('remove order')) {
-            return "Support: To cancel an order, please provide your order number. We'll check if cancellation is possible.";
+            response = "To cancel an order, please provide your order number. Note that orders can only be cancelled if they haven't been prepared yet. Would you like to proceed with cancellation?";
+            suggestions = ['Yes, cancel my order', 'No, keep my order', 'Order issues', 'Speak to human'];
+            return { response, suggestions };
         }
-        if (message.includes('account') || message.includes('profile') || message.includes('update')) {
-            return "Support: For account issues, you can update your profile or reset your password from the <a href='/Account/UpdateProfile' target='_blank'>Account</a> menu.";
+        
+        // Account management
+        if (message.includes('account') || message.includes('profile') || message.includes('update') || message.includes('change')) {
+            response = "You can manage your account settings, update your profile information, or change your password from the <a href='/Account/UpdateProfile' target='_blank'>Account</a> menu.";
+            suggestions = ['Update address', 'Change password', 'Profile picture', 'Order history'];
+            return { response, suggestions };
         }
-        if (message.includes('contact') || message.includes('support') || message.includes('help')) {
-            return "Support: You can reach us here or email support@quickbite.com. An admin will respond soon.";
+        
+        // Contact and support
+        if (message.includes('contact') || message.includes('support') || message.includes('help') || message.includes('human') || message.includes('agent')) {
+            response = "You can reach our customer support team via email at support@quickbite.com or by phone at (555) 123-4567 during business hours (9 AM - 10 PM). Would you like me to connect you with a human agent?";
+            suggestions = ['Yes, connect to agent', 'No thanks', 'Email support', 'Phone support'];
+            return { response, suggestions };
         }
-        if (message.includes('order') && message.includes('history')) {
-            return "Support: You can view your past orders on the <a href='/Cart/History' target='_blank'>Order History</a> page.";
+        
+        // Order history
+        if (message.includes('order') && (message.includes('history') || message.includes('previous') || message.includes('past'))) {
+            response = "You can view your complete order history on the <a href='/Cart/History' target='_blank'>Order History</a> page. This includes all your past orders, receipts, and delivery details.";
+            suggestions = ['Recent orders', 'Order receipt', 'Reorder items', 'Order issues'];
+            return { response, suggestions };
         }
-        if (message.includes('receipt')) {
-            return "Support: You can view and email your receipt from the <a href='/Cart/History' target='_blank'>Order History</a> page.";
+        
+        // Receipt information
+        if (message.includes('receipt') || message.includes('invoice')) {
+            response = "You can view and email your receipts from the <a href='/Cart/History' target='_blank'>Order History</a> page. Each receipt contains detailed information about your order, payment method, and delivery details.";
+            suggestions = ['Email receipt', 'Print receipt', 'Missing receipt', 'Order history'];
+            return { response, suggestions };
         }
-        return "Support: Thank you for your message. An admin will respond to your request soon.";
+        
+        // Login issues
+        if ((message.includes('login') || message.includes('log in') || message.includes('sign in')) &&
+            (message.includes('problem') || message.includes('issue') || message.includes('error') || message.includes('can\'t'))) {
+            response = "If you're having trouble logging in, you can reset your password at <a href='/Account/ResetPassword' target='_blank'>Reset Password</a>. Make sure cookies are enabled in your browser and you're using the correct email address.";
+            suggestions = ['Reset password', 'Create account', 'Cookie settings', 'Browser issues'];
+            return { response, suggestions };
+        }
+        
+        // Technical issues
+        if (message.includes('error') || message.includes('bug') || message.includes('not working') || message.includes('broken') || message.includes('issue')) {
+            response = "I'm sorry you're experiencing technical difficulties. For most issues, clearing your browser cache or trying a different browser can help. If the problem persists, please provide details about the issue you're facing.";
+            suggestions = ['Clear cache', 'Browser issues', 'App not working', 'Payment failed'];
+            return { response, suggestions };
+        }
+        
+        // Cart and checkout
+        if (message.includes('cart') || message.includes('shopping bag') || message.includes('checkout') || message.includes('my order')) {
+            response = "You can view your current cart items and proceed to checkout at the <a href='/Cart/Index' target='_blank'>Your Cart</a> page. From there, you can modify quantities, remove items, or complete your purchase.";
+            suggestions = ['Checkout issues', 'Add items', 'Remove items', 'Promo codes'];
+            return { response, suggestions };
+        }
+        
+        // Dietary restrictions and allergies
+        if (message.includes('allergy') || message.includes('allergic') || message.includes('dietary') || message.includes('vegetarian') || message.includes('vegan') || message.includes('gluten')) {
+            response = "We take dietary restrictions and allergies very seriously. Each menu item has detailed ingredient information. You can also add special instructions during checkout to notify our kitchen staff about your specific requirements.";
+            suggestions = ['Vegetarian options', 'Gluten-free options', 'Nut allergies', 'Special instructions'];
+            return { response, suggestions };
+        }
+        
+        // Opening hours
+        if (message.includes('hour') || message.includes('open') || message.includes('close') || message.includes('time')) {
+            response = "Our restaurant is open from 10:00 AM to 10:00 PM Monday through Thursday, and 10:00 AM to 11:00 PM Friday through Sunday. Online orders can be placed anytime, but will only be processed during business hours.";
+            suggestions = ['Delivery hours', 'Holiday hours', 'Late night options', 'Pre-order'];
+            return { response, suggestions };
+        }
+        
+        // Default response
+        response = "Thank you for your message. How else can I assist you with your food order today?";
+        suggestions = ['Menu recommendations', 'Track my order', 'Delivery options', 'Payment methods'];
+        return { response, suggestions };
     }
-
-    connection.on('ReceiveMessage', function (user, message) {
-        const msgDiv = document.createElement('div');
-        msgDiv.innerHTML = `<b>${user}:</b> ${message}`;
-        document.getElementById('chatMessages').appendChild(msgDiv);
-        document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-        saveChatHistory();
-        // Enhanced auto-reply logic
-        if (user !== 'Support' && message.trim() !== '') {
-            setTimeout(function() {
-                const autoMsg = document.createElement('div');
-                autoMsg.innerHTML = getAutoReply(message);
-                document.getElementById('chatMessages').appendChild(autoMsg);
-                document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-                saveChatHistory();
-            }, 800);
-        }
-    });
-
-    connection.start();
-
-    document.getElementById('chatSendBtn').onclick = function () {
-        const input = document.getElementById('chatInput');
-        const message = input.value;
+    
+    // --- Handle user input ---
+    function handleUserInput(message) {
         if (message.trim() === '') return;
-        connection.invoke('SendMessage', '@displayName', message);
-        input.value = '';
-    };
+        
+        // Display user message
+        addUserMessage(message);
+        
+        // Show typing indicator
+        showTypingIndicator();
+        
+        // Process after a short delay to simulate thinking
+        setTimeout(function() {
+            removeTypingIndicator();
+            
+            // Get automated response
+            const response = getAutoReply(message);
+            addSupportMessage(`<b>Support:</b> ${response.response}`);
+            
+            // Show relevant suggestions
+            showSuggestions(response.suggestions);
+            
+        }, 1000);
+        
+        // Clear input field
+        document.getElementById('chatInput').value = '';
+    }
+    
+    // --- File handling ---
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        if (!file.type.match('image.*')) {
+            addSupportMessage('<b>Support:</b> Please upload only image files.');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Display the uploaded image in chat
+            addUserMessage(`<img src="${e.target.result}" class="chat-image" alt="Uploaded image">`);
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Process after a short delay
+            setTimeout(function() {
+                removeTypingIndicator();
+                addSupportMessage('<b>Support:</b> Thanks for sharing the image. How can I help you with this?');
+                showSuggestions(['Identify this item', 'Menu similar to this', 'Report an issue', 'Just sharing']);
+            }, 1500);
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    // --- Initialize chat ---
+    document.addEventListener('DOMContentLoaded', function() {
+        loadChatHistory();
+        
+        // Toggle chat visibility
+        document.getElementById('chatHeader').onclick = function(e) {
+            if (e.target.id === 'chatHeader' || e.target.tagName === 'I' && e.target.parentNode.id === 'chatHeader') {
+                var body = document.getElementById('chatBody');
+                body.style.display = body.style.display === 'none' ? 'flex' : 'none';
+            }
+        };
+        
+        // Clear chat button
+        document.getElementById('chatClearBtn').onclick = function(e) {
+            e.stopPropagation();
+            clearChatHistory();
+        };
+        
+        // Minimize chat button
+        document.getElementById('chatMinimizeBtn').onclick = function(e) {
+            e.stopPropagation();
+            document.getElementById('chatBody').style.display = 'none';
+        };
+        
+        // Send message button
+        document.getElementById('chatSendBtn').onclick = function() {
+            const input = document.getElementById('chatInput');
+            handleUserInput(input.value);
+        };
+        
+        // Send message on Enter key
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleUserInput(this.value);
+            }
+        });
+        
+        // File upload button
+        document.getElementById('chatUploadBtn').onclick = function() {
+            document.getElementById('chatFileInput').click();
+        };
+        
+        // File input change
+        document.getElementById('chatFileInput').addEventListener('change', handleFileUpload);
+        
+        // Initialize SignalR connection
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl('/chathub')
+            .build();
+        
+        connection.on('ReceiveMessage', function (user, message) {
+            // Only handle messages from other users (admin/support staff)
+            if (user !== '@displayName' && user !== 'Support') {
+                addSupportMessage(`<b>${user}:</b> ${message}`);
+            }
+        });
+        
+        connection.start();
+    });
 </script>
 
               

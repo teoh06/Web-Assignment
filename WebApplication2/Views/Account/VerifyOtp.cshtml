@@ -1,0 +1,38 @@
+@model WebApplication2.Models.OtpVerificationVM
+@{
+    ViewData["Title"] = "Verify OTP";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4">Verification Required</h2>
+                    <p class="text-center text-muted mb-4">We've sent a verification code to your email address. Please enter it below to continue.</p>
+                    
+                    <form asp-action="VerifyOtp" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <input type="hidden" asp-for="Email" />
+                        <input type="hidden" asp-for="Action" />
+                        <input type="hidden" asp-for="ReturnUrl" />
+                        
+                        <div class="form-group mb-3">
+                            <label asp-for="OtpCode" class="form-label">Verification Code</label>
+                            <input asp-for="OtpCode" class="form-control form-control-lg text-center" placeholder="Enter 6-digit code" maxlength="6" />
+                            <span asp-validation-for="OtpCode" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Verify</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

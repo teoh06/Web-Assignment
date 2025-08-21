@@ -273,6 +273,7 @@ public class AccountController : Controller
             Email = m.Email,
             Name = m.Name,
             Address = m.Address,
+            PhoneNumber = m.PhoneNumber,
             PhotoURL = m.PhotoURL,
             PhotoHistory = photoHistory
         };
@@ -299,6 +300,7 @@ public class AccountController : Controller
         {
             m.Name = vm.Name;
             m.Address = vm.Address;
+            m.PhoneNumber = vm.PhoneNumber;
 
             string? newPhotoUrl = null;
             string oldPhotoUrl = m.PhotoURL;
@@ -501,7 +503,141 @@ public class AccountController : Controller
         return View();
     }
 
-    // In your AccountController.cs
+    // Add these methods to your AccountController
+    
+    // Helper method to generate OTP
+    private string GenerateOtp()
+    {
+        Random random = new Random();
+        return random.Next(100000, 999999).ToString();
+    }
+    
+    // Helper method to send OTP
+    private async Task<bool> SendOtpEmailAsync(User user, string action)
+    {
+        try
+        {
+            string otp = GenerateOtp();
+            
+            // Save OTP to user record
+            user.OtpCode = otp;
+            user.OtpExpiry = DateTime.UtcNow.AddMinutes(15); // OTP valid for 15 minutes
+            await db.SaveChangesAsync();
+            
+            // Send OTP email
+            string subject = "Your Verification Code";
+            string body = $@"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                <div style='background-color: #f8f9fa; padding: 20px; text-align: center;'>
+                    <h2 style='color: #343a40;'>Verification Required</h2>
+                </div>
+                <div style='padding: 20px; border: 1px solid #dee2e6; border-top: none;'>
+                    <p>Hello {user.Name},</p>
+                    <p>You've requested to {action}. Please use the following verification code to complete this action:</p>
+                    <div style='background-color: #e9ecef; padding: 15px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold; margin: 20px 0;'>
+                        {otp}
+                    </div>
+                    <p>This code will expire in 15 minutes.</p>
+                    <p>If you didn't request this action, please ignore this email or contact support if you have concerns.</p>
+                    <p>Thank you,<br>QuickBite Team</p>
+                </div>
+            </div>";
+            
+            await _emailService.SendEmailAsync(user.Email, subject, body);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+    
+    // GET: Account/VerifyOtp
+    public IActionResult VerifyOtp(string email, string action, string returnUrl)
+    {
+        var vm = new OtpVerificationVM
+        {
+            Email = email,
+            Action = action,
+            ReturnUrl = returnUrl
+        };
+        return View(vm);
+    }
+    
+    // POST: Account/VerifyOtp
+    [HttpPost]
+    public async Task<IActionResult> VerifyOtp(OtpVerificationVM vm)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(vm);
+        }
+        
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == vm.Email);
+        if (user == null)
+        {
+            ModelState.AddModelError("", "User not found.");
+            return View(vm);
+        }
+        
+        if (user.OtpCode != vm.OtpCode || !user.OtpExpiry.HasValue || user.OtpExpiry.Value < DateTime.UtcNow)
+        {
+            ModelState.AddModelError("", "Invalid or expired OTP code.");
+            return View(vm);
+        }
+        
+        // Clear OTP after successful verification
+        user.OtpCode = null;
+        user.OtpExpiry = null;
+        await db.SaveChangesAsync();
+        
+        // Redirect to the appropriate action based on the verification purpose
+        if (!string.IsNullOrEmpty(vm.ReturnUrl) && Url.IsLocalUrl(vm.ReturnUrl))
+        {
+            return Redirect(vm.ReturnUrl);
+        }
+        
+        // Default redirect if returnUrl is not valid
+        return RedirectToAction("Index", "Home");
+    }
+    
+    // Request OTP for sensitive actions
+    [HttpGet] // Add HttpGet support
+    public async Task<IActionResult> RequestOtp(string email, string action, string returnUrl)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        
+        bool sent = await SendOtpEmailAsync(user, action);
+        if (!sent)
+        {
+            TempData["Error"] = "Failed to send OTP email. Please try again.";
+            return RedirectToAction("Index", "Home");
+        }
+        
+        return RedirectToAction("VerifyOtp", new { email, action, returnUrl });
+    }
+    
+    // Keep the existing POST method as well
+    [HttpPost]
+    public async Task<IActionResult> RequestOtpPost(string email, string action, string returnUrl)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        
+        bool sent = await SendOtpEmailAsync(user, action);
+        if (!sent)
+        {
+            return StatusCode(500, new { success = false, message = "Failed to send OTP email." });
+        }
+        
+        return RedirectToAction("VerifyOtp", new { email, action, returnUrl });
+    }
 
     // This action is called when the user clicks the "Delete Your Account" button.
     [HttpPost]

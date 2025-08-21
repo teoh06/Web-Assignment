@@ -1,73 +1,133 @@
-@model WebApplication2.Controllers.ReceiptVM
+@model WebApplication2.Models.ReceiptVM
 @using WebApplication2.Models;
 @using System.Globalization;
 @{
     ViewBag.Title = "Order Receipt";
+    bool isEmailReceipt = ViewData["IsEmailReceipt"] != null && (bool)ViewData["IsEmailReceipt"];
 }
 
-<div class="container py-4">
-    <div class="card">
-        <div class="card-body">
-            <!-- Receipt Header -->
-            <div class="text-center mb-4">
-                <h2 class="mb-0">Order Receipt</h2>
-                <small class="text-muted">Thank you for your purchase!</small>
-            </div>
+@if (isEmailReceipt)
+{
+    <link rel="stylesheet" href="/css/email-receipt.css" />
+    <style>
+        /* Inline critical styles for email clients */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.5;
+            color: #333333;
+        }
+        
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        
+        td {
+            vertical-align: top;
+            padding: 8px;
+        }
+        
+        .email-receipt-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .email-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+        }
+        
+        .email-receipt-header {
+            text-align: center;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .email-order-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .email-order-table th, .email-order-table td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .email-order-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+    </style>
+}
 
-            <div class="row">
-                <!-- Order Information -->
+<div class="@(isEmailReceipt ? "email-receipt-container" : "container py-4 receipt-container")">
+    <div class="@(isEmailReceipt ? "email-section" : "card receipt-card")">
+        <div class="@(isEmailReceipt ? "email-receipt-header" : "card-header receipt-header text-center py-3")">
+            <h2 class="mb-0">Order Receipt</h2>
+            <p class="receipt-subtitle mb-0">Thank you for your purchase!</p>
+        </div>
+        <div class="@(isEmailReceipt ? "email-receipt-body" : "card-body receipt-body")" style="@(isEmailReceipt ? "padding: 20px;" : "")">
+            <!-- Order Information -->
+            <div class="row g-4">
                 <div class="col-md-6">
-                    <div class="mb-4">
-                        <h5 class="text-muted mb-3">Order Information</h5>
-                        <div class="table-responsive">
-                            <table class="table table-borderless table-sm">
-                                <tr>
-                                    <td class="text-muted" style="width: 40%">Order Number:</td>
-                                    <td><strong>#@Model.OrderId.ToString().PadLeft(6, '0')</strong></td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">Order Date:</td>
-                                    <td>@Model.Date.ToString("dd MMM yyyy, HH:mm")</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">Order Status:</td>
-                                    <td><span class="badge bg-success">@Model.Status</span></td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">Delivery Option:</td>
-                                    <td><strong>@Model.DeliveryOption</strong></td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">Delivery Address:</td>
-                                    <td><strong>@Model.DeliveryAddress</strong></td>
-                                </tr>
-                            </table>
+                    <div class="info-section">
+                        <h5 class="@(isEmailReceipt ? "email-section-title" : "section-title")" style="@(isEmailReceipt ? "color: #0d6efd; font-size: 18px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #dee2e6;" : "")">Order Information</h5>
+                        <div class="info-table">
+                            <div class="info-row">
+                                <div class="info-label">Order Number:</div>
+                                <div class="info-value fw-bold">#@Model.OrderId.ToString().PadLeft(6, '0')</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Order Date:</div>
+                                <div class="info-value">@Model.Date.ToString("dd MMM yyyy, HH:mm")</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Order Status:</div>
+                                <div class="info-value"><span class="status-badge">@Model.Status</span></div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Delivery Option:</div>
+                                <div class="info-value fw-bold">@Model.DeliveryOption</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Delivery Address:</div>
+                                <div class="info-value fw-bold">@Model.DeliveryAddress</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Customer Information -->
                 <div class="col-md-6">
-                    <div class="mb-4">
-                        <h5 class="text-muted mb-3">Customer Information</h5>
-                        <div class="table-responsive">
-                            <table class="table table-borderless table-sm">
-                                <tr>
-                                    <td class="text-muted" style="width: 40%">Customer Email:</td>
-                                    <td>@Model.MemberEmail</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted">Payment Method:</td>
-                                    <td><strong>@Model.PaymentMethod</strong></td>
-                                </tr>
-                                @if (!string.IsNullOrEmpty(Model.PhoneNumber))
-                                {
-                                    <tr>
-                                        <td class="text-muted">Phone Number:</td>
-                                        <td>@Model.PhoneNumber</td>
-                                    </tr>
-                                }
-                            </table>
+                    <div class="info-section">
+                        <h5 class="@(isEmailReceipt ? "email-section-title" : "section-title")" style="@(isEmailReceipt ? "color: #0d6efd; font-size: 18px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #dee2e6;" : "")">Customer Information</h5>
+                        <div class="info-table">
+                            <div class="info-row">
+                                <div class="info-label">Customer Email:</div>
+                                <div class="info-value">@Model.MemberEmail</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">Payment Method:</div>
+                                <div class="info-value fw-bold">@Model.PaymentMethod</div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                            {
+                                <div class="info-row">
+                                    <div class="info-label">Phone Number:</div>
+                                    <div class="info-value">@Model.PhoneNumber</div>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -76,38 +136,38 @@
             <!-- Delivery Instructions if any -->
             @if (!string.IsNullOrEmpty(Model.DeliveryInstructions))
             {
-                <div class="mb-4">
-                    <h5 class="text-muted mb-3">Delivery Instructions</h5>
-                    <p class="mb-0 p-3 bg-body rounded">@Model.DeliveryInstructions</p>
+                <div class="info-section mt-4">
+                    <h5 class="section-title">Delivery Instructions</h5>
+                    <div class="instructions-box">@Model.DeliveryInstructions</div>
                 </div>
             }
 
             <!-- Order Items -->
-            <div class="mb-4">
-                <h5 class="text-muted mb-3">Order Details</h5>
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead class="table-light">
+            <div class="info-section mt-4">
+                <h5 class="@(isEmailReceipt ? "email-section-title" : "section-title")" style="@(isEmailReceipt ? "color: #0d6efd; font-size: 18px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #dee2e6;" : "")">Order Details</h5>
+                <div class="@(isEmailReceipt ? "" : "table-responsive")">
+                    <table class="@(isEmailReceipt ? "email-order-table" : "table receipt-table")" style="@(isEmailReceipt ? "width: 100%; border-collapse: collapse; border: 1px solid #dee2e6;" : "")">
+                        <thead>
                             <tr>
-                                <th>Item</th>
-                                <th>Price</th>
-                                <th>Quantity</th>
-                                <th>Subtotal</th>
+                                <th style="@(isEmailReceipt ? "background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; text-align: left; font-weight: bold;" : "")">Item</th>
+                                <th style="@(isEmailReceipt ? "background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; text-align: left; font-weight: bold;" : "")">Price</th>
+                                <th style="@(isEmailReceipt ? "background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; text-align: left; font-weight: bold;" : "")">Quantity</th>
+                                <th style="@(isEmailReceipt ? "background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; text-align: left; font-weight: bold;" : "")">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Model.Items)
                             {
                                 <tr data-menu-item-id="@item.MenuItemId">
-                                    <td>
-                                        @item.Name
+                                    <td style="@(isEmailReceipt ? "border: 1px solid #dee2e6; padding: 10px; vertical-align: top;" : "")">
+                                        <div class="@(isEmailReceipt ? "email-item-name" : "item-name")" style="@(isEmailReceipt ? "font-weight: bold;" : "")">@item.Name</div>
                                         @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
                                         {
                                             var personalizations = item.SelectedPersonalizations.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
                                             if (personalizations.Length > 1)
                                             {
-                                                <div class="small text-muted">Personalizations:</div>
-                                                <ul>
+                                                <div class="personalizations-label">Personalizations:</div>
+                                                <ul class="personalizations-list">
                                                     @foreach (var personalization in personalizations)
                                                     {
                                                         <li>@personalization.Trim()</li>
@@ -116,20 +176,20 @@
                                             }
                                             else
                                             {
-                                                <div class="small text-muted">Personalization: @item.SelectedPersonalizations</div>
+                                                <div class="personalizations-label">Personalization: @item.SelectedPersonalizations</div>
                                             }
                                         }
                                     </td>
-                                    <td>@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
-                                    <td>@item.Quantity</td>
-                                    <td>@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
+                                    <td style="@(isEmailReceipt ? "border: 1px solid #dee2e6; padding: 10px; vertical-align: top;" : "")">@item.Price.ToString("C", new CultureInfo("en-MY"))</td>
+                                    <td style="@(isEmailReceipt ? "border: 1px solid #dee2e6; padding: 10px; vertical-align: top;" : "")">@item.Quantity</td>
+                                    <td class="@(isEmailReceipt ? "email-subtotal" : "subtotal")" style="@(isEmailReceipt ? "border: 1px solid #dee2e6; padding: 10px; vertical-align: top;" : "")">@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</td>
                                 </tr>
                             }
                         </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="3"><strong>Total</strong></td>
-                                <td><strong>@Model.Total.ToString("C", new CultureInfo("en-MY"))</strong></td>
+                        <tfoot>
+                            <tr class="@(isEmailReceipt ? "email-total-row" : "total-row")" style="@(isEmailReceipt ? "background-color: #f8f9fa;" : "")">
+                                <td colspan="3" style="@(isEmailReceipt ? "border: 1px solid #dee2e6; padding: 10px; font-weight: bold;" : "")"><strong>Total</strong></td>
+                                <td class="@(isEmailReceipt ? "email-total-amount" : "total-amount")" style="@(isEmailReceipt ? "border: 1px solid #dee2e6; padding: 10px; color: #0d6efd; font-weight: bold;" : "")"><strong>@Model.Total.ToString("C", new CultureInfo("en-MY"))</strong></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -139,55 +199,229 @@
             <!-- Payment Information for Card Payments -->
             @if (Model.PaymentMethod == "Card" && !string.IsNullOrEmpty(Model.CardNumber))
             {
-                <div class="mb-4">
-                    <h5 class="text-muted mb-3">Payment Details</h5>
-                    <div class="table-responsive">
-                        <table class="table table-borderless table-sm">
-                            <tr>
-                                <td class="text-muted" style="width: 40%">Card Type:</td>
-                                <td>Credit/Debit Card</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Card Number:</td>
-                                <td>**** **** **** @Model.CardNumber.Substring(Math.Max(0, Model.CardNumber.Length - 4))</td>
-                            </tr>
-                        </table>
+                <div class="@(isEmailReceipt ? "email-section" : "info-section mt-4")" style="@(isEmailReceipt ? "margin-bottom: 20px; padding: 15px; background-color: #ffffff; border: 1px solid #dee2e6;" : "")">
+                    <h5 class="@(isEmailReceipt ? "email-section-title" : "section-title")" style="@(isEmailReceipt ? "color: #0d6efd; font-size: 18px; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #dee2e6;" : "")">Payment Details</h5>
+                    <div class="info-table">
+                        <div class="info-row">
+                            <div class="info-label">Card Type:</div>
+                            <div class="info-value">Credit/Debit Card</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Card Number:</div>
+                            <div class="info-value">**** **** **** @Model.CardNumber.Substring(Math.Max(0, Model.CardNumber.Length - 4))</div>
+                        </div>
                     </div>
                 </div>
             }
 
             <!-- Receipt Footer -->
-            <div class="text-center mt-4 pt-4 border-top">
-                <p class="text-muted mb-2">For any questions about your order, please contact our customer service.</p>
-                <div class="mt-4">
-                    <a href="@Url.Action("Index", "MenuItem")" class="btn btn-primary me-2">Continue Shopping</a>
-                    <button onclick="window.print()" class="btn btn-outline-secondary">Print Receipt</button>
-                </div>
+            <div class="@(isEmailReceipt ? "email-receipt-footer" : "receipt-footer text-center mt-4 pt-4 border-top")" style="@(isEmailReceipt ? "text-align: center; padding-top: 20px; margin-top: 20px; border-top: 1px solid #dee2e6; color: #6c757d; font-size: 14px;" : "")">
+                <p class="footer-text mb-2">For any questions about your order, please contact our customer service.</p>
+                @if (!isEmailReceipt)
+                {
+                    <div class="mt-4">
+                        <a href="@Url.Action("Index", "MenuItem")" class="btn btn-primary me-2">Continue Shopping</a>
+                        <button onclick="window.print()" class="btn btn-outline-secondary">Print Receipt</button>
+                    </div>
+                }
             </div>
         </div>
     </div>
 </div>
 
 <style>
+    /* Light/Dark Mode Compatible Styles */
+    .receipt-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .receipt-card {
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    
+    .receipt-header {
+        background-color: var(--bs-primary-bg-subtle);
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+    
+    .receipt-logo {
+        filter: var(--logo-filter, none);
+    }
+    
+    .receipt-subtitle {
+        color: var(--bs-secondary-color);
+    }
+    
+    .receipt-body {
+        padding: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+    
+    .info-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-table {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .info-row {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .info-label {
+        width: 40%;
+        color: var(--bs-secondary-color);
+        font-weight: 500;
+    }
+    
+    .info-value {
+        width: 60%;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background-color: var(--accent-green);
+        color: var(--text-primary);
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    
+    .instructions-box {
+        padding: 1rem;
+        background-color: var(--bs-tertiary-bg);
+        border-radius: 4px;
+        border: 1px solid var(--bs-border-color);
+    }
+    
+    .receipt-table {
+        border-color: var(--bs-border-color);
+    }
+    
+    .receipt-table thead {
+        background-color: var(--bs-tertiary-bg);
+    }
+    
+    .receipt-table th {
+        border-bottom-width: 1px;
+        font-weight: 600;
+    }
+    
+    .item-name {
+        font-weight: 500;
+    }
+    
+    .personalizations-label {
+        font-size: 0.875rem;
+        color: var(--bs-secondary-color);
+        margin-top: 0.5rem;
+    }
+    
+    .personalizations-list {
+        font-size: 0.875rem;
+        padding-left: 1.5rem;
+        margin-bottom: 0;
+    }
+    
+    .total-row {
+        background-color: var(--bs-tertiary-bg);
+    }
+    
+    .total-amount {
+        color: var(--bs-primary);
+    }
+    
+    .receipt-footer {
+        color: var(--bs-secondary-color);
+    }
+    
+    /* Print Styles */
     @@media print {
-    @@page {
-        margin: 1cm;
+        @@page {
+            margin: 1cm;
+            size: portrait;
+        }
+        
+        body * { visibility: hidden !important; }
+        .receipt-container, .receipt-container * { visibility: visible !important; }
+        
+        .receipt-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 1cm !important;
+        }
+        
+        .navbar, .sidebar, .footer, .btn, header, nav, aside, .theme-toggle, 
+        .breadcrumb, .page-header, .alert, .user-info, .print-hide { 
+            display: none !important; 
+        }
+        
+        .receipt-card { 
+            border: none !important; 
+            box-shadow: none !important; 
+        }
+        
+        .receipt-header {
+            background-color: white !important;
+            color: black !important;
+            border-bottom: 1px solid #000 !important;
+        }
+        
+        .section-title {
+            color: black !important;
+            border-bottom: 1px solid #000 !important;
+        }
+        
+        .info-label {
+            color: #555 !important;
+        }
+        
+        .status-badge {
+            border: 1px solid #198754 !important;
+            background-color: white !important;
+            color: #198754 !important;
+        }
+        
+        .receipt-table {
+            border-color: #000 !important;
+        }
+        
+        .receipt-table th, .receipt-table td {
+            border-color: #000 !important;
+        }
+        
+        .instructions-box {
+            border: 1px solid #000 !important;
+            background-color: white !important;
+        }
+        
+        .total-row {
+            background-color: #f8f9fa !important;
+        }
     }
-    body * { visibility: hidden !important; }
-    .container, .container * { visibility: visible !important; }
-    .container {
-        position: static !important;
-        width: 17cm !important;
-        margin: 0 auto !important;
-        padding: 0 !important;
+    
+    /* Dark mode specific adjustments */
+    @@media (prefers-color-scheme: dark) {
+        .receipt-logo {
+            --logo-filter: brightness(0) invert(1);
+        }
     }
-    .navbar, .sidebar, .footer, .btn, header, nav, aside, .theme-toggle, .breadcrumb, .page-header, .alert, .user-info, .print-hide { display: none !important; }
-    .card { border: none !important; box-shadow: none !important; }
-    .table { border-color: #dee2e6 !important; }
-    .badge { border: 1px solid #198754 !important; }
-    body {
-        font-size: 12pt;
-        font-family: 'Times New Roman', Times, serif;
-    }
-}
 </style>
