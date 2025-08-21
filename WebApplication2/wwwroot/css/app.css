@@ -137,7 +137,8 @@ html.dark-theme {
     html.dark-theme .submit-btn,
     html.dark-theme .btn-primary,
     html.dark-theme .popup-btn-primary,
-    html.dark-theme .card-footer .fw-bold {
+    html.dark-theme .card-footer .fw-bold,
+    .btn-outline-secondary {
         color: var(--text-primary) !important;
     }
 
@@ -2783,3 +2784,4 @@ label {
 .chat-send-btn:hover {
     background-color: #3498db;
 }
+

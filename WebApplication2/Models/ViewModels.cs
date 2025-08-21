@@ -105,6 +105,12 @@ public class UpdateProfileVM
     [ValidAddress(MinimumLength = 10, MaximumLength = 200, RequireHouseNumber = true, RequireStreetName = true)]
     [CompleteAddress(RequireCity = true, RequireStateProvince = false, RequirePostalCode = false)]
     public string? Address { get; set; }
+    
+    // Phone number for order notifications
+    [Display(Name = "Phone Number")]
+    [RegularExpression(@"^\d{10,15}$", ErrorMessage = "Please enter a valid phone number (10-15 digits)")]
+    [MaxLength(15)]
+    public string? PhoneNumber { get; set; }
 
     // For selecting from photo history
     public string? SelectedPhotoPath { get; set; }
@@ -237,6 +243,20 @@ public class OrderSummaryVM // A nested ViewModel for each individual order in t
     public List<OrderItemVM> Items { get; set; } = new List<OrderItemVM>(); // Details for each item in the order
     public string DeliveryAddress { get; set; }
     public string DeliveryOption { get; set; } // Add delivery option
+}
+
+public class OtpVerificationVM
+{
+    [Required]
+    public string Email { get; set; }
+    
+    [Required(ErrorMessage = "Please enter the verification code")]
+    [StringLength(6, MinimumLength = 6, ErrorMessage = "OTP code must be 6 digits")]
+    [Display(Name = "Verification Code")]
+    public string OtpCode { get; set; }
+    
+    public string Action { get; set; }
+    public string ReturnUrl { get; set; }
 }
 
 
