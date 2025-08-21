@@ -386,37 +386,6 @@ public class AdminController : Controller
         TempData["Message"] = $"{admin.Name} already update to Admin";
         return RedirectToAction("Index", "Admin"); 
     }
-
-    [HttpPost]
-    public async Task<IActionResult> PromoteToAdmin(string email)
-    {
-        var member = await _context.Members.FirstOrDefaultAsync(m => m.Email == email);
-        if (member == null)
-        {
-            TempData["Error"] = "User not found.";
-            return RedirectToAction("ManageUsers", "Account");
-        }
-
-        _context.Members.Remove(member);
-
-        var admin = new Admin
-        {
-            Email = member.Email,
-            Name = member.Name,
-            Hash = member.Hash,
-            IsPendingDeletion = member.IsPendingDeletion,
-            DeletionRequestDate = member.DeletionRequestDate,
-            DeletionToken = member.DeletionToken,
-            OtpCode = member.OtpCode,
-            OtpExpiry = member.OtpExpiry
-        };
-
-        _context.Admins.Add(admin);
-        await _context.SaveChangesAsync();
-
-        TempData["Message"] = $"{admin.Name} already update to Admin";
-        return RedirectToAction("Index", "Admin"); 
-    }
 }
 
 
