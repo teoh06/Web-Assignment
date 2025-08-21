@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using System.Linq;
@@ -243,6 +243,87 @@ public class AdminController : Controller
         return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
     }
     
+    // POST: /Admin/UpdateOrderStatusAjax
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateOrderStatusAjax(int orderId, string status)
+    {
+        try
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null) return Json(new { success = false, message = "Order not found" });
+            
+            // Validate status
+            var validStatuses = new[] { "Pending", "Paid", "Preparing", "Out for Delivery", "Delivered", "Cancelled", "Refunded" };
+            if (string.IsNullOrEmpty(status) || !validStatuses.Contains(status))
+            {
+                return Json(new { success = false, message = "Invalid status" });
+            }
+            
+            order.Status = status;
+            await _context.SaveChangesAsync();
+            
+            // Get member email for notification
+            var memberEmail = order.MemberEmail ?? string.Empty;
+            
+            // TODO: Send notification to member (SMS or email)
+            // This would be implemented with a real notification service in production
+            
+            return Json(new { 
+                success = true, 
+                message = $"Order status updated to {status}",
+                orderId = orderId,
+                status = status
+            });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error updating order status: {ex.Message}" });
+        }
+    }
+    
+    // GET: /Admin/GetOrderDetails
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetOrderDetails(int orderId)
+    {
+        try
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+                
+            if (order == null) return Json(new { success = false, message = "Order not found" });
+            
+            // Format order details for JSON response
+            var orderDetails = new
+            {
+                orderId = order.OrderId,
+                memberEmail = order.MemberEmail ?? string.Empty,
+                orderDate = order.OrderDate.ToString("yyyy-MM-dd HH:mm:ss"),
+                status = order.Status ?? "Unknown",
+                paymentMethod = order.PaymentMethod ?? "Unknown",
+                deliveryAddress = order.DeliveryAddress ?? "Not specified",
+                deliveryOption = order.DeliveryOption ?? "Standard",
+                items = order.OrderItems.Select(oi => new
+                {
+                    name = oi.MenuItem?.Name ?? "Unknown Item",
+                    quantity = oi.Quantity,
+                    unitPrice = oi.UnitPrice,
+                    totalPrice = oi.Quantity * oi.UnitPrice
+                }).ToList(),
+                totalAmount = order.OrderItems.Sum(oi => oi.Quantity * oi.UnitPrice)
+            };
+            
+            return Json(new { success = true, order = orderDetails });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Error retrieving order details: {ex.Message}" });
+        }
+    }
+    
     // Example of using OTP for a sensitive admin action
     [HttpPost]
     [Authorize(Roles = "Admin")]
@@ -251,7 +332,7 @@ public class AdminController : Controller
         // Instead of directly deleting, redirect to OTP verification
         string returnUrl = Url.Action("ConfirmDeleteUser", "Admin", new { id });
         return RedirectToAction("RequestOtp", "Account", new { 
-            email = User.Identity.Name, 
+            email = User.Identity?.Name ?? string.Empty, 
             action = "delete a user account", 
             returnUrl 
         });

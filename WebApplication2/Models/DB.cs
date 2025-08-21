@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Threading.Tasks;
@@ -135,6 +135,13 @@ public class MenuItem
 
     // --- Add ratings navigation property ---
     public ICollection<MenuItemRating> MenuItemRatings { get; set; } = new List<MenuItemRating>();
+    
+    // --- Add stock tracking ---
+    [Range(0, int.MaxValue, ErrorMessage = "Stock quantity cannot be negative")]
+    public int StockQuantity { get; set; } = 0;
+    
+    // --- Track if item is out of stock ---
+    public bool IsOutOfStock => StockQuantity <= 0;
 }
 
 

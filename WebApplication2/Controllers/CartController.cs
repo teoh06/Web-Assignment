@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
@@ -48,6 +48,14 @@ namespace WebApplication2.Controllers
             var menuItem = _db.MenuItems.Find(menuItemId);
             if (menuItem == null)
                 return Json(new { success = false, message = "Menu item not found." });
+                
+            // Check stock availability
+            if (menuItem.StockQuantity <= 0)
+                return Json(new { success = false, message = "This item is out of stock." });
+                
+            // Check if requested quantity exceeds available stock
+            if (quantity > menuItem.StockQuantity)
+                return Json(new { success = false, message = $"Only {menuItem.StockQuantity} items available in stock." });
 
             var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
             var existing = cart.FirstOrDefault(x => x.MenuItemId == menuItemId && (x.SelectedPersonalizations ?? "") == (SelectedPersonalizations ?? ""));
@@ -99,6 +107,17 @@ namespace WebApplication2.Controllers
 
             if (model == null || model.MenuItemId <= 0 || model.Quantity < 1)
                 return Json(new { success = false, message = "Invalid data provided." });
+                
+            // Check stock availability
+            var menuItem = _db.MenuItems.Find(model.MenuItemId);
+            if (menuItem == null)
+                return Json(new { success = false, message = "Menu item not found." });
+                
+            if (menuItem.StockQuantity <= 0)
+                return Json(new { success = false, message = "This item is out of stock." });
+                
+            if (model.Quantity > menuItem.StockQuantity)
+                return Json(new { success = false, message = $"Only {menuItem.StockQuantity} items available in stock." });
 
             var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
             var itemToUpdate = cart.FirstOrDefault(x => x.MenuItemId == model.MenuItemId);
@@ -238,8 +257,41 @@ namespace WebApplication2.Controllers
             _db.Orders.Add(order);
             await _db.SaveChangesAsync();
 
+            // Check stock availability before finalizing order
+            bool stockIssue = false;
+            string stockErrorMessage = "";
+            
             foreach (var item in cart)
             {
+                var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
+                if (menuItem == null)
+                {
+                    stockIssue = true;
+                    stockErrorMessage = $"Menu item {item.Name} no longer exists.";
+                    break;
+                }
+                
+                if (menuItem.StockQuantity < item.Quantity)
+                {
+                    stockIssue = true;
+                    stockErrorMessage = $"Not enough stock for {item.Name}. Only {menuItem.StockQuantity} available.";
+                    break;
+                }
+            }
+            
+            if (stockIssue)
+            {
+                // Remove the order we just created
+                _db.Orders.Remove(order);
+                await _db.SaveChangesAsync();
+                
+                ModelState.AddModelError("", stockErrorMessage);
+                return View(vm);
+            }
+            
+            foreach (var item in cart)
+            {
+                // Add order item
                 _db.OrderItems.Add(new OrderItem
                 {
                     OrderId = order.OrderId,
@@ -248,6 +300,10 @@ namespace WebApplication2.Controllers
                     UnitPrice = item.Price,
                     SelectedPersonalizations = item.SelectedPersonalizations
                 });
+                
+                // Update stock quantity
+                var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
+                menuItem.StockQuantity -= item.Quantity;
             }
             await _db.SaveChangesAsync();
 
@@ -720,6 +776,123 @@ namespace WebApplication2.Controllers
             return Json(new { success = false, deliveryOption = "Delivery" });
         }
         
+        // This method was removed to fix the duplicate CancelOrder method
+        
+        // GET: /Cart/GetPurchaseSummaryData
+        [Authorize(Roles = "Member")]
+        [HttpGet]
+        public async Task<IActionResult> GetPurchaseSummaryData()
+        {
+            try
+            {
+                // Get all orders for the current member
+                var memberEmail = User.Identity.Name;
+                var orders = await _db.Orders
+                    .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.MenuItem)
+                    .ThenInclude(mi => mi.Category)
+                    .Where(o => o.MemberEmail == memberEmail)
+                    .OrderByDescending(o => o.OrderDate)
+                    .ToListAsync();
+                
+                // Monthly spending data (last 6 months)
+                var today = DateTime.Today;
+                var sixMonthsAgo = today.AddMonths(-6);
+                
+                var monthlyLabels = new List<string>();
+                var monthlyData = new List<decimal>();
+                
+                for (int i = 0; i < 6; i++)
+                {
+                    var month = today.AddMonths(-i);
+                    var monthName = month.ToString("MMM yyyy");
+                    monthlyLabels.Insert(0, monthName);
+                    
+                    var monthlyTotal = orders
+                        .Where(o => o.OrderDate.Year == month.Year && o.OrderDate.Month == month.Month)
+                        .SelectMany(o => o.OrderItems)
+                        .Sum(oi => oi.UnitPrice * oi.Quantity);
+                    
+                    monthlyData.Insert(0, monthlyTotal);
+                }
+                
+                // Order categories data
+                var categoryData = new List<int>();
+                var categoryLabels = new List<string>();
+                
+                var categories = orders
+                    .SelectMany(o => o.OrderItems)
+                    .Select(oi => oi.MenuItem.Category)
+                    .GroupBy(c => c.Name)
+                    .Select(g => new { CategoryName = g.Key, Count = g.Count() })
+                    .OrderByDescending(x => x.Count)
+                    .Take(5)
+                    .ToList();
+                
+                foreach (var category in categories)
+                {
+                    categoryLabels.Add(category.CategoryName);
+                    categoryData.Add(category.Count);
+                }
+                
+                return Json(new { 
+                    monthlyLabels, 
+                    monthlyData, 
+                    categoryLabels, 
+                    categoryData 
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting purchase summary data: {ex.Message}");
+                return Json(new { error = "Failed to load purchase summary data" });
+            }
+        }
+        
+        // GET: /Cart/GetOrderStatus
+        [HttpGet]
+        public async Task<IActionResult> GetOrderStatus(int orderId)
+        {
+            try
+            {
+                if (orderId <= 0)
+                {
+                    return Json(new { success = false, message = "Invalid order ID" });
+                }
+                
+                var order = await _db.Orders
+                    .FirstOrDefaultAsync(o => o.OrderId == orderId);
+                    
+                if (order == null)
+                {
+                    return Json(new { success = false, message = "Order not found" });
+                }
+                
+                // Check if the current user is authorized to view this order
+                var currentUserEmail = User.Identity?.Name;
+                var isAdmin = User.IsInRole("Admin");
+                
+                if (!isAdmin && order.MemberEmail != currentUserEmail)
+                {
+                    return Json(new { success = false, message = "You are not authorized to view this order" });
+                }
+                
+                return Json(new
+                {
+                    success = true,
+                    orderId = order.OrderId,
+                    status = order.Status ?? "Unknown",
+                    orderDate = order.OrderDate.ToString("yyyy-MM-dd HH:mm:ss"),
+                    deliveryOption = order.DeliveryOption ?? "Standard"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting order status: {ex.Message}");
+                return Json(new { success = false, message = "An error occurred while retrieving order status" });
+            }
+        }
+        
         // POST: /Cart/Refund
         [Authorize(Roles = "Member")]
         [HttpPost]
@@ -745,6 +918,55 @@ namespace WebApplication2.Controllers
             TempData["Success"] = $"Refund request for Order #{order.OrderId} submitted. Reason: {vm.Reason}";
             // Optionally, notify admin or save refund request to DB
             return RedirectToAction("History");
+        }
+        
+        // POST: /Cart/CancelOrder
+        [Authorize(Roles = "Member")]
+        [HttpPost]
+        public async Task<IActionResult> CancelOrder(int orderId, string reason)
+        {
+            try
+            {
+                // Find the order and verify ownership
+                var order = await _db.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId && o.MemberEmail == User.Identity.Name);
+                
+                if (order == null)
+                {
+                    return Json(new { success = false, message = "Order not found or you do not have access." });
+                }
+                
+                // Verify order can be cancelled (only Pending or Preparing orders)
+                if (order.Status != "Pending" && order.Status != "Preparing")
+                {
+                    return Json(new { success = false, message = $"Cannot cancel order with status '{order.Status}'." });
+                }
+                
+                // Update order status
+                order.Status = "Cancelled";
+                await _db.SaveChangesAsync();
+                
+                // Get member information for SMS notification
+                var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+                string phoneNumber = member?.PhoneNumber;
+                
+                // Log cancellation with reason
+                Console.WriteLine($"Order #{orderId} cancelled by {User.Identity.Name}. Reason: {reason}");
+                
+                // TODO: Implement actual SMS notification here
+                // For now, we'll just log that we would send an SMS
+                if (!string.IsNullOrEmpty(phoneNumber))
+                {
+                    Console.WriteLine($"SMS notification would be sent to {phoneNumber} for order cancellation #{orderId}");
+                    // In a real implementation, you would call an SMS service here
+                }
+                
+                return Json(new { success = true, message = "Order cancelled successfully." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cancelling order: {ex.Message}");
+                return Json(new { success = false, message = "An error occurred while cancelling the order." });
+            }
         }
     }
 

@@ -88,15 +88,37 @@
 
     var firstOrder = Model.Orders.First();
     <div class="order-tracking-details card p-4 mb-4" style="max-width:500px;margin:auto;">
-        <h4 class="mb-3">Order #@firstOrder.OrderNumber</h4>
-        <div class="progress mb-3" style="height: 20px; background: #eee; border-radius: 10px;">
-            <div class="progress-bar" id="progressBar" style="width:@GetProgress(firstOrder.Status)%; background: #4CAF50; height: 100%; border-radius: 10px;"></div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">Order #@firstOrder.OrderNumber</h4>
+            @if (User.IsInRole("Admin"))
+            {
+                <a href="@Url.Action("OrderDetail", "Admin", new { id = firstOrder.OrderNumber })" class="btn btn-sm btn-primary">View in Admin Panel</a>
+            }
         </div>
-        <ul class="tracking-steps d-flex justify-content-between mb-3" id="trackingSteps" style="list-style:none; padding:0;">
-            <li class="@(GetProgress(firstOrder.Status) >= 25 ? "active" : "")">Order Placed</li>
-            <li class="@(GetProgress(firstOrder.Status) >= 50 ? "active" : "")">Preparing</li>
-            <li class="@(GetProgress(firstOrder.Status) >= 75 ? "active" : "")">Out for Delivery</li>
-            <li class="@(GetProgress(firstOrder.Status) >= 100 ? "active" : "")">Delivered</li>
+        <div class="progress mb-3" style="height: 25px; background: #eee; border-radius: 10px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);">
+            <div class="progress-bar" id="progressBar" style="width:@GetProgress(firstOrder.Status)%; background: linear-gradient(to right, #4CAF50, #8BC34A); height: 100%; border-radius: 10px; transition: width 0.5s ease-in-out; position: relative;">
+                <span class="progress-text" style="position: absolute; right: 10px; color: white; font-weight: bold; text-shadow: 1px 1px 1px rgba(0,0,0,0.5);">0%</span>
+            </div>
+        </div>
+        <ul class="tracking-steps d-flex justify-content-between mb-3" id="trackingSteps" style="list-style:none; padding:0; position: relative;">
+            <li class="tracking-step @(GetProgress(firstOrder.Status) >= 25 ? "active" : "")" style="text-align: center; position: relative; flex: 1;">
+                <div class="step-icon" style="width: 30px; height: 30px; background: #eee; border-radius: 50%; margin: 0 auto 5px; line-height: 30px; font-weight: bold; border: 2px solid #ddd;">1</div>
+                <span>Order Placed</span>
+            </li>
+            <li class="tracking-step @(GetProgress(firstOrder.Status) >= 50 ? "active" : "")" style="text-align: center; position: relative; flex: 1;">
+                <div class="step-icon" style="width: 30px; height: 30px; background: #eee; border-radius: 50%; margin: 0 auto 5px; line-height: 30px; font-weight: bold; border: 2px solid #ddd;">2</div>
+                <span>Preparing</span>
+            </li>
+            <li class="tracking-step @(GetProgress(firstOrder.Status) >= 75 ? "active" : "")" style="text-align: center; position: relative; flex: 1;">
+                <div class="step-icon" style="width: 30px; height: 30px; background: #eee; border-radius: 50%; margin: 0 auto 5px; line-height: 30px; font-weight: bold; border: 2px solid #ddd;">3</div>
+                <span>Out for Delivery</span>
+            </li>
+            <li class="tracking-step @(GetProgress(firstOrder.Status) >= 100 ? "active" : "")" style="text-align: center; position: relative; flex: 1;">
+                <div class="step-icon" style="width: 30px; height: 30px; background: #eee; border-radius: 50%; margin: 0 auto 5px; line-height: 30px; font-weight: bold; border: 2px solid #ddd;">4</div>
+                <span>Delivered</span>
+            </li>
+            <!-- Progress connector line -->
+            <div class="step-connector" style="position: absolute; top: 15px; left: 15px; right: 15px; height: 2px; background: #ddd; z-index: -1;"></div>
         </ul>
         <div class="mb-2">
             <strong>Delivery Option:</strong> @firstOrder.DeliveryOption <br />
@@ -152,7 +174,14 @@
             animation: cloudMove 4s infinite linear;
         }
         
-        .tracking-steps li.active {
+        .tracking-step.active .step-icon {
+            background: #4CAF50 !important;
+            color: white !important;
+            border-color: #4CAF50 !important;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        .tracking-step.active span {
             color: #4CAF50;
             font-weight: bold;
         }
@@ -164,6 +193,25 @@
         #motorContainer {
             animation: motorMove 8s infinite ease-in-out;
         }
+        
+        /* Animation for progress steps */
+        @@keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .tracking-step.active .step-icon {
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Animation for progress text */
+        @@keyframes fadeInOut {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; }
+        }
     </style>
     
     <script>
@@ -172,6 +220,7 @@
             var orderStatus = '@Model.Orders?.FirstOrDefault()?.Status';
             var orderDateStr = '@Model.Orders?.FirstOrDefault()?.OrderDate.ToString("yyyy-MM-dd HH:mm:ss")';
             var orderNumber = '@Model.Orders?.FirstOrDefault()?.OrderNumber';
+            var isAdmin = '@User.IsInRole("Admin")' === 'True';
             
             var deliveryTimeElement = document.getElementById('deliveryTime');
             var deliveryMessageElement = document.getElementById('deliveryMessage');
@@ -191,7 +240,227 @@
             var statusMessage = '';
             var isCompleted = false;
             
-            // For testing: Auto-progress through all states within 10 seconds
+            // Function to update the UI based on current progress and status message
+            function updateUI(progress, message, isCompleted) {
+                // Update progress bar
+                if (progressBar) {
+                    progressBar.style.width = progress + '%';
+                    
+                    // Update progress text
+                    var progressText = progressBar.querySelector('.progress-text');
+                    if (progressText) {
+                        progressText.textContent = Math.round(progress) + '%';
+                    }
+                    
+                    if (isCompleted) {
+                        progressBar.style.background = 'linear-gradient(to right, #4CAF50, #2E7D32)';
+                    }
+                }
+                
+                // Update tracking steps
+                var steps = document.querySelectorAll('.tracking-step');
+                steps.forEach(function(step, index) {
+                    var stepIcon = step.querySelector('.step-icon');
+                    
+                    if ((index + 1) * 25 <= progress) {
+                        step.classList.add('active');
+                        
+                        // Add checkmark for completed steps
+                        if (stepIcon && index < 3 && progress > (index + 1) * 25 + 10) {
+                            stepIcon.innerHTML = '✓';
+                        }
+                    } else {
+                        step.classList.remove('active');
+                        
+                        // Reset number for incomplete steps
+                        if (stepIcon) {
+                            stepIcon.innerHTML = (index + 1);
+                        }
+                    }
+                });
+                
+                // Update step connector
+                var connector = document.querySelector('.step-connector');
+                if (connector) {
+                    var completedWidth = (progress / 100) * connector.offsetWidth;
+                    connector.innerHTML = '<div style="height:100%;width:' + completedWidth + 'px;background:#4CAF50;"></div>';
+                }
+                
+                // Update delivery message with animation
+                if (deliveryMessageElement) {
+                    // Create a fade effect for message changes
+                    deliveryMessageElement.style.opacity = '0';
+                    setTimeout(function() {
+                        deliveryMessageElement.innerHTML = message;
+                        deliveryMessageElement.style.opacity = '1';
+                        
+                        if (isCompleted) {
+                            deliveryMessageElement.style.color = '#4CAF50';
+                            deliveryMessageElement.style.fontWeight = 'bold';
+                        } else if (progress >= 75) {
+                            deliveryMessageElement.style.color = '#FF9800';
+                        } else {
+                            deliveryMessageElement.style.color = '#333';
+                        }
+                    }, 300);
+                }
+                
+                // Update motor animation for completed orders
+                if (isCompleted) {
+                    var motorAnimation = document.getElementById('motorAnimation');
+                    if (motorAnimation) {
+                        motorAnimation.style.border = '3px solid #4CAF50';
+                        motorAnimation.style.background = 'linear-gradient(to right, #c8e6c9, #a5d6a7, #81c784)';
+                    }
+                    
+                    // Update delivery time for completed orders
+                    if (deliveryTimeElement) {
+                        deliveryTimeElement.textContent = 'Delivered!';
+                        deliveryTimeElement.style.color = '#4CAF50';
+                        deliveryTimeElement.style.fontWeight = 'bold';
+                    }
+                }
+            }
+            
+            // Add admin controls if user is admin
+            if (isAdmin) {
+                var adminControlsDiv = document.createElement('div');
+                adminControlsDiv.className = 'admin-controls mt-3 p-3 bg-light border rounded';
+                adminControlsDiv.innerHTML = `
+                    <h5>Admin Controls</h5>
+                    <div class="d-flex mb-2">
+                        <select id="statusSelect" class="form-select me-2">
+                            <option value="Pending" ${orderStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="Paid" ${orderStatus === 'Paid' ? 'selected' : ''}>Paid</option>
+                            <option value="Preparing" ${orderStatus === 'Preparing' ? 'selected' : ''}>Preparing</option>
+                            <option value="Out for Delivery" ${orderStatus === 'Out for Delivery' ? 'selected' : ''}>Out for Delivery</option>
+                            <option value="Delivered" ${orderStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <button id="updateStatusBtn" class="btn btn-primary">Update Status</button>
+                    </div>
+                    <div id="statusUpdateMessage"></div>
+                `;
+                
+                // Add admin controls to the page
+                document.querySelector('.order-tracking-details').appendChild(adminControlsDiv);
+                
+                // Add event listener for status update button
+                document.getElementById('updateStatusBtn').addEventListener('click', function() {
+                    var newStatus = document.getElementById('statusSelect').value;
+                    updateOrderStatus(orderNumber, newStatus);
+                });
+            }
+            
+            // Function to update order status via AJAX
+            function updateOrderStatus(orderNumber, status) {
+                // Create status update message element
+                var statusUpdateMessage = document.getElementById('statusUpdateMessage');
+                statusUpdateMessage.innerHTML = '<div class="alert alert-info">Updating order status...</div>';
+                
+                // Send AJAX request to update order status
+                 fetch('/Admin/UpdateOrderStatusAjax', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/x-www-form-urlencoded',
+                     },
+                     body: 'orderId=' + '@firstOrder.OrderNumber' + '&status=' + encodeURIComponent(status)
+                 })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusUpdateMessage.innerHTML = '<div class="alert alert-success">Order status updated successfully!</div>';
+                        
+                        // Update UI with new status
+                        orderStatus = status;
+                        updateOrderStatusUI(status);
+                    } else {
+                        statusUpdateMessage.innerHTML = '<div class="alert alert-danger">Failed to update order status: ' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    statusUpdateMessage.innerHTML = '<div class="alert alert-danger">Error updating order status: ' + error.message + '</div>';
+                });
+            }
+            
+            // Function to update UI based on order status
+            function updateOrderStatusUI(status) {
+                switch(status) {
+                    case 'Paid':
+                        currentProgress = 25;
+                        statusMessage = '✅ Order placed successfully! Preparing your meal...';
+                        isCompleted = false;
+                        break;
+                    case 'Preparing':
+                        currentProgress = 50;
+                        statusMessage = '🍳 Your order is being prepared with care!';
+                        isCompleted = false;
+                        break;
+                    case 'Out for Delivery':
+                        currentProgress = 75;
+                        statusMessage = '🏍️ Your order is on the way!';
+                        isCompleted = false;
+                        break;
+                    case 'Delivered':
+                        currentProgress = 100;
+                        statusMessage = '🎉 Your order has been delivered successfully!';
+                        isCompleted = true;
+                        break;
+                    case 'Cancelled':
+                        currentProgress = 0;
+                        statusMessage = '❌ This order has been cancelled.';
+                        isCompleted = false;
+                        break;
+                    default:
+                        currentProgress = 10;
+                        statusMessage = '📋 Processing your order...';
+                        isCompleted = false;
+                }
+                
+                updateUI(currentProgress, statusMessage, isCompleted);
+            }
+            
+            // Set up real-time status updates using polling
+            if (!isAdmin) {
+                // Poll for status updates every 15 seconds
+                 setInterval(function() {
+                     fetch('/Cart/GetOrderStatus?orderId=' + '@firstOrder.OrderNumber')
+                         .then(response => response.json())
+                         .then(data => {
+                             if (data.success && data.status !== orderStatus) {
+                                 // Show notification of status change
+                                 showStatusChangeNotification(data.status);
+                                 
+                                 // Update status and UI
+                                 orderStatus = data.status;
+                                 updateOrderStatusUI(orderStatus);
+                             }
+                         })
+                         .catch(error => console.error('Error checking order status:', error));
+                 }, 15000);
+            }
+            
+            // Function to show notification of status change
+            function showStatusChangeNotification(status) {
+                var notification = document.createElement('div');
+                notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+                notification.style.top = '20px';
+                notification.style.right = '20px';
+                notification.style.zIndex = '9999';
+                notification.innerHTML = `
+                    Order status updated to: <strong>${status}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(function() {
+                    notification.remove();
+                }, 5000);
+            }
+            
+            // For testing: Auto-progress through all states within 15 seconds
             var testingMode = true; // Set to true to enable auto-progression
             
             if (testingMode) {
@@ -200,26 +469,56 @@
                 statusMessage = '✅ Order placed successfully! Preparing your meal...';
                 updateUI(currentProgress, statusMessage, false);
                 
-                // Progress to Preparing after 2.5 seconds
-                setTimeout(function() {
-                    currentProgress = 50;
-                    statusMessage = '🍳 Your order is being prepared with care!';
-                    updateUI(currentProgress, statusMessage, false);
+                // Create a more detailed 15-second animation with intermediate steps
+                var totalDuration = 15000; // 15 seconds total
+                var startTime = Date.now();
+                var animationInterval;
+                
+                // Define key progress points (percentage and corresponding messages)
+                var progressSteps = [
+                    { progress: 25, message: '✅ Order received! Processing payment...', time: 0 },
+                    { progress: 30, message: '✅ Payment confirmed! Order details sent to kitchen...', time: 2000 },
+                    { progress: 50, message: '🍳 Your order is being prepared with care!', time: 5000 },
+                    { progress: 60, message: '🍳 Chef is adding finishing touches...', time: 7000 },
+                    { progress: 75, message: '🏍️ Your order is packed and ready for delivery!', time: 9000 },
+                    { progress: 85, message: '🏍️ Delivery driver is on the way to your location...', time: 11000 },
+                    { progress: 95, message: '🏍️ Driver is approaching your address...', time: 13000 },
+                    { progress: 100, message: '🎉 Your order has been delivered successfully!', time: 15000 }
+                ];
+                
+                // Start the animation
+                animationInterval = setInterval(function() {
+                    var elapsedTime = Date.now() - startTime;
                     
-                    // Progress to Out for Delivery after another 2.5 seconds
-                    setTimeout(function() {
-                        currentProgress = 75;
-                        statusMessage = '🏍️ Your order is on the way!';
-                        updateUI(currentProgress, statusMessage, false);
-                        
-                        // Progress to Delivered after another 2.5 seconds
-                        setTimeout(function() {
-                            currentProgress = 100;
-                            statusMessage = '🎉 Your order has been delivered successfully!';
-                            updateUI(currentProgress, statusMessage, true);
-                        }, 2500);
-                    }, 2500);
-                }, 2500);
+                    // Find the appropriate step based on elapsed time
+                    var currentStep = progressSteps[0];
+                    var nextStep = null;
+                    
+                    for (var i = 0; i < progressSteps.length; i++) {
+                        if (elapsedTime >= progressSteps[i].time) {
+                            currentStep = progressSteps[i];
+                            nextStep = i < progressSteps.length - 1 ? progressSteps[i + 1] : null;
+                        } else {
+                            nextStep = progressSteps[i];
+                            break;
+                        }
+                    }
+                    
+                    // Calculate smooth progress between steps if there's a next step
+                    var smoothProgress = currentStep.progress;
+                    if (nextStep && nextStep.time > currentStep.time) {
+                        var stepProgress = (elapsedTime - currentStep.time) / (nextStep.time - currentStep.time);
+                        smoothProgress = currentStep.progress + stepProgress * (nextStep.progress - currentStep.progress);
+                    }
+                    
+                    // Update UI with current progress and message
+                    updateUI(smoothProgress, currentStep.message, smoothProgress >= 100);
+                    
+                    // Stop the animation when we reach the end
+                    if (elapsedTime >= totalDuration) {
+                        clearInterval(animationInterval);
+                    }
+                }, 100); // Update every 100ms for smooth animation
             } else {
                 // Normal mode - use actual order status
                 switch(orderStatus) {

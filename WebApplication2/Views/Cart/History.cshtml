@@ -3,10 +3,421 @@
 
 @{
     ViewBag.Title = "Order History";
+    var selectedStatus = Context.Request.Query["status"].ToString();
 }
 
 @section Scripts {
     <script src="/js/email-receipt.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Variables for pagination and filtering
+            let currentPage = 1;
+            const itemsPerPage = 6;
+            let filteredOrders = [];
+            let allOrders = [];
+            
+            // Initialize orders from DOM
+            function initializeOrders() {
+                allOrders = [];
+                $('.order-card').each(function() {
+                    const $this = $(this);
+                    allOrders.push({
+                        element: $this,
+                        id: $this.data('order-id'),
+                        date: $this.data('order-date'),
+                        total: $this.data('order-total'),
+                        status: $this.data('order-status')
+                    });
+                });
+                filteredOrders = [...allOrders];
+                updatePagination();
+                displayOrders();
+            }
+            
+            // Filter orders based on search, status, and sort
+            function filterOrders() {
+                const searchTerm = $('#searchInput').val().toLowerCase();
+                const statusFilter = $('#statusFilter').val();
+                const sortOrder = $('#sortOrder').val();
+                
+                filteredOrders = allOrders.filter(order => {
+                    // Filter by search term (order ID)
+                    const matchesSearch = searchTerm === '' || 
+                                         order.id.toString().includes(searchTerm) ||
+                                         order.date.toLowerCase().includes(searchTerm);
+                    
+                    // Filter by status
+                    const matchesStatus = statusFilter === '' || order.status === statusFilter;
+                    
+                    return matchesSearch && matchesStatus;
+                });
+                
+                // Sort orders
+                filteredOrders.sort((a, b) => {
+                    if (sortOrder === 'date_desc') {
+                        return new Date(b.date) - new Date(a.date);
+                    } else if (sortOrder === 'date_asc') {
+                        return new Date(a.date) - new Date(b.date);
+                    } else if (sortOrder === 'total_desc') {
+                        return b.total - a.total;
+                    } else if (sortOrder === 'total_asc') {
+                        return a.total - b.total;
+                    }
+                    return 0;
+                });
+                
+                currentPage = 1; // Reset to first page
+                updatePagination();
+                displayOrders();
+            }
+            
+            // Display orders for current page
+            function displayOrders() {
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const ordersToShow = filteredOrders.slice(startIndex, endIndex);
+                
+                // Hide all orders first
+                $('.order-card').hide();
+                
+                // Show only the orders for current page
+                ordersToShow.forEach(order => {
+                    order.element.show();
+                });
+                
+                // Show message if no orders match filters
+                if (filteredOrders.length === 0) {
+                    if ($('#noOrdersMessage').length === 0) {
+                        $('#ordersList').append('<div id="noOrdersMessage" class="col-12 text-center py-4"><p class="lead">No orders match your filters.</p></div>');
+                    }
+                } else {
+                    $('#noOrdersMessage').remove();
+                }
+            }
+            
+            // Update pagination controls
+            function updatePagination() {
+                const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+                const $pagination = $('#orderPagination');
+                $pagination.empty();
+                
+                // Previous button
+                $pagination.append(
+                    `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="${currentPage === 1 ? 'true' : 'false'}">Previous</a>
+                    </li>`
+                );
+                
+                // Page numbers
+                for (let i = 1; i <= totalPages; i++) {
+                    $pagination.append(
+                        `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                            <a class="page-link" href="#">${i}</a>
+                        </li>`
+                    );
+                }
+                
+                // Next button
+                $pagination.append(
+                    `<li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#">Next</a>
+                    </li>`
+                );
+                
+                // Hide pagination if only one page or no results
+                if (totalPages <= 1) {
+                    $pagination.parent().hide();
+                } else {
+                    $pagination.parent().show();
+                }
+            }
+            
+            // Handle pagination clicks
+            $(document).on('click', '#orderPagination .page-link', function(e) {
+                e.preventDefault();
+                const $this = $(this);
+                const $parent = $this.parent();
+                
+                if ($parent.hasClass('disabled')) return;
+                
+                if ($this.text() === 'Previous' && currentPage > 1) {
+                    currentPage--;
+                } else if ($this.text() === 'Next' && currentPage < Math.ceil(filteredOrders.length / itemsPerPage)) {
+                    currentPage++;
+                } else if (!isNaN(parseInt($this.text()))) {
+                    currentPage = parseInt($this.text());
+                }
+                
+                updatePagination();
+                displayOrders();
+            });
+            
+            // Handle filter changes
+            $('#searchInput').on('keyup', filterOrders);
+            $('#statusFilter, #sortOrder').on('change', filterOrders);
+            $('#searchButton').on('click', filterOrders);
+            
+            // Handle email button click
+            $('.email-form').on('submit', function (e) {
+                e.preventDefault();
+                var form = $(this);
+                var button = form.find('.email-button');
+                var spinner = button.find('.spinner-border');
+                
+                // Disable button and show spinner
+                button.prop('disabled', true);
+                spinner.removeClass('d-none');
+                
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function (response) {
+                        // Show success message
+                        alert('Receipt sent to your email!');
+                    },
+                    error: function (xhr, status, error) {
+                        // Show error message
+                        alert('Failed to send receipt. Please try again.');
+                    },
+                    complete: function () {
+                        // Re-enable button and hide spinner
+                        button.prop('disabled', false);
+                        spinner.addClass('d-none');
+                    }
+                });
+            });
+            
+            // Handle order cancellation
+            let orderIdToCancel = null;
+            
+            // Open cancel modal when cancel button is clicked
+            $(document).on('click', '.cancel-order-btn', function() {
+                orderIdToCancel = $(this).data('order-id');
+                $('#cancelOrderModal').modal('show');
+            });
+            
+            // Handle confirm cancel button click
+            $('#confirmCancelOrder').on('click', function() {
+                if (!orderIdToCancel) return;
+                
+                const reason = $('#cancelReason').val();
+                const $btn = $(this);
+                const originalText = $btn.text();
+                
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+                
+                // AJAX call to cancel order
+                $.ajax({
+                    url: '/Cart/CancelOrder',
+                    type: 'POST',
+                    data: {
+                        orderId: orderIdToCancel,
+                        reason: reason
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Order cancelled successfully. You will receive an SMS confirmation shortly.');
+                            
+                            // Update the order status in the UI
+                            const $orderCard = $(`.order-card[data-order-id="${orderIdToCancel}"]`);
+                            $orderCard.find('.badge').removeClass('bg-primary').addClass('bg-danger').text('Cancelled');
+                            $orderCard.find('.cancel-order-btn').remove();
+                            
+                            // Update the order in our arrays
+                            const orderIndex = allOrders.findIndex(o => o.id === orderIdToCancel);
+                            if (orderIndex !== -1) {
+                                allOrders[orderIndex].status = 'Cancelled';
+                            }
+                            
+                            const filteredIndex = filteredOrders.findIndex(o => o.id === orderIdToCancel);
+                            if (filteredIndex !== -1) {
+                                filteredOrders[filteredIndex].status = 'Cancelled';
+                            }
+                            
+                            // Close the modal
+                            $('#cancelOrderModal').modal('hide');
+                            
+                            // If status filter is active, reapply filters
+                            if ($('#statusFilter').val() !== '') {
+                                filterOrders();
+                            }
+                        } else {
+                            alert(response.message || 'Failed to cancel order. Please try again.');
+                        }
+                    },
+                    error: function() {
+                        alert('An error occurred. Please try again later.');
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).text(originalText);
+                        orderIdToCancel = null;
+                    }
+                });
+            });
+            
+            // Reset modal when closed
+            $('#cancelOrderModal').on('hidden.bs.modal', function() {
+                $('#cancelReason').val('');
+                orderIdToCancel = null;
+            });
+            
+            // Initialize the page
+            initializeOrders();
+            
+            // Initialize charts
+            initializeCharts();
+            
+            // Function to initialize charts
+            function initializeCharts() {
+                // Get order data from DOM
+                const orderData = [];
+                $('.order-card').each(function() {
+                    const $this = $(this);
+                    orderData.push({
+                        id: $this.data('order-id'),
+                        date: new Date($this.data('order-date')),
+                        total: parseFloat($this.data('order-total')),
+                        status: $this.data('order-status'),
+                        items: []
+                    });
+                    
+                    // Get items for each order
+                    $this.find('.list-group-item').each(function() {
+                        const itemText = $(this).find('div').text().trim();
+                        const itemParts = itemText.split('x');
+                        if (itemParts.length >= 2) {
+                            const itemName = itemParts[0].trim();
+                            orderData[orderData.length - 1].items.push({
+                                name: itemName
+                            });
+                        }
+                    });
+                });
+                
+                // Monthly spending chart
+                const monthlySpendingCtx = document.getElementById('monthlySpendingChart').getContext('2d');
+                
+                // Group orders by month and calculate total spending
+                const monthlySpending = {};
+                orderData.forEach(order => {
+                    if (order.status !== 'Cancelled' && order.status !== 'Refunded') {
+                        const monthYear = order.date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                        if (!monthlySpending[monthYear]) {
+                            monthlySpending[monthYear] = 0;
+                        }
+                        monthlySpending[monthYear] += order.total;
+                    }
+                });
+                
+                // Sort months chronologically
+                const sortedMonths = Object.keys(monthlySpending).sort((a, b) => {
+                    const dateA = new Date(a);
+                    const dateB = new Date(b);
+                    return dateA - dateB;
+                });
+                
+                // Create monthly spending chart
+                new Chart(monthlySpendingCtx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedMonths,
+                        datasets: [{
+                            label: 'Monthly Spending (RM)',
+                            data: sortedMonths.map(month => monthlySpending[month]),
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'RM' + value.toFixed(2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Order categories chart
+                const orderCategoriesCtx = document.getElementById('orderCategoriesChart').getContext('2d');
+                
+                // Count items by category/name
+                const itemCounts = {};
+                orderData.forEach(order => {
+                    if (order.status !== 'Cancelled' && order.status !== 'Refunded') {
+                        order.items.forEach(item => {
+                            if (!itemCounts[item.name]) {
+                                itemCounts[item.name] = 0;
+                            }
+                            itemCounts[item.name]++;
+                        });
+                    }
+                });
+                
+                // Sort items by count (descending)
+                const sortedItems = Object.keys(itemCounts).sort((a, b) => itemCounts[b] - itemCounts[a]);
+                
+                // Take top 5 items
+                const topItems = sortedItems.slice(0, 5);
+                
+                // Create order categories chart
+                new Chart(orderCategoriesCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: topItems,
+                        datasets: [{
+                            data: topItems.map(item => itemCounts[item]),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 }
 
 <!-- Notification alerts for success/error messages -->
@@ -25,70 +436,210 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
-</div>
 
-<!-- Displays a message if no orders exist;
-otherwise, lists each past order with details,
-items, total price, and a link to view the receipt,
-with two orders side by side per row. -->
-@if (!Model.Orders.Any())
-{
-    <div class="text-center empty-cart container py-4">
-        <i class="fas fa-solid fa-clipboard-list fa-3x mb-3"></i>
-        <p class="in-the-middle lead">You have no past orders.</p>
-        <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary">Start Shopping</a>
-    </div>
-}
-else
-{
-    <div class="row">
-        @foreach (var order in Model.Orders)
+    <!-- Order History Header with Filters -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>My Order History</h2>
+        @if (User.IsInRole("Admin"))
         {
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>Order #@order.OrderId</strong> - @order.OrderDate.ToString("yyyy-MM-dd HH:mm")
-                        </div>
-                        <span class="badge bg-info">@order.Status</span>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Items:</h5>
-                        <ul class="list-group list-group-flush">
-                            @foreach (var item in order.Items)
-                            {
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        @if (!string.IsNullOrEmpty(item.PhotoURL))
-                                        {
-                                            <img src="/Images/@item.PhotoURL" alt="@item.MenuItemName" style="width:50px; height:50px; object-fit:cover; margin-right:10px;">
-                                        }
-                                        @item.MenuItemName x @item.Quantity
-                                    </div>
-                                    <span>@((item.UnitPrice * item.Quantity).ToString("C", new CultureInfo("en-MY")))</span>
-                                </li>
-                            }
-                        </ul>
-                        <div class="mt-2">
-                            <strong>Delivery Address:</strong> @order.DeliveryAddress
-                            <br>
-                            <strong>Delivery Option:</strong> @order.DeliveryOption
-                        </div>
-                        <div class="d-flex justify-content-end align-items-center mt-3">
-                            <h4 class="mb-0 me-3">Total: @order.Total.ToString("C", new CultureInfo("en-MY"))</h4>
-                            <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">View Receipt</a>
-                            <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" style="display:inline-block; margin-left:8px;" class="email-form">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm btn-success email-button">
-                                    <i class="fas fa-envelope me-1"></i> Send to Email
-                                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                </button>
-                            </form>
-                            <a asp-action="Refund" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-danger ms-2">Request Refund</a>
-                        </div>
+            <a href="@Url.Action("Orders", "Admin")" class="btn btn-primary">Manage All Orders</a>
+        }
+    </div>
+        <div class="d-flex gap-2">
+            <div class="input-group">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search orders..." aria-label="Search orders">
+                <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <select id="statusFilter" class="form-select">
+                <option value="" selected="@(string.IsNullOrEmpty(selectedStatus))">All Statuses</option>
+                <option value="Pending" selected="@(selectedStatus == "Pending")">Pending</option>
+                <option value="Preparing" selected="@(selectedStatus == "Preparing")">Preparing</option>
+                <option value="Served" selected="@(selectedStatus == "Served")">Served</option>
+                <option value="Cancelled" selected="@(selectedStatus == "Cancelled")">Cancelled</option>
+                <option value="Refunded" selected="@(selectedStatus == "Refunded")">Refunded</option>
+            </select>
+            <select id="sortOrder" class="form-select">
+                <option value="date_desc">Newest First</option>
+                <option value="date_asc">Oldest First</option>
+                <option value="total_desc">Highest Amount</option>
+                <option value="total_asc">Lowest Amount</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Purchase Summary Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Monthly Spending</div>
+                <div class="card-body">
+                    <div style="height: 350px; width: 350px; margin: 0 auto;">
+                        <canvas id="monthlySpendingChart"></canvas>
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Order Categories</div>
+                <div class="card-body">
+                    <div style="height: 350px; width: 350px; margin: 0 auto;">
+                        <canvas id="orderCategoriesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Order listing container with pagination -->
+    <div id="orderListingContainer">
+        <!-- Displays a message if no orders exist;
+        otherwise, lists each past order with details,
+        items, total price, and a link to view the receipt,
+        with two orders side by side per row. -->
+        @if (!Model.Orders.Any())
+        {
+            <div class="text-center empty-cart py-4">
+                <i class="fas fa-solid fa-clipboard-list fa-3x mb-3"></i>
+                <p class="in-the-middle lead">You have no past orders.</p>
+                <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary">Start Shopping</a>
+            </div>
+        }
+        else
+        {
+            <div class="row" id="ordersList">
+                @foreach (var order in Model.Orders)
+                {
+                    <div class="col-md-6 mb-4 order-card" data-order-id="@order.OrderId" data-order-date="@order.OrderDate.ToString("yyyy-MM-ddTHH:mm:ss")" data-order-total="@order.Total" data-order-status="@order.Status">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Order #@order.OrderId</strong> - @order.OrderDate.ToString("yyyy-MM-dd HH:mm")
+                                </div>
+                                @if (order.Status == "Pending" || order.Status == "Preparing")
+                                {
+                                    <span class="badge bg-primary">@order.Status</span>
+                                }
+                                else if (order.Status == "Served")
+                                {
+                                    <span class="badge bg-success">@order.Status</span>
+                                }
+                                else if (order.Status == "Cancelled")
+                                {
+                                    <span class="badge bg-danger">@order.Status</span>
+                                }
+                                else if (order.Status == "Refunded")
+                                {
+                                    <span class="badge bg-warning text-dark">@order.Status</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-info">@order.Status</span>
+                                }
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">Items:</h5>
+                                <ul class="list-group list-group-flush mb-3">
+                                    @foreach (var item in order.Items)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                @if (!string.IsNullOrEmpty(item.PhotoURL))
+                                                {
+                                                    <img src="/Images/@item.PhotoURL" alt="@item.MenuItemName" style="width:50px; height:50px; object-fit:cover; margin-right:10px;">
+                                                }
+                                                @item.MenuItemName x @item.Quantity
+                                            </div>
+                                            <span>@((item.UnitPrice * item.Quantity).ToString("C", new CultureInfo("en-MY")))</span>
+                                        </li>
+                                    }
+                                </ul>
+                                <div class="mt-2">
+                                    <strong>Delivery Address:</strong> @order.DeliveryAddress
+                                    <br>
+                                    <strong>Delivery Option:</strong> @order.DeliveryOption
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-auto pt-3">
+                                    <h4 class="mb-0">Total: @order.Total.ToString("C", new CultureInfo("en-MY"))</h4>
+                                    <div class="btn-group">
+                                        <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-receipt me-1"></i> View Receipt
+                                        </a>
+                                        <a asp-action="Track" asp-controller="Cart" asp-route-orderNumber="@order.OrderId" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-truck me-1"></i> Track Order
+                                        </a>
+                                        <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" style="display:inline-block;" class="email-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-success email-button">
+                                                <i class="fas fa-envelope me-1"></i> Email
+                                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                            </button>
+                                        </form>
+                                        @if (order.Status == "Pending" || order.Status == "Preparing")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-danger cancel-order-btn" data-order-id="@order.OrderId">
+                                                <i class="fas fa-times me-1"></i> Cancel
+                                            </button>
+                                        }
+                                        else if (order.Status == "Served")
+                                        {
+                                            <a asp-action="Refund" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-undo me-1"></i> Refund
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <!-- Pagination controls -->
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Order history pagination">
+                    <ul class="pagination" id="orderPagination">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
         }
     </div>
-}
+
+    <!-- Order Cancellation Modal -->
+    <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelOrderModalLabel">Cancel Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel this order? This action cannot be undone.</p>
+                    <p>If you proceed, you will receive an SMS notification confirming the cancellation.</p>
+                    <div class="form-group">
+                        <label for="cancelReason">Reason for cancellation (optional):</label>
+                        <textarea id="cancelReason" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" id="confirmCancelOrder">Cancel Order</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

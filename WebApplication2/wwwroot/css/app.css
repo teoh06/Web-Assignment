@@ -112,6 +112,7 @@ html.dark-theme {
     html.dark-theme td,
     html.dark-theme th,
     html.dark-theme a,
+    html.dark-theme li,
     html.dark-theme label,
     html.dark-theme .card-title,
     html.dark-theme .card-text,
@@ -244,7 +245,7 @@ nav {
         flex: 1;
     }
 
-input::placeholder {
+input::placeholder, focus::placeholder, textarea::placeholder {
     color: var(--text-primary) !important;
 }
 
@@ -360,7 +361,7 @@ main {
 .pagination a,
 .pagination span {
     background: var(--bg-accent) !important;
-    color: var(--text-light) !important;
+    color: var(--text-primary) !important;
     border: 1px solid var(--border-color) !important;
 }
 
@@ -481,59 +482,283 @@ label > * {
     text-align: center;
 }
 
-/* NEW ERA - 29/7/2025 */
+/* =============================================================================
+   MODERN HOMEPAGE REDESIGN - QUICKBITE FOOD ORDERING
+   ============================================================================= */
 
-/* CSS for the menu-container with centered content and hover floating effect */
-.menu-container {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px var(--shadow-color);
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-lighter);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+/* Hero Section Styles */
+.hero-container {
+    background: var(--gradient-warm);
+    padding: 60px 20px;
+    border-radius: 0 0 30px 30px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('/images/pattern-dots.svg') repeat;
+    opacity: 0.1;
+    z-index: 0;
+}
+
+.welcome-banner {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.welcome-banner .nice-word {
+    font-family: "Victor Mono", monospace;
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-light);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     transition: all 0.3s ease;
 }
 
-    .menu-container:hover {
-        box-shadow: 0 8px 20px var(--shadow-color-dark);
-        transform: translateY(-5px);
-    }
+.tagline {
+    font-size: 1.2rem;
+    color: var(--text-light);
+    margin-bottom: 30px;
+    opacity: 0.9;
+}
 
-.browse-menu-title {
+.cta-container {
+    margin-top: 30px;
+}
+
+.cta-button {
+    background-color: var(--bg-primary);
+    color: var(--primary-brand);
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 15px 40px;
+    border-radius: 50px;
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    background-color: var(--bg-accent);
+    color: var(--secondary-brand);
+    text-decoration: none;
+}
+
+/* Content Container */
+.content-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Menu Section Styles */
+.menu-section {
+    margin-bottom: 60px;
+    padding: 20px 0;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.section-header h2 {
+    font-family: "Victor Mono", monospace;
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    position: relative;
+    display: inline-block;
+}
+
+.section-header h2::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: var(--primary-brand);
+    border-radius: 3px;
+}
+
+.section-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 20px auto;
+}
+
+/* Card Grid Layout */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    margin-top: 20px;
+}
+
+/* Menu Card Styles */
+.menu-card {
+    background-color: var(--card-bg);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+}
+
+.menu-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.card-image-container {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.menu-card:hover .card-image {
+    transform: scale(1.05);
+}
+
+.card-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: var(--primary-brand);
+    color: var(--text-light);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+    z-index: 1;
+}
+
+.card-badge.bestseller {
+    background: var(--accent-green);
+}
+
+.card-badge.favorite {
+    background: var(--accent-red);
+}
+
+.card-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
     text-align: center;
 }
 
-.in-the-middle {
+.card-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    flex-grow: 1;
+}
+
+.card-footer {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-light);
 }
 
-.home-menu-display {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 32px;
-    justify-content: center;
-    align-items: stretch;
+.card-price {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary-brand);
 }
 
-    .home-menu-display .card {
-        flex: 1 1 calc((100% - 3 * 32px) / 4);
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
+/* Section-specific styling */
+.featured-section {
+    position: relative;
+}
 
+.bestsellers-section, .featured-section {
+    background-color: var(--bg-secondary);
+    padding: 40px 20px;
+    border-radius: 20px;
+    margin: 60px 0;
+}
+
+.favorites-section {
+    position: relative;
+    padding-bottom: 40px;
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
-    .home-menu-display .card {
-        flex: 1 1 calc((100% - 3 * 32px) / 4);
+    .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 20px;
+    }
+    
+    .welcome-banner .nice-word {
+        font-size: 2.2rem;
+    }
+    
+    .section-header h2 {
+        font-size: 1.8rem;
+    }
+    
+    .hero-container {
+        padding: 40px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .welcome-banner .nice-word {
+        font-size: 1.8rem;
+    }
+    
+    .cta-button {
+        padding: 12px 30px;
+        font-size: 1rem;
     }
 }
 
@@ -573,10 +798,8 @@ label > * {
 .btn-success,
 .btn.btn-success {
     background: var(--gradient-fresh) !important;
-    border: none !important;
     color: var(--text-light) !important;
     padding: 12px 24px;
-    border-radius: 8px;
     font-weight: 600;
     transition: all 0.3s ease;
     box-shadow: var(--shadow-sm);
@@ -2129,7 +2352,7 @@ html.dark-theme .auth-card {
 }
 
 html.dark-theme .form-input {
-    background: var(--bg-tertiary);
+    background: var(--card-bg);
     border-color: var(--border-medium);
     color: var(--text-primary);
 }
@@ -2219,13 +2442,13 @@ html.dark-theme .card-footer .fw-bold {
 
 /* Form controls in cards */
 .card, .form-control {
-    background-color: var(--input-bg) !important;
+    background-color: var(--card-bg) !important;
     border: 1px solid var(--border-color) !important;
     color: var(--text-primary) !important;
 }
 
     .card .form-control:focus {
-        background-color: var(--input-bg) !important;
+        background-color: var(--card-bg) !important;
         border-color: var(--bg-accent) !important;
         color: var(--text-primary) !important;
         box-shadow: 0 0 5px var(--shadow-color) !important;
@@ -2785,3 +3008,7 @@ label {
     background-color: #3498db;
 }
 
+.btn-info, .btn.btn-info {
+    align-content: center;
+    text-align: center;
+}

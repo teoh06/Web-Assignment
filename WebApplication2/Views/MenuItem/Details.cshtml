@@ -1,4 +1,4 @@
-﻿@model WebApplication2.Models.MenuItemDetailsVM
+@model WebApplication2.Models.MenuItemDetailsVM
 @using WebApplication2.Models;
 @{
     ViewBag.Title = "Menu Item Details";
@@ -48,6 +48,22 @@
             <div class="menuitem-category">@menuItem.Category?.Name</div>
             <div class="menuitem-price">@menuItem.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
             <div class="menuitem-desc">@menuItem.Description</div>
+            <div class="menuitem-stock">
+                <span class="stock-label">Stock:</span>
+                <span class="stock-value @(menuItem.StockQuantity <= 0 ? "text-danger" : menuItem.StockQuantity < 10 ? "text-warning" : "text-success")">@menuItem.StockQuantity</span>
+                @if (menuItem.StockQuantity <= 0)
+                {
+                    <span class="badge bg-danger ms-2">Out of Stock</span>
+                }
+                else if (menuItem.StockQuantity < 10)
+                {
+                    <span class="badge bg-warning text-dark ms-2">Low Stock</span>
+                }
+                else
+                {
+                    <span class="badge bg-success ms-2">In Stock</span>
+                }
+            </div>
             <hr>
             @if (User.IsInRole("Member"))
             {
