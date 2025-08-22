@@ -259,4 +259,11 @@ public class OtpVerificationVM
     public string ReturnUrl { get; set; }
 }
 
+public class CartItemInputModel
+{
+    public int menuItemId { get; set; }
+    public int quantity { get; set; }
+    public string? SelectedPersonalizations { get; set; }
+}
+
 

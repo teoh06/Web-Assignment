@@ -296,47 +296,49 @@ public class AccountController : Controller
             if (err != "") ModelState.AddModelError("ProfilePicture", err);
         }
 
+        // --- Fix: Always check if any photo update is requested ---
+        bool photoChanged = false;
+        string? newPhotoUrl = null;
+        string oldPhotoUrl = m.PhotoURL;
+
+        try
+        {
+            if (!string.IsNullOrEmpty(vm.ProcessedImageData))
+            {
+                // Case 1: New photo from cropper
+                newPhotoUrl = SaveBase64Image(vm.ProcessedImageData, "photos");
+                photoChanged = true;
+            }
+            else if (vm.ProfilePicture != null)
+            {
+                // Case 2: New photo from direct upload
+                newPhotoUrl = hp.SavePhoto(vm.ProfilePicture, "photos");
+                photoChanged = true;
+            }
+            else if (!string.IsNullOrEmpty(vm.SelectedPhotoPath) && int.TryParse(vm.SelectedPhotoPath, out int selectedPhotoId))
+            {
+                // Case 3: Reusing a photo from history
+                var selectedPhoto = m.MemberPhotos.FirstOrDefault(p => p.Id == selectedPhotoId);
+                if (selectedPhoto != null && selectedPhoto.FileName != oldPhotoUrl)
+                {
+                    newPhotoUrl = selectedPhoto.FileName;
+                    photoChanged = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError("", "Error processing photo: " + ex.Message);
+        }
+
         if (ModelState.IsValid)
         {
             m.Name = vm.Name;
             m.Address = vm.Address;
             m.PhoneNumber = vm.PhoneNumber;
 
-            string? newPhotoUrl = null;
-            string oldPhotoUrl = m.PhotoURL;
-
-            // --- Determine the new photo URL ---
-            try
-            {
-                if (!string.IsNullOrEmpty(vm.ProcessedImageData))
-                {
-                    // Case 1: New photo from cropper
-                    newPhotoUrl = SaveBase64Image(vm.ProcessedImageData, "photos");
-                }
-                else if (vm.ProfilePicture != null)
-                {
-                    // Case 2: New photo from direct upload
-                    newPhotoUrl = hp.SavePhoto(vm.ProfilePicture, "photos");
-                }
-                else if (!string.IsNullOrEmpty(vm.SelectedPhotoPath) && int.TryParse(vm.SelectedPhotoPath, out int selectedPhotoId))
-                {
-                    // Case 3: Reusing a photo from history
-                    var selectedPhoto = m.MemberPhotos.FirstOrDefault(p => p.Id == selectedPhotoId);
-                    if (selectedPhoto != null)
-                    {
-                        newPhotoUrl = selectedPhoto.FileName;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ModelState.AddModelError("", "Error processing photo: " + ex.Message);
-                // On error, fall through to return the view with the model state error
-            }
-
-
             // --- If a photo change occurred, update history and current photo ---
-            if (newPhotoUrl != null && newPhotoUrl != oldPhotoUrl)
+            if (photoChanged && newPhotoUrl != null && newPhotoUrl != oldPhotoUrl)
             {
                 // Add the previous photo to history if it's not a default one and not already there
                 if (!string.IsNullOrEmpty(oldPhotoUrl) && oldPhotoUrl != "default.png" && !m.MemberPhotos.Any(p => p.FileName == oldPhotoUrl))
@@ -348,12 +350,9 @@ public class AccountController : Controller
                         UploadDate = DateTime.Now
                     });
                 }
-
-                // Set the new photo
                 m.PhotoURL = newPhotoUrl;
             }
 
-            // Save all changes (name, address, new photo URL, new history entry)
             db.SaveChanges();
 
             // --- Prune photo history to keep the 4 most recent ones AFTER saving changes ---
@@ -367,7 +366,6 @@ public class AccountController : Controller
 
                 foreach (var photo in photosToRemove)
                 {
-                    // Important: Only delete the file if it's not the current profile picture
                     if (photo.FileName != m.PhotoURL)
                     {
                         hp.DeletePhoto(photo.FileName, "photos");
