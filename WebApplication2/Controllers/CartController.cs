@@ -38,7 +38,7 @@ namespace WebApplication2.Controllers
         // -------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Add([FromBody] CartItemInputModel model)
+        public IActionResult Add([FromForm] CartItemInputModel model)
         {
             if (model == null)
             {
