@@ -36,7 +36,7 @@ public class EmailService : IEmailService
 
             using (MailMessage mail = new MailMessage())
             {
-                mail.From = new MailAddress(_senderEmail, "QuickBite Receipt"); // Use sender email from config with friendly name
+                mail.From = new MailAddress(_senderEmail, "QuickBite"); // Use sender email from config with friendly name
                 mail.To.Add(new MailAddress(toEmail));
                 mail.Subject = subject;
                 mail.Body = message;

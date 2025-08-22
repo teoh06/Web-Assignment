@@ -6,7 +6,8 @@
 
 <div class="profile-page-flex">
     <div class="profile-main-card">
-        <form class="tidy-form" method="post" enctype="multipart/form-data">
+        <form class="tidy-form" method="post" enctype="multipart/form-data" id="profileForm">
+            @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly"></div>
 
             <div class="profile-photo-wrapper">
@@ -16,7 +17,7 @@
                          alt="Profile Photo"
                          onerror="this.src='/photos/default.png'">
                 </label>
-                <br><small>Click photo to change or view history</small><br>
+                <br><small>Click or drag photo to change or view history</small><br>
                 <span asp-validation-for="ProfilePicture" class="field-validation-error"></span>
 
                 <input type="hidden" id="selectedPhotoPath" name="SelectedPhotoPath" value="">
@@ -25,6 +26,61 @@
                        class="hidden">
 
                 <input type="hidden" id="processedImageData" name="ProcessedImageData" value="">
+            </div>
+
+            <!-- Photo Popup Modal -->
+            <div id="photoPopup" class="photo-popup-overlay" style="display:none;">
+                <div class="photo-popup">
+                    <div class="popup-header">
+                        <h3>Profile Photo</h3>
+                        <button class="close-popup" type="button" onclick="closePhotoPopup()">&times;</button>
+                    </div>
+                    
+                    <div class="photo-edit-section">
+                        <div id="dropArea" class="upload-new-section">
+                            <strong>Drag & drop a photo here, or click to select</strong>
+                            <p>Supported: JPEG, PNG, JPG, WebP, GIF (max 5MB)</p>
+                            <input type="file" id="newPhotoInputPopup" accept="image/*" style="display:none;">
+                        </div>
+                        
+                        <div class="image-editor" style="display:none;">
+                            <div class="editor-controls">
+                                <button type="button" class="rotate-btn" onclick="rotateCropper(-90)">⟲ Rotate Left</button>
+                                <button type="button" class="rotate-btn" onclick="rotateCropper(90)">⟳ Rotate Right</button>
+                                <button type="button" class="reset-btn" onclick="resetCropper()">↺ Reset</button>
+                            </div>
+                            <div class="editor-preview">
+                                <img id="cropperImage" src="" alt="Preview" style="max-width:100%;border-radius:8px;">
+                            </div>
+                            <div id="imageProcessingSection"></div>
+                        </div>
+                    </div>
+
+                    <div class="photo-history-section">
+                        <h4>Photo History</h4>
+                        <div class="photo-history-grid">
+                            @foreach (var photo in Model.PhotoHistory ?? new List<ProfilePhotoVM>())
+                            {
+                                <div class="history-photo" data-photo-id="@photo.Id" data-photo-path="/photos/@photo.FileName" onclick="selectHistoryPhoto(this)">
+                                    <img src="/photos/@photo.FileName" alt="History Photo">
+                                    @if (photo.FileName == Model.PhotoURL)
+                                    {
+                                        <span class="current-photo-indicator" title="Current Photo">✔</span>
+                                    }
+                                    <div class="photo-hover-overlay">
+                                        <span class="select-indicator">Select</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="popup-actions">
+                        <button type="button" onclick="applySelectedPhoto()" class="popup-btn popup-btn-primary">Apply Selected</button>
+                        <button type="button" onclick="deleteSelectedPhoto()" class="popup-btn popup-btn-danger">Delete Selected</button>
+                        <button type="button" onclick="closePhotoPopup()" class="popup-btn popup-btn-secondary">Cancel</button>
+                    </div>
+                </div>
             </div>
 
             <div class="form-fields">
@@ -113,6 +169,152 @@
 </div>
 
 <style>
+.photo-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.photo-popup {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.close-popup {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.upload-new-section {
+    text-align: center;
+    border: 2px dashed #007bff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+    transition: background 0.3s;
+}
+
+.upload-new-section.active {
+    background: rgba(0, 123, 255, 0.1);
+}
+
+.upload-new-section strong {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+#dropArea {
+    cursor: pointer;
+}
+
+.popup-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 16px;
+}
+
+.popup-btn {
+    flex: 1;
+    margin: 0 8px;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.3s;
+}
+
+.popup-btn-primary {
+    background: #007bff;
+    color: #fff;
+}
+
+.popup-btn-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.popup-btn-secondary {
+    background: #6c757d;
+    color: #fff;
+}
+
+.photo-history-section {
+    margin-top: 24px;
+}
+
+.photo-history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.history-photo {
+    position: relative;
+    cursor: pointer;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.history-photo:hover {
+    transform: scale(1.05);
+}
+
+.history-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.current-photo-indicator {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #28a745;
+    color: #fff;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+}
+
+.feedback-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10001;
+    font-weight: 500;
+    max-width: 300px;
+    animation: fadeInOut 3s ease-in-out;
+}
+
 .profile-page-flex {
     display: flex;
     flex-direction: row;
@@ -123,6 +325,7 @@
     max-width: 1400px;
 }
 .profile-main-card {
+    background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
     flex: 2;
     border-radius: 16px;
     box-shadow: 0 4px 24px #0002;
@@ -130,6 +333,7 @@
     min-width: 400px;
 }
 .profile-favorites-card {
+    background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
     flex: 1;
     border-radius: 16px;
     box-shadow: 0 4px 24px #0002;
@@ -185,6 +389,97 @@
     font-style: italic;
     margin-top: 12px;
 }
+.photo-edit-section {
+    margin: 16px 0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.image-editor {
+    margin-top: 16px;
+}
+
+.editor-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    justify-content: center;
+}
+
+.rotate-btn, .reset-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: none;
+    background: var(--bg-accent);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.rotate-btn:hover, .reset-btn:hover {
+    background: var(--primary-brand);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.editor-preview {
+    text-align: center;
+    margin: 12px 0;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.photo-hover-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.history-photo {
+    position: relative;
+    cursor: pointer;
+}
+
+.history-photo:hover .photo-hover-overlay {
+    opacity: 1;
+}
+
+.select-indicator {
+    color: white;
+    font-weight: bold;
+    background: var(--primary-brand);
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+.history-photo.selected {
+    border: 2px solid var(--primary-brand);
+    box-shadow: 0 0 0 2px var(--primary-brand);
+}
+
+.upload-new-section.editing {
+    pointer-events: none;
+    opacity: 0.5;
+}
+.address-input-container {
+    width: 100%;
+    max-width: 600px;
+}
+.address-input {
+    width: 100%;
+    min-width: 350px;
+    max-width: 600px;
+    box-sizing: border-box;
+}
 @@media (max-width: 900px) {
     .profile-page-flex { flex-direction: column; gap: 24px; }
     .profile-main-card, .profile-favorites-card { min-width: 100%; max-width: 100%; }
@@ -198,184 +493,249 @@
     <link href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css" rel="stylesheet" />
     <script>
         let selectedPhotoElement = null;
-        let currentPhotoPath = '/photos/@Model.PhotoURL';
         let cropper = null;
-        let cropperImage = document.getElementById('cropperImage');
-        let imageProcessingSection = document.getElementById('imageProcessingSection');
+        let cropperImage = null;
+        let imageProcessingSection = null;
         let originalImageData = null;
         let hasProcessedImage = false;
+        let currentRotation = 0;
 
-        function openPhotoPopup() {
-            document.getElementById('photoPopup').style.display = 'flex';
-            markCurrentPhoto();
+        function getAntiForgeryToken() {
+            return document.querySelector('input[name="__RequestVerificationToken"]').value;
         }
 
-        function closePhotoPopup() {
-            document.getElementById('photoPopup').style.display = 'none';
-            selectedPhotoElement = null;
-            clearSelections();
-            if (cropper) { cropper.destroy(); cropper = null; }
-            imageProcessingSection.style.display = 'none';
-            originalImageData = null;
-            hasProcessedImage = false;
-            document.getElementById('processedImageData').value = '';
-        }
-
-        function markCurrentPhoto() {
-            const historyPhotos = document.querySelectorAll('.history-photo');
-            historyPhotos.forEach(photo => {
-                const indicator = photo.querySelector('.current-photo-indicator');
-                if (indicator) { // This means it's the current photo
-                    photo.classList.add('selected');
-                    selectedPhotoElement = photo;
-                } else {
-                    photo.classList.remove('selected');
-                }
-            });
-        }
-
-        function selectHistoryPhoto(photoElement) {
-            clearSelections();
-            photoElement.classList.add('selected');
-            selectedPhotoElement = photoElement;
-            document.getElementById('processedImageData').value = '';
-            document.getElementById('newPhotoInput').value = '';
+        function showFeedback(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = 'feedback-notification';
+            if (type === 'error') notification.style.background = '#dc3545';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => { notification.remove(); }, 3000);
         }
 
         function clearSelections() {
             document.querySelectorAll('.history-photo').forEach(p => p.classList.remove('selected'));
         }
 
-        // Only one way to update photo: Apply Selected
-        function applySelectedPhoto() {
-            if (imageProcessingSection.style.display === 'block' && cropper) {
-                // If a new photo is uploaded and processed
-                const canvas = cropper.getCroppedCanvas({
-                     width: 300, height: 300, fillColor: '#fff', imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
-                });
-                const processedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                document.getElementById('processedImageData').value = processedDataUrl;
-                document.getElementById('currentProfilePhoto').src = processedDataUrl;
-                document.getElementById('selectedPhotoPath').value = '';
-            } else if (selectedPhotoElement) {
-                // If a previous photo is selected
-                const newPhotoPath = selectedPhotoElement.dataset.photoPath;
-                const photoId = selectedPhotoElement.dataset.photoId;
-                document.getElementById('currentProfilePhoto').src = newPhotoPath;
-                document.getElementById('selectedPhotoPath').value = photoId; // Always send ID
-                document.getElementById('processedImageData').value = '';
-                document.getElementById('newPhotoInput').value = '';
+        function resetCropper() {
+            if (cropper) {
+                // Reset rotation
+                currentRotation = 0;
+                cropper.reset();
+                cropper.clear();
+                // Reset to original image if available
+                if (originalImageData) {
+                    cropperImage.src = originalImageData;
+                    cropper.replace(originalImageData);
+                }
             }
-            closePhotoPopup();
         }
 
-        function deleteSelectedPhoto() {
-            if (!selectedPhotoElement) {
-                alert('Please select a photo to delete.');
-                return;
+        function handlePhotoFile(file) {
+            const cropperImage = document.getElementById('cropperImage');
+            if (!cropperImage) return;
+            
+            if (file.size > 5 * 1024 * 1024) { 
+                showFeedback('File size must be less than 5MB', 'error');
+                return; 
+            }
+            
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) { 
+                showFeedback('Please select a valid image file (JPEG, PNG, JPG, WebP, GIF)', 'error');
+                return; 
             }
 
-            const isCurrentPhoto = !!selectedPhotoElement.querySelector('.current-photo-indicator');
-            if (isCurrentPhoto) {
-                alert('Cannot delete the current profile photo. Please select a different photo first.');
-                return;
-            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                originalImageData = e.target.result;
+                cropperImage.src = e.target.result;
+                document.querySelector('.image-editor').style.display = 'block';
+                document.getElementById('dropArea').classList.add('editing');
+                
+                if (cropper) { 
+                    cropper.destroy(); 
+                }
+                
+                cropper = new Cropper(cropperImage, { 
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 0.9,
+                    responsive: true,
+                    cropBoxResizable: true,
+                    cropBoxMovable: true,
+                    zoomable: true,
+                    rotatable: true
+                });
 
-            if (confirm('Are you sure you want to permanently delete this photo from your history?')) {
+                hasProcessedImage = false;
+                clearSelections();
+                selectedPhotoElement = null;
+                currentRotation = 0;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function selectHistoryPhoto(photoElement) {
+            clearSelections();
+            photoElement.classList.add('selected');
+            selectedPhotoElement = photoElement;
+
+            const img = photoElement.querySelector('img');
+            const cropperImage = document.getElementById('cropperImage');
+            originalImageData = img.src;
+            cropperImage.src = img.src;
+            
+            document.querySelector('.image-editor').style.display = 'block';
+            document.getElementById('dropArea').classList.add('editing');
+            
+            if (cropper) { 
+                cropper.destroy(); 
+            }
+            
+            cropper = new Cropper(cropperImage, { 
+                aspectRatio: 1,
+                viewMode: 1,
+                autoCropArea: 0.9,
+                responsive: true,
+                cropBoxResizable: true,
+                cropBoxMovable: true,
+                zoomable: true,
+                rotatable: true
+            });
+
+            document.getElementById('processedImageData').value = '';
+            document.getElementById('newPhotoInput').value = '';
+            currentRotation = 0;
+        }
+
+        function applySelectedPhoto() {
+            const form = document.getElementById('profileForm');
+            const processedInput = document.getElementById('processedImageData');
+            const selectedPathInput = document.getElementById('selectedPhotoPath');
+            const mainPhotoInput = document.getElementById('newPhotoInput');
+            const popupFileInput = document.getElementById('newPhotoInputPopup');
+
+            // Clear any previous values
+            processedInput.value = '';
+            selectedPathInput.value = '';
+            
+            if (cropper && document.querySelector('.image-editor').style.display === 'block') {
+                // If we have an active cropper, use its output
+                const canvas = cropper.getCroppedCanvas({
+                    width: 300,
+                    height: 300,
+                    fillColor: '#fff',
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high'
+                });
+                
+                if (canvas) {
+                    const processedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    processedInput.value = processedDataUrl;
+                    document.getElementById('currentProfilePhoto').src = processedDataUrl;
+                }
+            } else if (selectedPhotoElement) {
+                // If we have a selected history photo
                 const photoId = selectedPhotoElement.dataset.photoId;
-                if (!photoId || photoId === '0') {
-                    alert('This photo cannot be deleted.');
+                if (!photoId) {
+                    showFeedback('No photo selected.', 'error');
                     return;
                 }
+                selectedPathInput.value = photoId;
+                const photoUrl = selectedPhotoElement.querySelector('img').src;
+                document.getElementById('currentProfilePhoto').src = photoUrl;
+            } else if (popupFileInput.files && popupFileInput.files[0]) {
+                // If we have a file selected in the popup
+                const file = popupFileInput.files[0];
+                const transfer = new DataTransfer();
+                transfer.items.add(file);
+                mainPhotoInput.files = transfer.files;
+            } else {
+                showFeedback('No photo selected.', 'error');
+                return;
+            }
 
-                fetch('/Account/DeleteMemberPhoto', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: 'id=' + photoId
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        selectedPhotoElement.remove();
-                        selectedPhotoElement = null;
-                        showFeedback(data.message || 'Photo deleted from history.');
-                    } else {
-                        showFeedback(data.message || 'Failed to delete photo.', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showFeedback('An error occurred. Please try again.', 'error');
-                });
+            closePhotoPopup();
+            form.submit();
+        }
+
+        function rotateCropper(degree) {
+            if (cropper) {
+                currentRotation = (currentRotation + degree) % 360;
+                cropper.rotate(degree);
             }
         }
 
-        // Handle new photo upload
-        document.getElementById('newPhotoInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                if (file.size > 5 * 1024 * 1024) { alert('File size must be less than 5MB'); this.value = ''; return; }
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
-                if (!allowedTypes.includes(file.type)) { alert('Please select a valid image file (JPEG, PNG, JPG, WebP, GIF)'); this.value = ''; return; }
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    originalImageData = e.target.result;
-                    cropperImage.src = e.target.result;
-                    imageProcessingSection.style.display = 'block';
-                    if (cropper) { cropper.destroy(); }
-                    cropper = new Cropper(cropperImage, { aspectRatio: 1, viewMode: 1, autoCropArea: 0.8, responsive: true });
-                    hasProcessedImage = false;
-                    // When a new image is uploaded, it becomes the selection
-                    clearSelections();
-                    selectedPhotoElement = null;
-                };
-                reader.readAsDataURL(file);
+        function openPhotoPopup() {
+            document.getElementById('photoPopup').style.display = 'flex';
+            markCurrentPhoto();
+            
+            // Reset the popup state
+            document.querySelector('.image-editor').style.display = 'none';
+            document.getElementById('dropArea').classList.remove('editing');
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
             }
-        });
-
-        function cropImage() { if (cropper) { cropper.crop(); hasProcessedİmage = true; showFeedback('Image cropped!'); } }
-        function rotateImage(deg) { if (cropper) { cropper.rotate(deg); hasProcessedİmage = true; showFeedback('Image rotated!'); } }
-        function flipImage(direction) { if (cropper) { if (direction === 'horizontal') cropper.scaleX(cropper.getData().scaleX === 1 ? -1 : 1); else cropper.scaleY(cropper.getData().scaleY === 1 ? -1 : 1); hasProcessedİmage = true; showFeedback('Image flipped!'); } }
-        function resetImage() { if (originalImageData && cropper) { cropperImage.src = originalImageData; cropper.destroy(); cropper = new Cropper(cropperImage, { aspectRatio: 1, viewMode: 1, autoCropArea: 0.8, responsive: true }); hasProcessedİmage = false; showFeedback('Image reset!'); } }
-
-        // Show feedback notification
-        function showFeedback(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.style.cssText = `position: fixed; top: 20px; right: 20px; background: ${type === 'error' ? '#dc3545' : '#28a745'}; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 10000; font-weight: 500; max-width: 300px; animation: fadeInOut 3s ease-in-out;`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => { notification.remove(); }, 3000);
         }
 
-        // Delete account confirmation
-        document.getElementById('deleteAccountForm').addEventListener('submit', function (e) {
-            if (!confirm('Do you really want to delete your account? This action will send a confirmation email to your registered address.')) {
-                e.preventDefault();
+        function closePhotoPopup() {
+            document.getElementById('photoPopup').style.display = 'none';
+            selectedPhotoElement = null;
+            clearSelections();
+            
+            if (cropper) { 
+                cropper.destroy(); 
+                cropper = null; 
             }
-        });
-
-        // Close popup when clicking outside
-        document.getElementById('photoPopup').addEventListener('click', function(e) {
-            if (e.target === this) { closePhotoPopup(); }
-        });
-
-        // Refresh favorite list after favorite is toggled
-        function refreshFavoriteList() {
-            $.get('/Account/GetFavoriteListPartial', function(html) {
-                $('#favoriteList').html(html);
-            });
+            
+            document.querySelector('.image-editor').style.display = 'none';
+            document.getElementById('dropArea').classList.remove('editing');
+            originalImageData = null;
+            hasProcessedImage = false;
         }
-        // Listen for favorite button click on menu page
-        $(document).on('click', '.menu-card-fav-btn', function() {
-            var btn = $(this);
-            var id = btn.data('id');
-            $.post('/MenuItem/ToggleFavorite', { menuItemId: id }, function(data) {
-                if (data.favorited !== undefined) {
-                    // Optionally update button UI here
-                    refreshFavoriteList(); // Refresh profile favorite list
+
+        // Initialize event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('newPhotoInputPopup');
+            const resetBtn = document.querySelector('.reset-btn');
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', resetCropper);
+            }
+
+            dropArea.addEventListener('click', function(e) {
+                if (!dropArea.classList.contains('editing')) {
+                    fileInput.click();
                 }
+            });
+
+            dropArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (!dropArea.classList.contains('editing')) {
+                    dropArea.classList.add('active');
+                }
+            });
+
+            dropArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                dropArea.classList.remove('active');
+            });
+
+            dropArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropArea.classList.remove('active');
+                if (!dropArea.classList.contains('editing')) {
+                    const file = e.dataTransfer.files[0];
+                    if (file) handlePhotoFile(file);
+                }
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) handlePhotoFile(file);
             });
         });
     </script>

@@ -26,6 +26,7 @@ public class DB : DbContext
     public DbSet<MenuItemImage> MenuItemImages { get; set; } // Added DbSet for MenuItemImage
     public DbSet<MenuItemFavorite> MenuItemFavorites { get; set; } // Added for favorites
     public DbSet<CartItem> CartItems { get; set; } // Add CartItems for top sell logic
+    public DbSet<WishListItem> WishListItems { get; set; } // Add DbSet for WishListItem
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -256,6 +257,16 @@ public class CartItem
     public Member Member { get; set; }
     [Range(1, 100)]
     public int Quantity { get; set; } = 1;
+}
+
+public class WishListItem
+{
+    public int Id { get; set; }
+    public int MenuItemId { get; set; }
+    public MenuItem MenuItem { get; set; }
+    public string MemberEmail { get; set; }
+    [ForeignKey("MemberEmail")]
+    public Member Member { get; set; }
 }
 
 // SmtpSetting class does NOT have a [Key] attribute because it's a keyless entity

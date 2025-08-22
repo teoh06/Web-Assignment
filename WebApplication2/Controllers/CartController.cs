@@ -38,11 +38,21 @@ namespace WebApplication2.Controllers
         // -------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Add(int menuItemId, int quantity, string? SelectedPersonalizations)
+        public IActionResult Add([FromBody] CartItemInputModel model)
         {
+            if (model == null)
+            {
+                // Fallback to form data if not JSON
+                return AddFromForm(Request.Form["menuItemId"].ToString(), Request.Form["quantity"].ToString(), Request.Form["SelectedPersonalizations"].ToString());
+            }
+            
             if (!User.IsInRole("Member"))
                 return Json(new { success = false, message = "Unauthorized access." });
 
+            int menuItemId = model.menuItemId;
+            int quantity = model.quantity;
+            string? SelectedPersonalizations = model.SelectedPersonalizations;
+            
             if (quantity < 1) quantity = 1;
 
             var menuItem = _db.MenuItems.Find(menuItemId);
@@ -95,6 +105,52 @@ namespace WebApplication2.Controllers
             return View(cart);
         }
 
+        // Helper method for form-based cart additions
+        private IActionResult AddFromForm(string menuItemIdStr, string quantityStr, string? selectedPersonalizations)
+        {
+            if (!int.TryParse(menuItemIdStr, out int menuItemId) || !int.TryParse(quantityStr, out int quantity))
+                return Json(new { success = false, message = "Invalid input data." });
+                
+            if (!User.IsInRole("Member"))
+                return Json(new { success = false, message = "Unauthorized access." });
+
+            if (quantity < 1) quantity = 1;
+
+            var menuItem = _db.MenuItems.Find(menuItemId);
+            if (menuItem == null)
+                return Json(new { success = false, message = "Menu item not found." });
+                
+            // Check stock availability
+            if (menuItem.StockQuantity <= 0)
+                return Json(new { success = false, message = "This item is out of stock." });
+                
+            // Check if requested quantity exceeds available stock
+            if (quantity > menuItem.StockQuantity)
+                return Json(new { success = false, message = $"Only {menuItem.StockQuantity} items available in stock." });
+
+            var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
+            var existing = cart.FirstOrDefault(x => x.MenuItemId == menuItemId && (x.SelectedPersonalizations ?? "") == (selectedPersonalizations ?? ""));
+
+            if (existing != null)
+                existing.Quantity = Math.Min(100, existing.Quantity + quantity);
+            else
+                cart.Add(new CartItemVM
+                {
+                    MenuItemId = menuItemId,
+                    Name = menuItem.Name,
+                    Price = menuItem.Price,
+                    Quantity = quantity,
+                    PhotoURL = menuItem.PhotoURL ?? "default.jpg",
+                    SelectedPersonalizations = selectedPersonalizations
+                });
+
+            HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
+            SaveCartToCookie(cart);
+
+            decimal currentCartTotal = cart.Sum(x => x.Price * x.Quantity);
+            return Json(new { success = true, message = $"Added {quantity} x {menuItem.Name} to cart.", newTotal = currentCartTotal });
+        }
+        
         // -------------------
         // Update quantity (AJAX)
         // -------------------
@@ -967,6 +1023,70 @@ namespace WebApplication2.Controllers
                 Console.WriteLine($"Error cancelling order: {ex.Message}");
                 return Json(new { success = false, message = "An error occurred while cancelling the order." });
             }
+        }
+
+        // --- WISH LIST ACTIONS ---
+        [Authorize(Roles = "Member")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AddToWishList(int menuItemId)
+        {
+            var email = User.Identity.Name;
+            if (!_db.WishListItems.Any(w => w.MenuItemId == menuItemId && w.MemberEmail == email))
+            {
+                _db.WishListItems.Add(new WishListItem { MenuItemId = menuItemId, MemberEmail = email });
+                _db.SaveChanges();
+            }
+            return Json(new { success = true });
+        }
+
+        [Authorize(Roles = "Member")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RemoveFromWishList(int menuItemId)
+        {
+            var email = User.Identity.Name;
+            var item = _db.WishListItems.FirstOrDefault(w => w.MenuItemId == menuItemId && w.MemberEmail == email);
+            if (item != null)
+            {
+                _db.WishListItems.Remove(item);
+                _db.SaveChanges();
+            }
+            return Json(new { success = true });
+        }
+
+        [Authorize(Roles = "Member")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult TransferWishListToCart(int menuItemId, int quantity = 1)
+        {
+            var email = User.Identity.Name;
+            var wish = _db.WishListItems.FirstOrDefault(w => w.MenuItemId == menuItemId && w.MemberEmail == email);
+            var menuItem = _db.MenuItems.Find(menuItemId);
+            if (wish == null || menuItem == null)
+                return Json(new { success = false, message = "Item not found in wish list or menu." });
+            if (menuItem.StockQuantity < quantity)
+                return Json(new { success = false, message = $"Only {menuItem.StockQuantity} in stock." });
+            // Add to cart (reuse Add logic)
+            var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
+            var existing = cart.FirstOrDefault(x => x.MenuItemId == menuItemId);
+            if (existing != null)
+                existing.Quantity = Math.Min(100, existing.Quantity + quantity);
+            else
+                cart.Add(new CartItemVM
+                {
+                    MenuItemId = menuItemId,
+                    Name = menuItem.Name,
+                    Price = menuItem.Price,
+                    Quantity = quantity,
+                    PhotoURL = menuItem.PhotoURL ?? "default.jpg"
+                });
+            HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
+            SaveCartToCookie(cart);
+            // Remove from wish list after transfer
+            _db.WishListItems.Remove(wish);
+            _db.SaveChanges();
+            return Json(new { success = true, message = $"Added {quantity} x {menuItem.Name} to cart and removed from wish list." });
         }
     }
 

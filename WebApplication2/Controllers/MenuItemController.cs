@@ -555,6 +555,50 @@ public class MenuItemController : Controller
             .Select(f => f.MenuItemId).ToList();
         return Json(favorites);
     }
+    
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult GetItemDetails(int id)
+    {
+        var menuItem = db.MenuItems
+            .Include(m => m.Category)
+            .Where(m => m.MenuItemId == id)
+            .Select(m => new {
+                id = m.MenuItemId,
+                name = m.Name,
+                price = m.Price,
+                photoURL = m.PhotoURL,
+                categoryName = m.Category.Name,
+                stockQuantity = m.StockQuantity
+            })
+            .FirstOrDefault();
+            
+        if (menuItem == null) return NotFound();
+        return Json(menuItem);
+    }
+    
+    [HttpPost]
+    [AllowAnonymous]
+    public IActionResult GetStockInfo([FromBody] StockInfoRequest request)
+    {
+        if (request?.ItemIds == null || !request.ItemIds.Any())
+            return BadRequest("No item IDs provided");
+            
+        var stockInfo = db.MenuItems
+            .Where(m => request.ItemIds.Contains(m.MenuItemId))
+            .Select(m => new {
+                id = m.MenuItemId,
+                stockQuantity = m.StockQuantity
+            })
+            .ToList();
+            
+        return Json(stockInfo);
+    }
+    
+    public class StockInfoRequest
+    {
+        public List<int> ItemIds { get; set; }
+    }
 
     [HttpGet]
     public IActionResult GetTopSellItems(int count = 5)
