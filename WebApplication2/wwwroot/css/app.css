@@ -589,10 +589,10 @@ label > * {
 .section-header h2::after {
     content: '';
     position: absolute;
-    bottom: -10px;
+    bottom: -15px;
     left: 50%;
     transform: translateX(-50%);
-    width: 60px;
+    width: 100px;
     height: 3px;
     background: var(--primary-brand);
     border-radius: 3px;
@@ -700,7 +700,7 @@ label > * {
     justify-content: space-between;
     align-items: center;
     margin-top: auto;
-    padding-top: 15px;
+    padding: 10px;
     border-top: 1px solid var(--border-light);
 }
 
@@ -708,6 +708,10 @@ label > * {
     font-weight: 700;
     font-size: 1.1rem;
     color: var(--primary-brand);
+    display: flex;
+    justify-content: center; /* Centers the container horizontally */
+    flex-direction: column; /* Arrange children vertically if needed */
+    align-items: flex-start; /* Align items to the left inside the container */
 }
 
 /* Section-specific styling */
@@ -3011,4 +3015,8 @@ label {
 .btn-info, .btn.btn-info {
     align-content: center;
     text-align: center;
+}
+
+.stock-label {
+    color: var(--text-primary) !important;
 }

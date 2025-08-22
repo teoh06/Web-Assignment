@@ -1,18 +1,25 @@
 @inject DB db
 @{
     string displayName = "Guest";
+    string userRole = "Guest";
+    string userIdentifier = "";
+    
     if (User.Identity.IsAuthenticated && User.IsInRole("Member"))
     {
+        userRole = "Member";
         var member = db.Members.Find(User.Identity.Name);
         if (member != null && !string.IsNullOrEmpty(member.Email))
         {
+            userIdentifier = member.Email;
             var email = member.Email;
             int atIdx = email.IndexOf('@');
             displayName = atIdx > 2 ? email.Substring(0, 2) + "***" + email.Substring(atIdx) : email;
         }
     }
-    else if (User.Identity.IsAuthenticated)
+    else if (User.Identity.IsAuthenticated && User.IsInRole("Admin"))
     {
+        userRole = "Admin";
+        userIdentifier = User.Identity.Name;
         displayName = User.Identity.Name;
     }
 }
@@ -288,6 +295,78 @@
         animation-delay: 0.4s;
     }
     
+    /* Admin Confirmation Dialog */
+    .admin-confirmation {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        border-radius: 8px;
+        padding: 10px 15px;
+        margin: 5px 0;
+    }
+    
+    .admin-confirmation p {
+        margin: 0 0 10px 0;
+        font-weight: bold;
+        color: #856404;
+    }
+    
+    .admin-confirmation-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .admin-confirmation-buttons button {
+        padding: 5px 15px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    
+    .confirm-yes {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .confirm-no {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    /* Image Recognition Results */
+    .image-recognition-result {
+        background-color: #e8f4fd;
+        border: 1px solid #b8daff;
+        border-radius: 8px;
+        padding: 10px;
+        margin: 5px 0;
+    }
+    
+    .image-recognition-result h4 {
+        margin: 0 0 5px 0;
+        color: #004085;
+    }
+    
+    .recognized-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 5px;
+    }
+    
+    .recognized-item {
+        background-color: #007bff;
+        color: white;
+        border-radius: 15px;
+        padding: 3px 8px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    
+    .recognized-item:hover {
+        background-color: #0056b3;
+    }
+    
     @@keyframes typing {
         0% { transform: translateY(0); }
         50% { transform: translateY(-5px); }
@@ -296,8 +375,18 @@
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"></script>
 <script>
+    // --- SignalR connection setup ---
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/chathub")
+        .withAutomaticReconnect()
+        .build();
+    
+    // User role and identifier from server-side
+    const userRole = "@userRole";
+    const userIdentifier = "@userIdentifier";
+    
     // --- Chat history persistence ---
     function saveChatHistory() {
         sessionStorage.setItem('chatHistory', document.getElementById('chatMessages').innerHTML);
@@ -309,16 +398,32 @@
             document.getElementById('chatMessages').innerHTML = history;
         } else {
             // Welcome message if no history
-            addSupportMessage("👋 Welcome to QuickBite support! How can I help you today?");
-            showSuggestions(['Menu recommendations', 'Track my order', 'Delivery options', 'Payment methods']);
+            addSupportMessage(`👋 Welcome to QuickBite support! I see you're logged in as a <strong>${userRole}</strong>. How can I help you today?`);
+            
+            // Show role-specific suggestions
+            if (userRole === "Member") {
+                showSuggestions(['Order food', 'Track my order', 'Menu recommendations', 'Delivery options']);
+            } else if (userRole === "Admin") {
+                showSuggestions(['Modify prices', 'Menu management', 'Order statistics', 'Customer feedback']);
+            } else {
+                showSuggestions(['Menu recommendations', 'Create account', 'Delivery options', 'Payment methods']);
+            }
         }
     }
     
     function clearChatHistory() {
         document.getElementById('chatMessages').innerHTML = '';
         sessionStorage.removeItem('chatHistory');
-        addSupportMessage("Chat history cleared. How can I help you today?");
-        showSuggestions(['Menu recommendations', 'Track my order', 'Delivery options', 'Payment methods']);
+        addSupportMessage(`Chat history cleared. How can I help you today?`);
+        
+        // Show role-specific suggestions after clearing
+        if (userRole === "Member") {
+            showSuggestions(['Order food', 'Track my order', 'Menu recommendations', 'Delivery options']);
+        } else if (userRole === "Admin") {
+            showSuggestions(['Modify prices', 'Menu management', 'Order statistics', 'Customer feedback']);
+        } else {
+            showSuggestions(['Menu recommendations', 'Create account', 'Delivery options', 'Payment methods']);
+        }
     }
     
     // --- Message handling functions ---
@@ -368,295 +473,261 @@
             btn.className = 'suggestion-btn';
             btn.textContent = suggestion;
             btn.onclick = function() {
-                handleUserInput(suggestion);
+                // Direct navigation for specific actions
+                if (suggestion === 'View cart') {
+                    window.location.href = '/Cart';
+                } else if (suggestion === 'Checkout') {
+                    window.location.href = '/Cart/Payment';
+                } else if (suggestion === 'Track my order') {
+                    window.location.href = '/Cart/Track';
+                } else if (suggestion === 'Show menu' || suggestion === 'Menu recommendations') {
+                    window.location.href = '/MenuItem';
+                } else if (suggestion === 'Order history') {
+                    window.location.href = '/Cart/History';
+                } else {
+                    // For other suggestions, process through the chat
+                    handleUserInput(suggestion);
+                }
             };
             suggestionsContainer.appendChild(btn);
         });
     }
     
-    // --- Enhanced auto-reply logic ---
-    function getAutoReply(message) {
-        message = message.toLowerCase();
-        let response = "";
-        let suggestions = [];
-        
-        // Clear chat command
-        if (message.includes('clear') || message.includes('reset') || message.includes('remove chat')) {
-            clearChatHistory();
-            return { response: "Chat history cleared.", suggestions: ['Menu recommendations', 'Track my order', 'Delivery options'] };
-        }
-        
-        // Order tracking
-        if ((message.includes('track') && message.includes('order')) || message.includes('where') && message.includes('order')) {
-            response = "You can track your order status <a href='/Cart/Track' target='_blank'>here</a>. Would you like me to help you with anything else about your order?";
-            suggestions = ['Order status', 'Delivery time', 'Cancel order', 'Order issues'];
-            
-            // Show a sample order tracking card
-            response += `
-            <div class="order-status-card">
-                <div class="order-status-header">Order #12345 Status</div>
-                <div class="order-status-progress">
-                    <div class="order-status-bar" style="width: 75%;"></div>
-                </div>
-                <div class="order-status-details">
-                    <span>Order Placed</span>
-                    <span>Preparing</span>
-                    <span>Out for Delivery</span>
-                    <span>Delivered</span>
-                </div>
-                <div style="margin-top: 10px; font-size: 14px;">Current Status: <strong>Out for Delivery</strong></div>
-                <div style="margin-top: 5px; font-size: 12px;">Estimated Delivery: <strong>12:45 PM</strong></div>
-            </div>`;
-            
-            return { response, suggestions };
-        }
-        
-        // Menu recommendations
-        if (message.includes('menu') || message.includes('food') || message.includes('recommend') || message.includes('special')) {
-            response = "You can browse our full menu on the <a href='/MenuItem' target='_blank'>Menu</a> page. Here are some popular items our customers love:";
-            suggestions = ['Burger options', 'Vegetarian options', 'Desserts', 'Beverages'];
-            
-            // Show sample menu items with images
-            response += `
-            <div class="menu-item-card">
-                <img src="/images/burger.jpg" class="menu-item-image" alt="Classic Burger">
-                <div class="menu-item-details">
-                    <div class="menu-item-name">Classic Burger</div>
-                    <div class="menu-item-description">Beef patty with special sauce</div>
-                    <div class="menu-item-price">RM8.99</div>
-                </div>
-            </div>
-            <div class="menu-item-card">
-                <img src="/images/pizza.jpg" class="menu-item-image" alt="Pepperoni Pizza">
-                <div class="menu-item-details">
-                    <div class="menu-item-name">Pepperoni Pizza</div>
-                    <div class="menu-item-description">Thin crust with mozzarella</div>
-                    <div class="menu-item-price">RM12.99</div>
-                </div>
-            </div>
-            <div class="menu-item-card">
-                <img src="/images/salad.jpg" class="menu-item-image" alt="Fresh Garden Salad">
-                <div class="menu-item-details">
-                    <div class="menu-item-name">Fresh Garden Salad</div>
-                    <div class="menu-item-description">Mixed greens with dressing</div>
-                    <div class="menu-item-price">RM6.99</div>
-                </div>
-            </div>`;
-            
-            return { response, suggestions };
-        }
-        
-        // Delivery information
-        if (message.includes('delivery') || message.includes('address') || message.includes('shipping')) {
-            response = "We offer both delivery and pickup options. Delivery usually takes 30-45 minutes depending on your location. You can update your delivery address in your <a href='/Account/UpdateProfile' target='_blank'>profile</a>.";
-            suggestions = ['Delivery time', 'Change address', 'Delivery fee', 'Pickup options'];
-            return { response, suggestions };
-        }
-        
-        // Payment options
-        if (message.includes('payment') || message.includes('pay') || message.includes('card') || message.includes('cash')) {
-            response = "We accept various payment methods including credit/debit cards and cash on delivery. All online payments are securely processed.";
-            suggestions = ['Payment issues', 'Add payment method', 'Cash on delivery', 'Receipt'];
-            return { response, suggestions };
-        }
-        
-        // Greetings
-        if (message.includes('hello') || message.includes('hi') || message.includes('hey') || message.includes('morning') || message.includes('afternoon') || message.includes('evening')) {
-            response = "Hello! How can I assist you with your food order today?";
-            suggestions = ['Menu recommendations', 'Track my order', 'Delivery options', 'Payment methods'];
-            return { response, suggestions };
-        }
-        
-        // Order cancellation
-        if (message.includes('cancel') || message.includes('remove order')) {
-            response = "To cancel an order, please provide your order number. Note that orders can only be cancelled if they haven't been prepared yet. Would you like to proceed with cancellation?";
-            suggestions = ['Yes, cancel my order', 'No, keep my order', 'Order issues', 'Speak to human'];
-            return { response, suggestions };
-        }
-        
-        // Account management
-        if (message.includes('account') || message.includes('profile') || message.includes('update') || message.includes('change')) {
-            response = "You can manage your account settings, update your profile information, or change your password from the <a href='/Account/UpdateProfile' target='_blank'>Account</a> menu.";
-            suggestions = ['Update address', 'Change password', 'Profile picture', 'Order history'];
-            return { response, suggestions };
-        }
-        
-        // Contact and support
-        if (message.includes('contact') || message.includes('support') || message.includes('help') || message.includes('human') || message.includes('agent')) {
-            response = "You can reach our customer support team via email at support@quickbite.com or by phone at (555) 123-4567 during business hours (9 AM - 10 PM). Would you like me to connect you with a human agent?";
-            suggestions = ['Yes, connect to agent', 'No thanks', 'Email support', 'Phone support'];
-            return { response, suggestions };
-        }
-        
-        // Order history
-        if (message.includes('order') && (message.includes('history') || message.includes('previous') || message.includes('past'))) {
-            response = "You can view your complete order history on the <a href='/Cart/History' target='_blank'>Order History</a> page. This includes all your past orders, receipts, and delivery details.";
-            suggestions = ['Recent orders', 'Order receipt', 'Reorder items', 'Order issues'];
-            return { response, suggestions };
-        }
-        
-        // Receipt information
-        if (message.includes('receipt') || message.includes('invoice')) {
-            response = "You can view and email your receipts from the <a href='/Cart/History' target='_blank'>Order History</a> page. Each receipt contains detailed information about your order, payment method, and delivery details.";
-            suggestions = ['Email receipt', 'Print receipt', 'Missing receipt', 'Order history'];
-            return { response, suggestions };
-        }
-        
-        // Login issues
-        if ((message.includes('login') || message.includes('log in') || message.includes('sign in')) &&
-            (message.includes('problem') || message.includes('issue') || message.includes('error') || message.includes('can\'t'))) {
-            response = "If you're having trouble logging in, you can reset your password at <a href='/Account/ResetPassword' target='_blank'>Reset Password</a>. Make sure cookies are enabled in your browser and you're using the correct email address.";
-            suggestions = ['Reset password', 'Create account', 'Cookie settings', 'Browser issues'];
-            return { response, suggestions };
-        }
-        
-        // Technical issues
-        if (message.includes('error') || message.includes('bug') || message.includes('not working') || message.includes('broken') || message.includes('issue')) {
-            response = "I'm sorry you're experiencing technical difficulties. For most issues, clearing your browser cache or trying a different browser can help. If the problem persists, please provide details about the issue you're facing.";
-            suggestions = ['Clear cache', 'Browser issues', 'App not working', 'Payment failed'];
-            return { response, suggestions };
-        }
-        
-        // Cart and checkout
-        if (message.includes('cart') || message.includes('shopping bag') || message.includes('checkout') || message.includes('my order')) {
-            response = "You can view your current cart items and proceed to checkout at the <a href='/Cart/Index' target='_blank'>Your Cart</a> page. From there, you can modify quantities, remove items, or complete your purchase.";
-            suggestions = ['Checkout issues', 'Add items', 'Remove items', 'Promo codes'];
-            return { response, suggestions };
-        }
-        
-        // Dietary restrictions and allergies
-        if (message.includes('allergy') || message.includes('allergic') || message.includes('dietary') || message.includes('vegetarian') || message.includes('vegan') || message.includes('gluten')) {
-            response = "We take dietary restrictions and allergies very seriously. Each menu item has detailed ingredient information. You can also add special instructions during checkout to notify our kitchen staff about your specific requirements.";
-            suggestions = ['Vegetarian options', 'Gluten-free options', 'Nut allergies', 'Special instructions'];
-            return { response, suggestions };
-        }
-        
-        // Opening hours
-        if (message.includes('hour') || message.includes('open') || message.includes('close') || message.includes('time')) {
-            response = "Our restaurant is open from 10:00 AM to 10:00 PM Monday through Thursday, and 10:00 AM to 11:00 PM Friday through Sunday. Online orders can be placed anytime, but will only be processed during business hours.";
-            suggestions = ['Delivery hours', 'Holiday hours', 'Late night options', 'Pre-order'];
-            return { response, suggestions };
-        }
-        
-        // Default response
-        response = "Thank you for your message. How else can I assist you with your food order today?";
-        suggestions = ['Menu recommendations', 'Track my order', 'Delivery options', 'Payment methods'];
-        return { response, suggestions };
-    }
-    
     // --- Handle user input ---
-    function handleUserInput(message) {
-        if (message.trim() === '') return;
+    async function handleUserInput(message) {
+        if (!message.trim()) return;
         
-        // Display user message
+        // Add user message to chat
         addUserMessage(message);
+        
+        // Clear input field
+        document.getElementById('chatInput').value = '';
         
         // Show typing indicator
         showTypingIndicator();
         
-        // Process after a short delay to simulate thinking
-        setTimeout(function() {
+        try {
+            // Send message to SignalR hub
+            await connection.invoke("ProcessUserMessage", userRole, userIdentifier, message);
+        } catch (err) {
+            console.error(err);
             removeTypingIndicator();
-            
-            // Get automated response
-            const response = getAutoReply(message);
-            addSupportMessage(`<b>Support:</b> ${response.response}`);
-            
-            // Show relevant suggestions
-            showSuggestions(response.suggestions);
-            
-        }, 1000);
-        
-        // Clear input field
-        document.getElementById('chatInput').value = '';
+            addSupportMessage("Sorry, there was an error processing your request. Please try again later.");
+        }
     }
     
-    // --- File handling ---
-    function handleFileUpload(event) {
-        const file = event.target.files[0];
+    // --- Handle image upload ---
+    async function handleImageUpload(file) {
         if (!file) return;
         
-        if (!file.type.match('image.*')) {
-            addSupportMessage('<b>Support:</b> Please upload only image files.');
-            return;
-        }
-        
+        // Create a message showing the uploaded image
         const reader = new FileReader();
-        reader.onload = function(e) {
-            // Display the uploaded image in chat
-            addUserMessage(`<img src="${e.target.result}" class="chat-image" alt="Uploaded image">`);
+        reader.onload = async function(e) {
+            const imageUrl = e.target.result;
+            
+            // Add user message with image
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'user-message';
+            msgDiv.innerHTML = `<b>You:</b> <br><img src="${imageUrl}" class="chat-image" alt="Uploaded image">`;
+            document.getElementById('chatMessages').appendChild(msgDiv);
+            scrollToBottom();
             
             // Show typing indicator
             showTypingIndicator();
             
-            // Process after a short delay
-            setTimeout(function() {
+            try {
+                // Send image to SignalR hub for processing
+                await connection.invoke("ProcessImageUpload", userRole, userIdentifier, imageUrl);
+            } catch (err) {
+                console.error(err);
                 removeTypingIndicator();
-                addSupportMessage('<b>Support:</b> Thanks for sharing the image. How can I help you with this?');
-                showSuggestions(['Identify this item', 'Menu similar to this', 'Report an issue', 'Just sharing']);
-            }, 1500);
+                addSupportMessage("Sorry, there was an error processing your image. Please try again later.");
+            }
         };
         reader.readAsDataURL(file);
     }
     
-    // --- Initialize chat ---
-    document.addEventListener('DOMContentLoaded', function() {
-        loadChatHistory();
+    // --- Admin confirmation dialog ---
+    function showAdminConfirmation(message, actionData) {
+        const confirmDiv = document.createElement('div');
+        confirmDiv.className = 'support-message';
+        confirmDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p>${message}</p>
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Yes</button>
+                    <button class="confirm-no">No</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(confirmDiv);
+        scrollToBottom();
         
-        // Toggle chat visibility
+        // Add event listeners to buttons
+        confirmDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            // Remove confirmation dialog
+            confirmDiv.remove();
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                // Send confirmation to SignalR hub
+                await connection.invoke("ConfirmAdminAction", actionData.action, actionData.itemName, actionData.newPrice);
+            } catch (err) {
+                console.error(err);
+                removeTypingIndicator();
+                addSupportMessage("Sorry, there was an error processing your request. Please try again later.");
+            }
+        });
+        
+        confirmDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            // Remove confirmation dialog
+            confirmDiv.remove();
+            
+            // Add message that action was cancelled
+            addSupportMessage("Action cancelled. How else can I assist you?");
+        });
+    }
+    
+    // --- Add items to cart ---
+    async function addItemsToCart(items) {
+        if (!items || items.length === 0) return;
+        
+        // For each item, make an AJAX call to add to cart
+        for (const item of items) {
+            try {
+                const response = await fetch('/Cart/Add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: `menuItemId=${item.menuItemId}&quantity=${item.quantity}${item.selectedPersonalizations ? '&SelectedPersonalizations=' + encodeURIComponent(item.selectedPersonalizations) : ''}`
+                });
+                
+                const result = await response.json();
+                if (!result.success) {
+                    console.error('Error adding item to cart:', result.message);
+                }
+            } catch (err) {
+                console.error('Error adding item to cart:', err);
+            }
+        }
+        
+        // Update cart count or notification if needed
+        // This would depend on how your site handles cart updates
+    }
+    
+    // --- SignalR event handlers ---
+    connection.on("ReceiveResponse", (message) => {
+        removeTypingIndicator();
+        addSupportMessage(message);
+    });
+    
+    connection.on("ShowSuggestions", (suggestions) => {
+        showSuggestions(suggestions);
+    });
+    
+    connection.on("ConfirmAdminAction", (message, actionData) => {
+        removeTypingIndicator();
+        showAdminConfirmation(message, actionData);
+    });
+    
+    connection.on("AddToCart", (items) => {
+        addItemsToCart(items);
+    });
+    
+    connection.on("ShowImageRecognitionResults", (results) => {
+        removeTypingIndicator();
+        
+        // Create a message with the recognition results
+        let message = `<div class="image-recognition-result">
+            <h4>Image Recognition Results</h4>
+            <p>I've identified these items in your image:</p>
+            <div class="recognized-items">`;
+            
+        results.items.forEach(item => {
+            message += `<span class="recognized-item" onclick="handleUserInput('Order ${item.name}')">${item.name}</span>`;
+        });
+        
+        message += `</div>
+            <p style="margin-top: 10px;">Click on any item above to order it, or use the suggestions below.</p>
+        </div>`;
+        
+        addSupportMessage(message);
+        
+        // Create custom suggestions based on recognized items
+        const customSuggestions = [];
+        if (results.items.length > 0) {
+            customSuggestions.push(`Order ${results.items[0].name}`);
+            if (results.items.length > 1) {
+                customSuggestions.push(`Order ${results.items[1].name}`);
+            }
+        }
+        customSuggestions.push('Show menu');
+        customSuggestions.push('View cart');
+        
+        // Show relevant suggestions
+        showSuggestions(customSuggestions);
+    });
+    
+    // --- Initialize chat ---
+    async function initializeChat() {
+        try {
+            await connection.start();
+            console.log("SignalR Connected.");
+            
+            // Load chat history after connection is established
+            loadChatHistory();
+            
+            // Set up event listeners
+            document.getElementById('chatSendBtn').addEventListener('click', () => {
+                const message = document.getElementById('chatInput').value;
+                handleUserInput(message);
+            });
+            
+            document.getElementById('chatInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const message = document.getElementById('chatInput').value;
+                    handleUserInput(message);
+                }
+            });
+            
+            document.getElementById('chatClearBtn').addEventListener('click', clearChatHistory);
+            
+            document.getElementById('chatMinimizeBtn').addEventListener('click', () => {
+                const chatBody = document.getElementById('chatBody');
+                chatBody.style.display = chatBody.style.display === 'none' ? 'flex' : 'none';
+            });
+            
+            document.getElementById('chatUploadBtn').addEventListener('click', () => {
+                document.getElementById('chatFileInput').click();
+            });
+            
+            document.getElementById('chatFileInput').addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    handleImageUpload(e.target.files[0]);
+                }
+            });
+            
+        } catch (err) {
+            console.error(err);
+            setTimeout(initializeChat, 5000);
+        }
+    }
+    
+    // Start the chat when the page loads
+    document.addEventListener('DOMContentLoaded', initializeChat);
+    
+    // Add click handler for chat header to toggle visibility
+    document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('chatHeader').onclick = function(e) {
             if (e.target.id === 'chatHeader' || e.target.tagName === 'I' && e.target.parentNode.id === 'chatHeader') {
                 var body = document.getElementById('chatBody');
                 body.style.display = body.style.display === 'none' ? 'flex' : 'none';
             }
         };
-        
-        // Clear chat button
-        document.getElementById('chatClearBtn').onclick = function(e) {
-            e.stopPropagation();
-            clearChatHistory();
-        };
-        
-        // Minimize chat button
-        document.getElementById('chatMinimizeBtn').onclick = function(e) {
-            e.stopPropagation();
-            document.getElementById('chatBody').style.display = 'none';
-        };
-        
-        // Send message button
-        document.getElementById('chatSendBtn').onclick = function() {
-            const input = document.getElementById('chatInput');
-            handleUserInput(input.value);
-        };
-        
-        // Send message on Enter key
-        document.getElementById('chatInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                handleUserInput(this.value);
-            }
-        });
-        
-        // File upload button
-        document.getElementById('chatUploadBtn').onclick = function() {
-            document.getElementById('chatFileInput').click();
-        };
-        
-        // File input change
-        document.getElementById('chatFileInput').addEventListener('change', handleFileUpload);
-        
-        // Initialize SignalR connection
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl('/chathub')
-            .build();
-        
-        connection.on('ReceiveMessage', function (user, message) {
-            // Only handle messages from other users (admin/support staff)
-            if (user !== '@displayName' && user !== 'Support') {
-                addSupportMessage(`<b>${user}:</b> ${message}`);
-            }
-        });
-        
-        connection.start();
     });
 </script>
 
