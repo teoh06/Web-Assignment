@@ -2585,6 +2585,7 @@ html.dark-theme .card .list-group-item {
 .item-image {
     position: relative;
     height: 200px;
+    width: 300px;
     overflow: hidden;
 }
 

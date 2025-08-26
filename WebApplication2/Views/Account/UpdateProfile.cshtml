@@ -35,14 +35,14 @@
                         <h3>Profile Photo</h3>
                         <button class="close-popup" type="button" onclick="closePhotoPopup()">&times;</button>
                     </div>
-                    
+
                     <div class="photo-edit-section">
                         <div id="dropArea" class="upload-new-section">
                             <strong>Drag & drop a photo here, or click to select</strong>
                             <p>Supported: JPEG, PNG, JPG, WebP, GIF (max 5MB)</p>
                             <input type="file" id="newPhotoInputPopup" accept="image/*" style="display:none;">
                         </div>
-                        
+
                         <div class="image-editor" style="display:none;">
                             <div class="editor-controls">
                                 <button type="button" class="rotate-btn" onclick="rotateCropper(-90)">⟲ Rotate Left</button>
@@ -83,35 +83,28 @@
                 </div>
             </div>
 
-            <div class="form-fields">
+            <div class="form-fields vertical-fields">
                 <div class="field-row">
                     <label asp-for="Email">Email</label>
-                    <div class="email-display">@Model.Email</div>
+                    <input asp-for="Email" class="form-input" readonly />
                 </div>
-
                 <div class="field-row">
                     <label asp-for="Address">Address</label>
-                    <div class="address-input-container">
-                        <input asp-for="Address" class="form-input address-input"
-                               placeholder="Enter your full address (e.g., 123 Main Street, City, State ZIP)"
-                               autocomplete="street-address"
-                               data-validation-url="/Account/ValidateAddress"
-                               data-suggestions-url="/Account/GetAddressSuggestions">
-                        <div class="address-suggestions" id="addressSuggestions" hidden></div>
-                        <div class="address-validation-feedback" id="addressFeedback" hidden></div>
-                    </div>
+                    <input asp-for="Address" class="form-input address-input"
+                           placeholder="Enter your full address (e.g., 123 Main Street, City, State ZIP)"
+                           autocomplete="street-address"
+                           data-validation-url="/Account/ValidateAddress"
+                           data-suggestions-url="/Account/GetAddressSuggestions">
                     <span asp-validation-for="Address" class="field-validation-error"></span>
                 </div>
-
                 <div class="field-row">
                     <label asp-for="Name">Name</label>
                     <input asp-for="Name" class="form-input" autofocus>
                     <span asp-validation-for="Name" class="field-validation-error"></span>
                 </div>
-                
                 <div class="field-row">
                     <label asp-for="PhoneNumber">Phone Number</label>
-                    <input asp-for="PhoneNumber" class="form-input" placeholder="Enter your phone number for order notifications">
+                    <input asp-for="PhoneNumber" class="form-input" placeholder="Enter your phone number (Optional)">
                     <span asp-validation-for="PhoneNumber" class="field-validation-error"></span>
                 </div>
             </div>
@@ -135,357 +128,347 @@
     <div class="profile-favorites-card">
         <h2 class="favorite-title">Your Favorite Dishes</h2>
         <div id="favoriteList">
-        @if (User.IsInRole("Member"))
-        {
-            @inject DB db
-            var favIds = db.MenuItemFavorites.Where(f => f.MemberEmail == User.Identity.Name).Select(f => f.MenuItemId).ToList();
-            var favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId)).ToList();
-            if (favorites.Any())
-            {
-                <div class="favorite-list-grid">
-                    @foreach (var item in favorites)
-                    {
-                        <div class="favorite-card">
-                            <a href="/MenuItem/Details/@item.MenuItemId">
-                                <img src="/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" class="favorite-img" />
-                            </a>
-                            <div class="favorite-info">
-                                <div class="favorite-name">@item.Name</div>
-                                <div class="favorite-category">@item.Category?.Name</div>
-                                <div class="favorite-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
-                                <a href="/MenuItem/Details/@item.MenuItemId" class="btn btn-sm btn-info">Details</a>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="empty-favorite">You have not added any favorites yet.</div>
-            }
-        }
+            @await Html.PartialAsync("GetFavoriteListPartial")
         </div>
     </div>
 </div>
 
 <style>
-.photo-popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-}
+    .photo-popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    }
 
-.photo-popup {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
-    width: 90%;
-    max-width: 500px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-    position: relative;
-}
+    .photo-popup {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+        position: relative;
+    }
 
-.popup-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
-.close-popup {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-}
+    .close-popup {
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
 
-.upload-new-section {
-    text-align: center;
-    border: 2px dashed #007bff;
-    border-radius: 8px;
-    padding: 16px;
-    margin-top: 16px;
-    transition: background 0.3s;
-}
+    .upload-new-section {
+        text-align: center;
+        border: 2px dashed #007bff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+        transition: background 0.3s;
+    }
 
-.upload-new-section.active {
-    background: rgba(0, 123, 255, 0.1);
-}
+    .upload-new-section.active {
+        background: rgba(0, 123, 255, 0.1);
+    }
 
-.upload-new-section strong {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-}
+    .upload-new-section strong {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
 
-#dropArea {
-    cursor: pointer;
-}
+    #dropArea {
+        cursor: pointer;
+    }
 
-.popup-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 16px;
-}
+    .popup-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 16px;
+    }
 
-.popup-btn {
-    flex: 1;
-    margin: 0 8px;
-    padding: 12px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background 0.3s;
-}
+    .popup-btn {
+        flex: 1;
+        margin: 0 8px;
+        padding: 12px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background 0.3s;
+    }
 
-.popup-btn-primary {
-    background: #007bff;
-    color: #fff;
-}
+    .popup-btn-primary {
+        background: #007bff;
+        color: #fff;
+    }
 
-.popup-btn-danger {
-    background: #dc3545;
-    color: #fff;
-}
+    .popup-btn-danger {
+        background: #dc3545;
+        color: #fff;
+    }
 
-.popup-btn-secondary {
-    background: #6c757d;
-    color: #fff;
-}
+    .popup-btn-secondary {
+        background: #6c757d;
+        color: #fff;
+    }
 
-.photo-history-section {
-    margin-top: 24px;
-}
+    .photo-history-section {
+        margin-top: 24px;
+    }
 
-.photo-history-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-    gap: 12px;
-    margin-top: 12px;
-}
+    .photo-history-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+    }
 
-.history-photo {
-    position: relative;
-    cursor: pointer;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.2s;
-}
+    .history-photo {
+        position: relative;
+        cursor: pointer;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.2s;
+    }
 
-.history-photo:hover {
-    transform: scale(1.05);
-}
+    .history-photo:hover {
+        transform: scale(1.05);
+    }
 
-.history-photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+    .history-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
 
-.current-photo-indicator {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    background: #28a745;
-    color: #fff;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 0.8rem;
-}
+    .current-photo-indicator {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: #28a745;
+        color: #fff;
+        border-radius: 50%;
+        padding: 2px 6px;
+        font-size: 0.8rem;
+    }
 
-.feedback-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #28a745;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    z-index: 10001;
-    font-weight: 500;
-    max-width: 300px;
-    animation: fadeInOut 3s ease-in-out;
-}
+    .feedback-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 10001;
+        font-weight: 500;
+        max-width: 300px;
+        animation: fadeInOut 3s ease-in-out;
+    }
 
-.profile-page-flex {
-    display: flex;
-    flex-direction: row;
-    gap: 40px;
-    align-items: flex-start;
-    justify-content: center;
-    margin: 40px auto;
-    max-width: 1400px;
-}
-.profile-main-card {
-    background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
-    flex: 2;
-    border-radius: 16px;
-    box-shadow: 0 4px 24px #0002;
-    padding: 32px;
-    min-width: 400px;
-}
-.profile-favorites-card {
-    background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
-    flex: 1;
-    border-radius: 16px;
-    box-shadow: 0 4px 24px #0002;
-    padding: 32px;
-    min-width: 320px;
-    max-width: 420px;
-}
-.favorite-title {
-    font-family: 'Victor Mono', monospace;
-    font-size: 1.5rem;
-    color: var(--primary-brand);
-    margin-bottom: 18px;
-}
-.favorite-list-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-.favorite-card {
-    border-radius: 12px;
-    box-shadow: 0 2px 8px #0003;
-    padding: 18px;
-    display: flex;
-    gap: 18px;
-    align-items: center;
-}
-.favorite-img {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 8px;
-}
-.favorite-info {
-    flex: 1;
-    text-align: left;
-}
-.favorite-name {
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin-bottom: 2px;
-}
-.favorite-category {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-    margin-bottom: 2px;
-}
-.favorite-price {
-    color: var(--accent-green);
-    font-weight: bold;
-    margin-bottom: 6px;
-}
-.empty-favorite {
-    font-style: italic;
-    margin-top: 12px;
-}
-.photo-edit-section {
-    margin: 16px 0;
-    border-radius: 8px;
-    overflow: hidden;
-}
+    .profile-page-flex {
+        display: flex;
+        flex-direction: row;
+        gap: 40px;
+        align-items: flex-start;
+        justify-content: center;
+        margin: 40px auto;
+        max-width: 1400px;
+    }
+    .profile-main-card {
+        background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+        flex: 2;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px #0002;
+        padding: 32px;
+        min-width: 400px;
+    }
+    .profile-favorites-card {
+        background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+        flex: 1;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px #0002;
+        padding: 32px;
+        min-width: 320px;
+        max-width: 420px;
+    }
+    .favorite-title {
+        font-family: 'Victor Mono', monospace;
+        font-size: 1.5rem;
+        color: var(--primary-brand);
+        margin-bottom: 18px;
+    }
+    .favorite-list-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+    .favorite-card {
+        border-radius: 12px;
+        box-shadow: 0 2px 8px #0003;
+        padding: 18px;
+        display: flex;
+        gap: 18px;
+        align-items: center;
+    }
+    .favorite-img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    .favorite-info {
+        flex: 1;
+        text-align: left;
+    }
+    .favorite-name {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 2px;
+    }
+    .favorite-category {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+    }
+    .favorite-price {
+        color: var(--accent-green);
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
+    .empty-favorite {
+        font-style: italic;
+        margin-top: 12px;
+    }
+    .photo-edit-section {
+        margin: 16px 0;
+        border-radius: 8px;
+        overflow: hidden;
+    }
 
-.image-editor {
-    margin-top: 16px;
-}
+    .image-editor {
+        margin-top: 16px;
+    }
 
-.editor-controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-    justify-content: center;
-}
+    .editor-controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        justify-content: center;
+    }
 
-.rotate-btn, .reset-btn {
-    padding: 8px 16px;
-    border-radius: 20px;
-    border: none;
-    background: var(--bg-accent);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-}
+    .rotate-btn, .reset-btn {
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: none;
+        background: var(--bg-accent);
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
 
-.rotate-btn:hover, .reset-btn:hover {
-    background: var(--primary-brand);
-    color: white;
-    transform: translateY(-1px);
-}
+    .rotate-btn:hover, .reset-btn:hover {
+        background: var(--primary-brand);
+        color: white;
+        transform: translateY(-1px);
+    }
 
-.editor-preview {
-    text-align: center;
-    margin: 12px 0;
-    padding: 16px;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-}
+    .editor-preview {
+        text-align: center;
+        margin: 12px 0;
+        padding: 16px;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+    }
 
-.photo-hover-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
+    .photo-hover-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
 
-.history-photo {
-    position: relative;
-    cursor: pointer;
-}
+    .history-photo {
+        position: relative;
+        cursor: pointer;
+    }
 
-.history-photo:hover .photo-hover-overlay {
-    opacity: 1;
-}
+    .history-photo:hover .photo-hover-overlay {
+        opacity: 1;
+    }
 
-.select-indicator {
-    color: white;
-    font-weight: bold;
-    background: var(--primary-brand);
-    padding: 4px 12px;
-    border-radius: 12px;
-}
+    .select-indicator {
+        color: white;
+        font-weight: bold;
+        background: var(--primary-brand);
+        padding: 4px 12px;
+        border-radius: 12px;
+    }
 
-.history-photo.selected {
-    border: 2px solid var(--primary-brand);
-    box-shadow: 0 0 0 2px var(--primary-brand);
-}
+    .history-photo.selected {
+        border: 2px solid var(--primary-brand);
+        box-shadow: 0 0 0 2px var(--primary-brand);
+    }
 
-.upload-new-section.editing {
-    pointer-events: none;
-    opacity: 0.5;
-}
-.address-input-container {
-    width: 100%;
-    max-width: 600px;
-}
-.address-input {
-    width: 100%;
-    min-width: 350px;
-    max-width: 600px;
-    box-sizing: border-box;
-}
-@@media (max-width: 900px) {
-    .profile-page-flex { flex-direction: column; gap: 24px; }
-    .profile-main-card, .profile-favorites-card { min-width: 100%; max-width: 100%; }
-    .favorite-list-grid { flex-direction: row; flex-wrap: wrap; gap: 18px; }
-    .favorite-card { flex-direction: column; align-items: flex-start; }
-}
+    .upload-new-section.editing {
+        pointer-events: none;
+        opacity: 0.5;
+    }
+    .address-input-container {
+        width: 100%;
+        max-width: 600px;
+    }
+    .address-input {
+        width: 100%;
+        min-width: 350px;
+        max-width: 600px;
+        box-sizing: border-box;
+    }
+    .vertical-fields .field-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 18px;
+    }
+    .vertical-fields label {
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
+    .vertical-fields .form-input,
+    .vertical-fields .address-input {
+        width: 100%;
+        min-width: 250px;
+        max-width: 600px;
+        box-sizing: border-box;
+        margin-bottom: 0;
+    }
+    @@media (max-width: 900px) {
+        .profile-page-flex { flex-direction: column; gap: 24px; }
+        .profile-main-card, .profile-favorites-card { min-width: 100%; max-width: 100%; }
+        .favorite-list-grid { flex-direction: row; flex-wrap: wrap; gap: 18px; }
+        .favorite-card { flex-direction: column; align-items: flex-start; }
+    }
 </style>
 
 @section Scripts {
@@ -534,16 +517,16 @@
         function handlePhotoFile(file) {
             const cropperImage = document.getElementById('cropperImage');
             if (!cropperImage) return;
-            
-            if (file.size > 5 * 1024 * 1024) { 
+
+            if (file.size > 5 * 1024 * 1024) {
                 showFeedback('File size must be less than 5MB', 'error');
-                return; 
+                return;
             }
-            
+
             const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
-            if (!allowedTypes.includes(file.type)) { 
+            if (!allowedTypes.includes(file.type)) {
                 showFeedback('Please select a valid image file (JPEG, PNG, JPG, WebP, GIF)', 'error');
-                return; 
+                return;
             }
 
             const reader = new FileReader();
@@ -552,12 +535,12 @@
                 cropperImage.src = e.target.result;
                 document.querySelector('.image-editor').style.display = 'block';
                 document.getElementById('dropArea').classList.add('editing');
-                
-                if (cropper) { 
-                    cropper.destroy(); 
+
+                if (cropper) {
+                    cropper.destroy();
                 }
-                
-                cropper = new Cropper(cropperImage, { 
+
+                cropper = new Cropper(cropperImage, {
                     aspectRatio: 1,
                     viewMode: 1,
                     autoCropArea: 0.9,
@@ -585,15 +568,15 @@
             const cropperImage = document.getElementById('cropperImage');
             originalImageData = img.src;
             cropperImage.src = img.src;
-            
+
             document.querySelector('.image-editor').style.display = 'block';
             document.getElementById('dropArea').classList.add('editing');
-            
-            if (cropper) { 
-                cropper.destroy(); 
+
+            if (cropper) {
+                cropper.destroy();
             }
-            
-            cropper = new Cropper(cropperImage, { 
+
+            cropper = new Cropper(cropperImage, {
                 aspectRatio: 1,
                 viewMode: 1,
                 autoCropArea: 0.9,
@@ -619,7 +602,7 @@
             // Clear any previous values
             processedInput.value = '';
             selectedPathInput.value = '';
-            
+
             if (cropper && document.querySelector('.image-editor').style.display === 'block') {
                 // If we have an active cropper, use its output
                 const canvas = cropper.getCroppedCanvas({
@@ -629,7 +612,7 @@
                     imageSmoothingEnabled: true,
                     imageSmoothingQuality: 'high'
                 });
-                
+
                 if (canvas) {
                     const processedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
                     processedInput.value = processedDataUrl;
@@ -670,7 +653,7 @@
         function openPhotoPopup() {
             document.getElementById('photoPopup').style.display = 'flex';
             markCurrentPhoto();
-            
+
             // Reset the popup state
             document.querySelector('.image-editor').style.display = 'none';
             document.getElementById('dropArea').classList.remove('editing');
@@ -684,12 +667,12 @@
             document.getElementById('photoPopup').style.display = 'none';
             selectedPhotoElement = null;
             clearSelections();
-            
-            if (cropper) { 
-                cropper.destroy(); 
-                cropper = null; 
+
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
             }
-            
+
             document.querySelector('.image-editor').style.display = 'none';
             document.getElementById('dropArea').classList.remove('editing');
             originalImageData = null;
