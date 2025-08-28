@@ -41,10 +41,8 @@
         </div>
         <div class="chat-input-container">
             <input id="chatInput" class="chat-input" type="text" placeholder="Type your message..." />
-            <button id="chatUploadBtn" class="chat-upload-btn" title="Upload image"><i class="fas fa-image"></i></button>
             <button id="chatSendBtn" class="chat-send-btn">Send</button>
         </div>
-        <input type="file" id="chatFileInput" accept="image/*" style="display: none;" />
     </div>
 </div>
 
@@ -54,12 +52,13 @@
         bottom: 20px;
         right: 20px;
         width: 350px;
-        background-color: #fff;
+        background-color: var(--bg-primary);
         border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        box-shadow: var(--shadow-lg);
         z-index: 1000;
         overflow: hidden;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        border: 1px solid var(--border-light);
     }
     
     .chat-header {
@@ -81,7 +80,7 @@
     .chat-controls button {
         background: none;
         border: none;
-        color: white;
+        color: #fff !important;
         cursor: pointer;
         font-size: 14px;
     }
@@ -122,15 +121,23 @@
     .chat-input-container {
         display: flex;
         padding: 10px;
-        border-top: 1px solid #eee;
+        border-top: 1px solid var(--border-light);
+        background-color: var(--bg-primary);
     }
     
     .chat-input {
         flex-grow: 1;
         padding: 10px;
-        border: 1px solid #ddd;
+        border: 1px solid var(--border-medium);
         border-radius: 20px;
         outline: none;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+    }
+    
+    .chat-input:focus {
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
     }
     
     .chat-send-btn, .chat-upload-btn {
@@ -297,7 +304,7 @@
     
     /* Admin Confirmation Dialog */
     .admin-confirmation {
-        background-color: #fff3cd;
+        background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
         border: 1px solid #ffeeba;
         border-radius: 8px;
         padding: 10px 15px;
@@ -387,6 +394,19 @@
     const userRole = "@userRole";
     const userIdentifier = "@userIdentifier";
     
+    // --- Connection status feedback ---
+    function setConnectionStatus(connected) {
+        let header = document.getElementById('chatHeader');
+        if (!header) return;
+        if (connected) {
+            header.style.backgroundColor = '#4CAF50';
+            header.title = 'Connected to support';
+        } else {
+            header.style.backgroundColor = '#b71c1c';
+            header.title = 'Disconnected from support. Trying to reconnect...';
+        }
+    }
+    
     // --- Chat history persistence ---
     function saveChatHistory() {
         sessionStorage.setItem('chatHistory', document.getElementById('chatMessages').innerHTML);
@@ -467,93 +487,45 @@
     function showSuggestions(suggestions) {
         const suggestionsContainer = document.getElementById('chatSuggestions');
         suggestionsContainer.innerHTML = '';
-        
         suggestions.forEach(suggestion => {
             const btn = document.createElement('button');
             btn.className = 'suggestion-btn';
             btn.textContent = suggestion;
             btn.onclick = function() {
-                // Direct navigation for specific actions
-                if (suggestion === 'View cart') {
-                    window.location.href = '/Cart';
-                } else if (suggestion === 'Checkout') {
-                    window.location.href = '/Cart/Payment';
-                } else if (suggestion === 'Track my order') {
-                    window.location.href = '/Cart/Track';
-                } else if (suggestion === 'Show menu' || suggestion === 'Menu recommendations') {
-                    window.location.href = '/MenuItem';
-                } else if (suggestion === 'Order history') {
-                    window.location.href = '/Cart/History';
+                // --- Reorder feature ---
+                if (suggestion === 'Reorder previous order') {
+                    showReorderConfirmation();
+                    return;
+                }
+                // --- Live order tracking feature ---
+                if (suggestion === 'Track my order (live)') {
+                    promptTrackOrderLive();
+                    return;
+                }
+                // ...existing admin and navigation logic...
+                if (userRole === "Admin") {
+                    if (suggestion === 'Modify menu item') { promptAdminModifyMenuItem(); return; }
+                    if (suggestion === 'Modify category') { promptAdminModifyCategory(); return; }
+                    if (suggestion === 'Menu management' || suggestion === 'Go to menu management') { showNavigationConfirmation('Menu management'); return; }
+                    if (suggestion === 'Category management' || suggestion === 'Go to category management') { showNavigationConfirmation('Category management'); return; }
+                }
+                if (['View cart', 'Checkout', 'Track my order', 'Show menu', 'Menu recommendations', 'Order history'].includes(suggestion)) {
+                    showNavigationConfirmation(suggestion);
                 } else {
-                    // For other suggestions, process through the chat
                     handleUserInput(suggestion);
                 }
             };
             suggestionsContainer.appendChild(btn);
         });
     }
-    
-    // --- Handle user input ---
-    async function handleUserInput(message) {
-        if (!message.trim()) return;
-        
-        // Add user message to chat
-        addUserMessage(message);
-        
-        // Clear input field
-        document.getElementById('chatInput').value = '';
-        
-        // Show typing indicator
-        showTypingIndicator();
-        
-        try {
-            // Send message to SignalR hub
-            await connection.invoke("ProcessUserMessage", userRole, userIdentifier, message);
-        } catch (err) {
-            console.error(err);
-            removeTypingIndicator();
-            addSupportMessage("Sorry, there was an error processing your request. Please try again later.");
-        }
-    }
-    
-    // --- Handle image upload ---
-    async function handleImageUpload(file) {
-        if (!file) return;
-        
-        // Create a message showing the uploaded image
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const imageUrl = e.target.result;
-            
-            // Add user message with image
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'user-message';
-            msgDiv.innerHTML = `<b>You:</b> <br><img src="${imageUrl}" class="chat-image" alt="Uploaded image">`;
-            document.getElementById('chatMessages').appendChild(msgDiv);
-            scrollToBottom();
-            
-            // Show typing indicator
-            showTypingIndicator();
-            
-            try {
-                // Send image to SignalR hub for processing
-                await connection.invoke("ProcessImageUpload", userRole, userIdentifier, imageUrl);
-            } catch (err) {
-                console.error(err);
-                removeTypingIndicator();
-                addSupportMessage("Sorry, there was an error processing your image. Please try again later.");
-            }
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    // --- Admin confirmation dialog ---
-    function showAdminConfirmation(message, actionData) {
+
+    // --- Reorder confirmation dialog ---
+    function showReorderConfirmation() {
         const confirmDiv = document.createElement('div');
         confirmDiv.className = 'support-message';
         confirmDiv.innerHTML = `
             <div class="admin-confirmation">
-                <p>${message}</p>
+                <p>Do you want to reorder your previous order?</p>
                 <div class="admin-confirmation-buttons">
                     <button class="confirm-yes">Yes</button>
                     <button class="confirm-no">No</button>
@@ -562,62 +534,65 @@
         `;
         document.getElementById('chatMessages').appendChild(confirmDiv);
         scrollToBottom();
-        
-        // Add event listeners to buttons
         confirmDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
-            // Remove confirmation dialog
             confirmDiv.remove();
-            
-            // Show typing indicator
             showTypingIndicator();
-            
-            try {
-                // Send confirmation to SignalR hub
-                await connection.invoke("ConfirmAdminAction", actionData.action, actionData.itemName, actionData.newPrice);
-            } catch (err) {
-                console.error(err);
-                removeTypingIndicator();
-                addSupportMessage("Sorry, there was an error processing your request. Please try again later.");
-            }
+            await connection.invoke('ReorderPreviousOrder', userRole, userIdentifier);
         });
-        
         confirmDiv.querySelector('.confirm-no').addEventListener('click', () => {
-            // Remove confirmation dialog
             confirmDiv.remove();
-            
-            // Add message that action was cancelled
-            addSupportMessage("Action cancelled. How else can I assist you?");
+            addSupportMessage('Reorder cancelled.');
         });
     }
-    
-    // --- Add items to cart ---
-    async function addItemsToCart(items) {
-        if (!items || items.length === 0) return;
-        
-        // For each item, make an AJAX call to add to cart
-        for (const item of items) {
-            try {
-                const response = await fetch('/Cart/Add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: `menuItemId=${item.menuItemId}&quantity=${item.quantity}${item.selectedPersonalizations ? '&SelectedPersonalizations=' + encodeURIComponent(item.selectedPersonalizations) : ''}`
-                });
-                
-                const result = await response.json();
-                if (!result.success) {
-                    console.error('Error adding item to cart:', result.message);
-                }
-            } catch (err) {
-                console.error('Error adding item to cart:', err);
+
+    // --- Prompt for live order tracking ---
+    function promptTrackOrderLive() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p>Enter your order number to track live status:</p>
+                <input id="liveOrderInput" type="text" style="width:90%" placeholder="e.g. 12345" />
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Track</button>
+                    <button class="confirm-no">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            const val = document.getElementById('liveOrderInput').value;
+            msgDiv.remove();
+            if (val) {
+                showTypingIndicator();
+                await connection.invoke('TrackOrderLive', userRole, userIdentifier, val);
+            } else {
+                addSupportMessage('Please enter a valid order number.');
             }
-        }
-        
-        // Update cart count or notification if needed
-        // This would depend on how your site handles cart updates
+        });
+        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            msgDiv.remove();
+            addSupportMessage('Live tracking cancelled.');
+        });
     }
+
+    // --- SignalR event handlers for new features ---
+    connection.on("LiveOrderStatus", (status) => {
+        removeTypingIndicator();
+        // Show a timeline/status in chat
+        addSupportMessage(status.timelineHtml || status.timeline || status.message || status);
+        if (status.estimatedTime) {
+            addSupportMessage(`<b>Estimated time:</b> ${status.estimatedTime}`);
+        }
+        if (status.suggestions) {
+            showSuggestions(status.suggestions);
+        }
+    });
+    connection.on("ReorderResult", (result) => {
+        removeTypingIndicator();
+        addSupportMessage(result);
+    });
     
     // --- SignalR event handlers ---
     connection.on("ReceiveResponse", (message) => {
@@ -672,50 +647,81 @@
         showSuggestions(customSuggestions);
     });
     
+    // --- Fix: Ensure chat is initialized and welcome message is shown after DOM is ready and SignalR is connected ---
+    function showInitialWelcomeIfNeeded() {
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+        if (!sessionStorage.getItem('chatHistory') || chatMessages.innerHTML.trim() === '') {
+            addSupportMessage(`👋 Welcome to QuickBite support! I see you're logged in as a <strong>${userRole}</strong>. How can I help you today?`);
+            if (userRole === "Member") {
+                showSuggestions(['Order food', 'Track my order', 'Menu recommendations', 'Delivery options']);
+            } else if (userRole === "Admin") {
+                showSuggestions(['Modify prices', 'Menu management', 'Order statistics', 'Customer feedback']);
+            } else {
+                showSuggestions(['Menu recommendations', 'Create account', 'Delivery options', 'Payment methods']);
+            }
+        }
+    }
+
     // --- Initialize chat ---
     async function initializeChat() {
         try {
             await connection.start();
+            setConnectionStatus(true);
             console.log("SignalR Connected.");
-            
-            // Load chat history after connection is established
             loadChatHistory();
+            showInitialWelcomeIfNeeded();
             
-            // Set up event listeners
-            document.getElementById('chatSendBtn').addEventListener('click', () => {
-                const message = document.getElementById('chatInput').value;
-                handleUserInput(message);
-            });
+            // Add event listeners for user input
+            const sendBtn = document.getElementById('chatSendBtn');
+            const chatInput = document.getElementById('chatInput');
             
-            document.getElementById('chatInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    const message = document.getElementById('chatInput').value;
-                    handleUserInput(message);
-                }
-            });
+            if (sendBtn) {
+                sendBtn.addEventListener('click', () => {
+                    const message = chatInput.value;
+                    if (message && message.trim()) {
+                        handleUserInput(message);
+                    }
+                });
+            }
             
-            document.getElementById('chatClearBtn').addEventListener('click', clearChatHistory);
+            if (chatInput) {
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const message = chatInput.value;
+                        if (message && message.trim()) {
+                            handleUserInput(message);
+                        }
+                    }
+                });
+            }
             
-            document.getElementById('chatMinimizeBtn').addEventListener('click', () => {
-                const chatBody = document.getElementById('chatBody');
-                chatBody.style.display = chatBody.style.display === 'none' ? 'flex' : 'none';
-            });
+            const clearBtn = document.getElementById('chatClearBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', clearChatHistory);
+            }
             
-            document.getElementById('chatUploadBtn').addEventListener('click', () => {
-                document.getElementById('chatFileInput').click();
-            });
-            
-            document.getElementById('chatFileInput').addEventListener('change', (e) => {
-                if (e.target.files && e.target.files[0]) {
-                    handleImageUpload(e.target.files[0]);
-                }
-            });
-            
+            const minimizeBtn = document.getElementById('chatMinimizeBtn');
+            if (minimizeBtn) {
+                minimizeBtn.addEventListener('click', () => {
+                    const chatBody = document.getElementById('chatBody');
+                    if (chatBody) {
+                        chatBody.style.display = chatBody.style.display === 'none' ? 'flex' : 'none';
+                    }
+                });
+            }
         } catch (err) {
+            setConnectionStatus(false);
+            addSupportMessage('<span style="color:#b71c1c">❌ Unable to connect to support chat. Retrying...</span>');
             console.error(err);
             setTimeout(initializeChat, 5000);
         }
     }
+    
+    // SignalR connection events
+    connection.onclose(() => setConnectionStatus(false));
+    connection.onreconnecting(() => setConnectionStatus(false));
+    connection.onreconnected(() => setConnectionStatus(true));
     
     // Start the chat when the page loads
     document.addEventListener('DOMContentLoaded', initializeChat);
@@ -729,6 +735,286 @@
             }
         };
     });
-</script>
+    
+    // --- Admin confirmation dialog handler (missing in original) ---
+    function showAdminConfirmation(message, actionData) {
+        const confirmDiv = document.createElement('div');
+        confirmDiv.className = 'support-message';
+        confirmDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p>${message}</p>
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Yes</button>
+                    <button class="confirm-no">No</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(confirmDiv);
+        scrollToBottom();
+        confirmDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            confirmDiv.remove();
+            showTypingIndicator();
+            await connection.invoke('ConfirmAdminAction', actionData.action, actionData.itemName, actionData.newPrice);
+        });
+        confirmDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            confirmDiv.remove();
+            addSupportMessage('Admin action cancelled.');
+        });
+    }
 
-              
+    // --- Add to cart handler (missing in original) ---
+    function addItemsToCart(items) {
+        // Get anti-forgery token from page (if present)
+        let token = document.querySelector('input[name="__RequestVerificationToken"]');
+        let antiForgeryToken = token ? token.value : null;
+        let addedMsg = 'Added to cart:';
+        let errorMsg = '';
+        let completed = 0;
+        let errors = 0;
+        let total = items.length;
+
+        if (!Array.isArray(items)) items = [items];
+
+        items.forEach(item => {
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('menuItemId', item.menuItemId || item.menuItemId || item.MenuItemId);
+            formData.append('quantity', item.quantity || item.Quantity || 1);
+            formData.append('SelectedPersonalizations', item.selectedPersonalizations || item.SelectedPersonalizations || '');
+            if (antiForgeryToken) formData.append('__RequestVerificationToken', antiForgeryToken);
+
+            fetch('/Cart/Add', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {},
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addedMsg += `<br>- ${formData.get('quantity')} x ${item.name || item.Name}`;
+                } else {
+                    errorMsg += `<br>❌ ${item.name || item.Name}: ${data.message}`;
+                    errors++;
+                }
+            })
+            .catch(err => {
+                errorMsg += `<br>❌ ${item.name || item.Name}: Error adding to cart.`;
+                errors++;
+            })
+            .finally(() => {
+                completed++;
+                if (completed === total) {
+                    if (addedMsg !== 'Added to cart:') addSupportMessage(addedMsg);
+                    if (errorMsg) addSupportMessage(errorMsg);
+                    // Optionally reload cart section if present
+                    if (window.location.pathname.toLowerCase().includes('/cart')) {
+                        // If on cart page, reload via AJAX or refresh
+                        location.reload();
+                    }
+                }
+            });
+        });
+    }
+
+    // --- User input handler ---
+    async function handleUserInput(message) {
+        if (!message || !message.trim()) return;
+        
+        // Clear input field
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.value = '';
+        }
+        
+        // Add user message to chat
+        addUserMessage(message);
+        showTypingIndicator();
+        
+        try {
+            // Check connection state and reconnect if needed
+            if (connection.state !== 'Connected') {
+                console.log('Connection not in Connected state. Current state:', connection.state);
+                await connection.start();
+                console.log('Reconnected to SignalR hub');
+            }
+            
+            // Send message to hub
+            await connection.invoke('ProcessUserMessage', userRole, userIdentifier, message);
+        } catch (error) {
+            console.error('Error sending message:', error);
+            removeTypingIndicator();
+            addSupportMessage('<span style="color:#b71c1c">❌ Error sending message. Please try again.</span>');
+            
+            // Try to reconnect
+            try {
+                await connection.start();
+                setConnectionStatus(true);
+            } catch (reconnectError) {
+                console.error('Failed to reconnect:', reconnectError);
+                setConnectionStatus(false);
+            }
+        }
+    }
+
+    // --- Navigation confirmation handler ---
+    function showNavigationConfirmation(action) {
+        let url = '';
+        let confirmMessage = '';
+        
+        switch (action) {
+            case 'View cart':
+                url = '/Cart';
+                confirmMessage = 'Go to your cart to review and modify your order?';
+                break;
+            case 'Checkout':
+                url = '/Cart';
+                confirmMessage = 'Go to checkout to complete your order?';
+                break;
+            case 'Track my order':
+                url = '/Cart/Track';
+                confirmMessage = 'Go to order tracking page?';
+                break;
+            case 'Show menu':
+            case 'Menu recommendations':
+                url = '/MenuItem';
+                confirmMessage = 'Browse our delicious menu?';
+                break;
+            case 'Order history':
+                url = '/Cart/History';
+                confirmMessage = 'View your order history?';
+                break;
+            case 'Menu management':
+                url = '/MenuItem/Index';
+                confirmMessage = 'Go to menu management page?';
+                break;
+            case 'Category management':
+                url = '/Category/Index';
+                confirmMessage = 'Go to category management page?';
+                break;
+            default:
+                handleUserInput(action);
+                return;
+        }
+        
+        const confirmDiv = document.createElement('div');
+        confirmDiv.className = 'support-message';
+        confirmDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p>${confirmMessage}</p>
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Yes</button>
+                    <button class="confirm-no">No</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(confirmDiv);
+        scrollToBottom();
+        
+        confirmDiv.querySelector('.confirm-yes').addEventListener('click', () => {
+            confirmDiv.remove();
+            window.open(url, '_blank');
+            addSupportMessage(`Opening ${action} page for you!`);
+        });
+        
+        confirmDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            confirmDiv.remove();
+            addSupportMessage('No problem! What else can I help you with?');
+        });
+    }
+
+    // --- Admin modify menu item prompt ---
+    function promptAdminModifyMenuItem() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p>Enter menu item name to modify:</p>
+                <input id="menuItemInput" type="text" style="width:90%" placeholder="e.g. Classic Burger" />
+                <p>Select field to modify:</p>
+                <select id="fieldSelect" style="width:90%; margin-bottom:10px;">
+                    <option value="name">Name</option>
+                    <option value="description">Description</option>
+                    <option value="price">Price</option>
+                    <option value="photourl">Photo URL</option>
+                </select>
+                <p>Enter new value:</p>
+                <input id="newValueInput" type="text" style="width:90%" placeholder="New value" />
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Modify</button>
+                    <button class="confirm-no">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        
+        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            const itemName = document.getElementById('menuItemInput').value;
+            const field = document.getElementById('fieldSelect').value;
+            const newValue = document.getElementById('newValueInput').value;
+            msgDiv.remove();
+            
+            if (itemName && field && newValue) {
+                showTypingIndicator();
+                await connection.invoke('ModifyMenuItem', itemName, field, newValue);
+            } else {
+                addSupportMessage('Please fill in all fields.');
+            }
+        });
+        
+        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            msgDiv.remove();
+            addSupportMessage('Menu item modification cancelled.');
+        });
+    }
+
+    // --- Admin modify category prompt ---
+    function promptAdminModifyCategory() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p>Enter current category name:</p>
+                <input id="currentCategoryInput" type="text" style="width:90%" placeholder="e.g. Main Course" />
+                <p>Enter new category name:</p>
+                <input id="newCategoryInput" type="text" style="width:90%" placeholder="New category name" />
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Modify</button>
+                    <button class="confirm-no">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        
+        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            const currentName = document.getElementById('currentCategoryInput').value;
+            const newName = document.getElementById('newCategoryInput').value;
+            msgDiv.remove();
+            
+            if (currentName && newName) {
+                showTypingIndicator();
+                await connection.invoke('ModifyCategory', currentName, newName);
+            } else {
+                addSupportMessage('Please fill in both category names.');
+            }
+        });
+        
+        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            msgDiv.remove();
+            addSupportMessage('Category modification cancelled.');
+        });
+    }
+
+    // --- SignalR event handlers for admin modifications ---
+    connection.on("MenuItemModified", (message) => {
+        removeTypingIndicator();
+        addSupportMessage(message);
+    });
+    
+    connection.on("CategoryModified", (message) => {
+        removeTypingIndicator();
+        addSupportMessage(message);
+    });
+</script>

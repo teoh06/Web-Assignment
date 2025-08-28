@@ -11,413 +11,854 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         $(document).ready(function () {
-            // Variables for pagination and filtering
-            let currentPage = 1;
-            const itemsPerPage = 6;
-            let filteredOrders = [];
-            let allOrders = [];
+            // --- Enhanced Layout/Design: Card and Button Styling ---
+            $(".order-card .card").addClass("shadow border-0");
+            $(".order-card .card-header").addClass("bg-light border-bottom-0");
             
-            // Initialize orders from DOM
-            function initializeOrders() {
-                allOrders = [];
-                $('.order-card').each(function() {
-                    const $this = $(this);
-                    allOrders.push({
-                        element: $this,
-                        id: $this.data('order-id'),
-                        date: $this.data('order-date'),
-                        total: $this.data('order-total'),
-                        status: $this.data('order-status')
-                    });
-                });
-                filteredOrders = [...allOrders];
-                updatePagination();
-                displayOrders();
-            }
+            // Apply consistent button styling
+            $(".order-card .btn").addClass("rounded-pill px-3 fw-semibold");
+            $(".order-card .btn").css({
+                "min-width": "120px", 
+                "margin-right": "8px",
+                "transition": "all 0.3s ease",
+                "position": "relative",
+                "overflow": "hidden"
+            });
             
-            // Filter orders based on search, status, and sort
-            function filterOrders() {
-                const searchTerm = $('#searchInput').val().toLowerCase();
-                const statusFilter = $('#statusFilter').val();
-                const sortOrder = $('#sortOrder').val();
-                
-                filteredOrders = allOrders.filter(order => {
-                    // Filter by search term (order ID)
-                    const matchesSearch = searchTerm === '' || 
-                                         order.id.toString().includes(searchTerm) ||
-                                         order.date.toLowerCase().includes(searchTerm);
-                    
-                    // Filter by status
-                    const matchesStatus = statusFilter === '' || order.status === statusFilter;
-                    
-                    return matchesSearch && matchesStatus;
-                });
-                
-                // Sort orders
-                filteredOrders.sort((a, b) => {
-                    if (sortOrder === 'date_desc') {
-                        return new Date(b.date) - new Date(a.date);
-                    } else if (sortOrder === 'date_asc') {
-                        return new Date(a.date) - new Date(b.date);
-                    } else if (sortOrder === 'total_desc') {
-                        return b.total - a.total;
-                    } else if (sortOrder === 'total_asc') {
-                        return a.total - b.total;
-                    }
-                    return 0;
-                });
-                
-                currentPage = 1; // Reset to first page
-                updatePagination();
-                displayOrders();
-            }
+            // Style specific button types
+            $(".order-card .btn-outline-primary").addClass("border-2").hover(function() {
+                $(this).css("box-shadow", "0 4px 8px rgba(0,123,255,0.25)");
+            }, function() {
+                $(this).css("box-shadow", "none");
+            });
             
-            // Display orders for current page
-            function displayOrders() {
-                const startIndex = (currentPage - 1) * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                const ordersToShow = filteredOrders.slice(startIndex, endIndex);
+            $(".order-card .btn-outline-info").addClass("border-2").hover(function() {
+                $(this).css("box-shadow", "0 4px 8px rgba(23,162,184,0.25)");
+            }, function() {
+                $(this).css("box-shadow", "none");
+            });
+            
+            $(".order-card .btn-outline-success").addClass("border-2").hover(function() {
+                $(this).css("box-shadow", "0 4px 8px rgba(40,167,69,0.25)");
+            }, function() {
+                $(this).css("box-shadow", "none");
+            });
+            
+            $(".order-card .btn-outline-danger").addClass("border-2").hover(function() {
+                $(this).css("box-shadow", "0 4px 8px rgba(220,53,69,0.25)");
+            }, function() {
+                $(this).css("box-shadow", "none");
+            });
+            
+            $(".order-card .btn-warning").addClass("border-2").hover(function() {
+                $(this).css("box-shadow", "0 4px 8px rgba(255,193,7,0.25)");
+            }, function() {
+                $(this).css("box-shadow", "none");
+            });
+            
+            $(".order-card .btn-success").addClass("border-2").hover(function() {
+                $(this).css("box-shadow", "0 4px 8px rgba(40,167,69,0.25)");
+            }, function() {
+                $(this).css("box-shadow", "none");
+            });
+            
+            $(".order-card .btn-secondary").addClass("border-2").hover(function() {
+                $(this).css("box-shadow", "0 4px 8px rgba(108,117,125,0.25)");
+            }, function() {
+                $(this).css("box-shadow", "none");
+            });
+            
+            // Add ripple effect to buttons
+            $(".order-card .btn").on("click", function(e) {
+                const btn = $(this);
+                const x = e.pageX - btn.offset().left;
+                const y = e.pageY - btn.offset().top;
                 
-                // Hide all orders first
-                $('.order-card').hide();
-                
-                // Show only the orders for current page
-                ordersToShow.forEach(order => {
-                    order.element.show();
+                const ripple = $('<span class="btn-ripple"></span>');
+                ripple.css({
+                    left: x + 'px',
+                    top: y + 'px'
                 });
                 
-                // Show message if no orders match filters
-                if (filteredOrders.length === 0) {
-                    if ($('#noOrdersMessage').length === 0) {
-                        $('#ordersList').append('<div id="noOrdersMessage" class="col-12 text-center py-4"><p class="lead">No orders match your filters.</p></div>');
-                    }
+                btn.append(ripple);
+                
+                setTimeout(function() {
+                    ripple.remove();
+                }, 700);
+            });
+            
+            // Style images
+            $(".order-card img").addClass("rounded shadow-sm border");
+
+            // --- Status Filter: Reload with Query Param for Server-Side Filtering ---
+            $('#statusFilter').off('change').on('change', function() {
+                const status = $(this).val();
+                const url = new URL(window.location.href);
+                if (status) {
+                    url.searchParams.set('status', status);
                 } else {
-                    $('#noOrdersMessage').remove();
+                    url.searchParams.delete('status');
                 }
-            }
-            
-            // Update pagination controls
-            function updatePagination() {
-                const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-                const $pagination = $('#orderPagination');
-                $pagination.empty();
-                
-                // Previous button
-                $pagination.append(
-                    `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="#" tabindex="-1" aria-disabled="${currentPage === 1 ? 'true' : 'false'}">Previous</a>
-                    </li>`
-                );
-                
-                // Page numbers
-                for (let i = 1; i <= totalPages; i++) {
-                    $pagination.append(
-                        `<li class="page-item ${currentPage === i ? 'active' : ''}">
-                            <a class="page-link" href="#">${i}</a>
-                        </li>`
-                    );
-                }
-                
-                // Next button
-                $pagination.append(
-                    `<li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
-                        <a class="page-link" href="#">Next</a>
-                    </li>`
-                );
-                
-                // Hide pagination if only one page or no results
-                if (totalPages <= 1) {
-                    $pagination.parent().hide();
-                } else {
-                    $pagination.parent().show();
-                }
-            }
-            
-            // Handle pagination clicks
-            $(document).on('click', '#orderPagination .page-link', function(e) {
-                e.preventDefault();
-                const $this = $(this);
-                const $parent = $this.parent();
-                
-                if ($parent.hasClass('disabled')) return;
-                
-                if ($this.text() === 'Previous' && currentPage > 1) {
-                    currentPage--;
-                } else if ($this.text() === 'Next' && currentPage < Math.ceil(filteredOrders.length / itemsPerPage)) {
-                    currentPage++;
-                } else if (!isNaN(parseInt($this.text()))) {
-                    currentPage = parseInt($this.text());
-                }
-                
-                updatePagination();
-                displayOrders();
+                window.location.href = url.toString();
+            });
+
+            // --- Track Order Button: Go to Track Page with Order Number ---
+            $(document).on('click', '.track-order-btn', function() {
+                const orderId = $(this).data('order-id');
+                window.location.href = '/Cart/Track?orderNumber=' + orderId;
             });
             
-            // Handle filter changes
-            $('#searchInput').on('keyup', filterOrders);
-            $('#statusFilter, #sortOrder').on('change', filterOrders);
-            $('#searchButton').on('click', filterOrders);
-            
-            // Handle email button click
-            $('.email-form').on('submit', function (e) {
-                e.preventDefault();
-                var form = $(this);
-                var button = form.find('.email-button');
-                var spinner = button.find('.spinner-border');
+            // --- Reorder Button: Add items to cart ---
+            $(document).on('click', '.reorder-btn', function() {
+                const orderId = $(this).data('order-id');
+                const btn = $(this);
                 
-                // Disable button and show spinner
-                button.prop('disabled', true);
-                spinner.removeClass('d-none');
+                // Show loading state
+                const originalText = btn.html();
+                btn.html('<i class="fas fa-spinner fa-spin me-1"></i> Processing...');
+                btn.prop('disabled', true);
                 
+                // Send AJAX request to reorder endpoint
                 $.ajax({
-                    url: form.attr('action'),
+                    url: '/Cart/Reorder',
                     type: 'POST',
-                    data: form.serialize(),
-                    success: function (response) {
-                        // Show success message
-                        alert('Receipt sent to your email!');
-                    },
-                    error: function (xhr, status, error) {
-                        // Show error message
-                        alert('Failed to send receipt. Please try again.');
-                    },
-                    complete: function () {
-                        // Re-enable button and hide spinner
-                        button.prop('disabled', false);
-                        spinner.addClass('d-none');
-                    }
-                });
-            });
-            
-            // Handle order cancellation
-            let orderIdToCancel = null;
-            
-            // Open cancel modal when cancel button is clicked
-            $(document).on('click', '.cancel-order-btn', function() {
-                orderIdToCancel = $(this).data('order-id');
-                $('#cancelOrderModal').modal('show');
-            });
-            
-            // Handle confirm cancel button click
-            $('#confirmCancelOrder').on('click', function() {
-                if (!orderIdToCancel) return;
-                
-                const reason = $('#cancelReason').val();
-                const $btn = $(this);
-                const originalText = $btn.text();
-                
-                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
-                
-                // AJAX call to cancel order
-                $.ajax({
-                    url: '/Cart/CancelOrder',
-                    type: 'POST',
-                    data: {
-                        orderId: orderIdToCancel,
-                        reason: reason
-                    },
+                    data: { orderId: orderId },
                     success: function(response) {
                         if (response.success) {
-                            alert('Order cancelled successfully. You will receive an SMS confirmation shortly.');
+                            // Show success message
+                            const successAlert = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                                '<i class="fas fa-check-circle me-2"></i> Items added to cart successfully!' +
+                                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                                '</div>');
+                            $('.container.mt-3').prepend(successAlert);
                             
-                            // Update the order status in the UI
-                            const $orderCard = $(`.order-card[data-order-id="${orderIdToCancel}"]`);
-                            $orderCard.find('.badge').removeClass('bg-primary').addClass('bg-danger').text('Cancelled');
-                            $orderCard.find('.cancel-order-btn').remove();
-                            
-                            // Update the order in our arrays
-                            const orderIndex = allOrders.findIndex(o => o.id === orderIdToCancel);
-                            if (orderIndex !== -1) {
-                                allOrders[orderIndex].status = 'Cancelled';
-                            }
-                            
-                            const filteredIndex = filteredOrders.findIndex(o => o.id === orderIdToCancel);
-                            if (filteredIndex !== -1) {
-                                filteredOrders[filteredIndex].status = 'Cancelled';
-                            }
-                            
-                            // Close the modal
-                            $('#cancelOrderModal').modal('hide');
-                            
-                            // If status filter is active, reapply filters
-                            if ($('#statusFilter').val() !== '') {
-                                filterOrders();
-                            }
+                            // Redirect to cart page after a short delay
+                            setTimeout(function() {
+                                window.location.href = '/Cart';
+                            }, 1000);
                         } else {
-                            alert(response.message || 'Failed to cancel order. Please try again.');
+                            // Show error message
+                            const errorAlert = $('<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                                '<i class="fas fa-exclamation-circle me-2"></i> ' + (response.message || 'Failed to add items to cart.') +
+                                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                                '</div>');
+                            $('.container.mt-3').prepend(errorAlert);
+                            
+                            // Reset button state
+                            btn.html(originalText);
+                            btn.prop('disabled', false);
                         }
                     },
                     error: function() {
-                        alert('An error occurred. Please try again later.');
-                    },
-                    complete: function() {
-                        $btn.prop('disabled', false).text(originalText);
-                        orderIdToCancel = null;
+                        // Show error message
+                        const errorAlert = $('<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                            '<i class="fas fa-exclamation-circle me-2"></i> An error occurred while processing your request.' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                            '</div>');
+                        $('.container.mt-3').prepend(errorAlert);
+                        
+                        // Reset button state
+                        btn.html(originalText);
+                        btn.prop('disabled', false);
                     }
                 });
             });
             
-            // Reset modal when closed
-            $('#cancelOrderModal').on('hidden.bs.modal', function() {
-                $('#cancelReason').val('');
-                orderIdToCancel = null;
+            // --- Search Functionality ---
+            $('#searchBtn').on('click', function() {
+                performSearch();
             });
             
-            // Initialize the page
-            initializeOrders();
+            $('#searchInput').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
             
-            // Initialize charts
-            initializeCharts();
+            // --- Sorting Functionality ---
+            $('#sortOptions').on('change', function() {
+                const sortOption = $(this).val();
+                sortOrders(sortOption);
+            });
             
-            // Function to initialize charts
-            function initializeCharts() {
-                // Get order data from DOM
-                const orderData = [];
-                $('.order-card').each(function() {
-                    const $this = $(this);
-                    orderData.push({
-                        id: $this.data('order-id'),
-                        date: new Date($this.data('order-date')),
-                        total: parseFloat($this.data('order-total')),
-                        status: $this.data('order-status'),
-                        items: []
-                    });
-                    
-                    // Get items for each order
-                    $this.find('.list-group-item').each(function() {
-                        const itemText = $(this).find('div').text().trim();
-                        const itemParts = itemText.split('x');
-                        if (itemParts.length >= 2) {
-                            const itemName = itemParts[0].trim();
-                            orderData[orderData.length - 1].items.push({
-                                name: itemName
-                            });
-                        }
-                    });
-                });
-                
-                // Monthly spending chart
-                const monthlySpendingCtx = document.getElementById('monthlySpendingChart').getContext('2d');
-                
-                // Group orders by month and calculate total spending
-                const monthlySpending = {};
-                orderData.forEach(order => {
-                    if (order.status !== 'Cancelled' && order.status !== 'Refunded') {
-                        const monthYear = order.date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-                        if (!monthlySpending[monthYear]) {
-                            monthlySpending[monthYear] = 0;
-                        }
-                        monthlySpending[monthYear] += order.total;
-                    }
-                });
-                
-                // Sort months chronologically
-                const sortedMonths = Object.keys(monthlySpending).sort((a, b) => {
-                    const dateA = new Date(a);
-                    const dateB = new Date(b);
-                    return dateA - dateB;
-                });
-                
-                // Create monthly spending chart
-                new Chart(monthlySpendingCtx, {
-                    type: 'line',
-                    data: {
-                        labels: sortedMonths,
-                        datasets: [{
-                            label: 'Monthly Spending (RM)',
-                            data: sortedMonths.map(month => monthlySpending[month]),
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 2,
-                            tension: 0.1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return 'RM' + value.toFixed(2);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-                
-                // Order categories chart
-                const orderCategoriesCtx = document.getElementById('orderCategoriesChart').getContext('2d');
-                
-                // Count items by category/name
-                const itemCounts = {};
-                orderData.forEach(order => {
-                    if (order.status !== 'Cancelled' && order.status !== 'Refunded') {
-                        order.items.forEach(item => {
-                            if (!itemCounts[item.name]) {
-                                itemCounts[item.name] = 0;
-                            }
-                            itemCounts[item.name]++;
-                        });
-                    }
-                });
-                
-                // Sort items by count (descending)
-                const sortedItems = Object.keys(itemCounts).sort((a, b) => itemCounts[b] - itemCounts[a]);
-                
-                // Take top 5 items
-                const topItems = sortedItems.slice(0, 5);
-                
-                // Create order categories chart
-                new Chart(orderCategoriesCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: topItems,
-                        datasets: [{
-                            data: topItems.map(item => itemCounts[item]),
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.7)',
-                                'rgba(54, 162, 235, 0.7)',
-                                'rgba(255, 206, 86, 0.7)',
-                                'rgba(75, 192, 192, 0.7)',
-                                'rgba(153, 102, 255, 0.7)'
-                            ],
-                            borderColor: [
-                                'rgba(255, 99, 132, 1)',
-                                'rgba(54, 162, 235, 1)',
-                                'rgba(255, 206, 86, 1)',
-                                'rgba(75, 192, 192, 1)',
-                                'rgba(153, 102, 255, 1)'
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right'
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const label = context.label || '';
-                                        const value = context.raw || 0;
-                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = Math.round((value / total) * 100);
-                                        return `${label}: ${value} (${percentage}%)`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+            // --- Load Chart Data ---
+            loadChartData();
+            
+            // --- Initialize Pagination ---
+            initPagination();
         });
+        
+        // Function to sort orders based on selected option
+        function sortOrders(sortOption) {
+            const orderCards = $('.order-card').toArray();
+            
+            // Sort the order cards based on the selected option
+            orderCards.sort(function(a, b) {
+                const cardA = $(a);
+                const cardB = $(b);
+                
+                switch(sortOption) {
+                    case 'date-newest':
+                        const dateA = new Date(cardA.find('.order-date').data('date'));
+                        const dateB = new Date(cardB.find('.order-date').data('date'));
+                        return dateB - dateA; // Newest first
+                    case 'date-oldest':
+                        const dateC = new Date(cardA.find('.order-date').data('date'));
+                        const dateD = new Date(cardB.find('.order-date').data('date'));
+                        return dateC - dateD; // Oldest first
+                    case 'price-highest':
+                        const priceA = parseFloat(cardA.find('.order-total').data('price'));
+                        const priceB = parseFloat(cardB.find('.order-total').data('price'));
+                        return priceB - priceA; // Highest first
+                    case 'price-lowest':
+                        const priceC = parseFloat(cardA.find('.order-total').data('price'));
+                        const priceD = parseFloat(cardB.find('.order-total').data('price'));
+                        return priceC - priceD; // Lowest first
+                    default:
+                        return 0; // No sorting
+                }
+            });
+            
+            // Reappend the sorted cards to the container
+            const container = $('.order-history-list');
+            $.each(orderCards, function(index, card) {
+                container.append(card);
+            });
+            
+            // Show animation effect for sorting
+            $('.order-card').addClass('sort-animation');
+            setTimeout(function() {
+                $('.order-card').removeClass('sort-animation');
+            }, 500);
+            
+            // Reinitialize pagination after sorting
+            initPagination();
+        }
+        
+        // Global variables for pagination
+        let currentPage = 1;
+        const ordersPerPage = 5;
+        let filteredOrders = [];
+        
+        // Function to initialize pagination
+        function initPagination() {
+            // Get all visible order cards
+            filteredOrders = $('.order-card:visible').toArray();
+            const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+            
+            // Reset to first page when filtering changes
+            currentPage = 1;
+            
+            // Update pagination controls
+            updatePaginationControls(totalPages);
+            
+            // Show orders for current page
+            showOrdersForPage(currentPage);
+        }
+        
+        // Function to update pagination controls
+        function updatePaginationControls(totalPages) {
+            // Clear existing pagination
+            $('.pagination-controls').remove();
+            
+            if (totalPages <= 1) {
+                return; // No need for pagination
+            }
+            
+            // Create pagination controls
+            let paginationHtml = '<div class="pagination-controls">';
+            
+            // First page button
+            paginationHtml += `<button class="page-btn first-btn" ${currentPage === 1 ? 'disabled' : ''} title="First Page">
+                <i class="fas fa-angle-double-left"></i>
+            </button>`;
+            
+            // Previous button
+            paginationHtml += `<button class="page-btn prev-btn" ${currentPage === 1 ? 'disabled' : ''} title="Previous Page">
+                <i class="fas fa-chevron-left"></i> Prev
+            </button>`;
+            
+            // Page buttons (show max 5 pages)
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, startPage + 4);
+            
+            // Show ellipsis for first pages if needed
+            if (startPage > 1) {
+                paginationHtml += `<button class="page-btn" data-page="1">1</button>`;
+                if (startPage > 2) {
+                    paginationHtml += `<span class="page-ellipsis">...</span>`;
+                }
+            }
+            
+            // Show page buttons
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+            }
+            
+            // Show ellipsis for last pages if needed
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHtml += `<span class="page-ellipsis">...</span>`;
+                }
+                paginationHtml += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
+            }
+            
+            // Next button
+            paginationHtml += `<button class="page-btn next-btn" ${currentPage === totalPages ? 'disabled' : ''} title="Next Page">
+                Next <i class="fas fa-chevron-right"></i>
+            </button>`;
+            
+            // Last page button
+            paginationHtml += `<button class="page-btn last-btn" ${currentPage === totalPages ? 'disabled' : ''} title="Last Page">
+                <i class="fas fa-angle-double-right"></i>
+            </button>`;
+            
+            // Page info
+            paginationHtml += `<span class="page-info">
+                <i class="fas fa-file-alt me-1"></i> Page ${currentPage} of ${totalPages}
+            </span>`;
+            
+            paginationHtml += '</div>';
+            
+            // Append pagination controls
+            $('.order-history-list').after(paginationHtml);
+            
+            // Add event listeners
+            $('.page-btn[data-page]').on('click', function() {
+                currentPage = parseInt($(this).data('page'));
+                showOrdersForPage(currentPage);
+                updatePaginationControls(totalPages);
+            });
+            
+            $('.prev-btn').on('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    showOrdersForPage(currentPage);
+                    updatePaginationControls(totalPages);
+                }
+            });
+            
+            $('.next-btn').on('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    showOrdersForPage(currentPage);
+                    updatePaginationControls(totalPages);
+                }
+            });
+            
+            $('.first-btn').on('click', function() {
+                if (currentPage > 1) {
+                    currentPage = 1;
+                    showOrdersForPage(currentPage);
+                    updatePaginationControls(totalPages);
+                }
+            });
+            
+            $('.last-btn').on('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage = totalPages;
+                    showOrdersForPage(currentPage);
+                    updatePaginationControls(totalPages);
+                }
+            });
+        }
+        
+        // Function to show orders for the current page
+        function showOrdersForPage(page) {
+            // Hide all orders
+            $('.order-card').hide();
+            
+            // Calculate start and end index
+            const startIndex = (page - 1) * ordersPerPage;
+            const endIndex = Math.min(startIndex + ordersPerPage, filteredOrders.length);
+            
+            // Show orders for current page with animation
+            for (let i = startIndex; i < endIndex; i++) {
+                const orderCard = $(filteredOrders[i]);
+                orderCard.addClass('page-transition');
+                orderCard.show();
+                
+                // Remove animation class after animation completes
+                setTimeout(() => {
+                    orderCard.removeClass('page-transition');
+                }, 400); // Match the animation duration
+            }
+            
+            // Scroll to top of order list
+            $('html, body').animate({
+                scrollTop: $('.order-history-list').offset().top - 100
+            }, 300);
+        }
+        
+        // Function to perform search on orders
+        function performSearch() {
+            const searchTerm = $('#searchInput').val().trim().toLowerCase();
+            if (!searchTerm) {
+                // If search is empty, show all orders
+                $('.order-card').show();
+                // Initialize pagination with all orders
+                initPagination();
+                return;
+            }
+            
+            // Hide all orders initially
+            $('.order-card').hide();
+            
+            // Show orders that match the search term
+            $('.order-card').each(function() {
+                const orderCard = $(this);
+                const orderId = orderCard.find('.order-id').text().toLowerCase();
+                const orderDate = orderCard.find('.order-date').text().toLowerCase();
+                const orderItems = orderCard.find('.order-item-name').text().toLowerCase();
+                
+                if (orderId.includes(searchTerm) || 
+                    orderDate.includes(searchTerm) || 
+                    orderItems.includes(searchTerm)) {
+                    orderCard.show();
+                }
+            });
+            
+            // Show message if no results found
+            if ($('.order-card:visible').length === 0) {
+                if ($('#no-results-message').length === 0) {
+                    $('.order-history-container').append(
+                        '<div id="no-results-message" class="alert alert-info mt-3">No orders found matching your search.</div>'
+                    );
+                }
+            } else {
+                $('#no-results-message').remove();
+                // Initialize pagination with filtered results
+                initPagination();
+            }
+        }
+        
+        // Function to load chart data from the server
+        function loadChartData() {
+            $.ajax({
+                url: '/Cart/GetPurchaseSummaryData',
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    if (data.error) {
+                        console.error('Error loading chart data:', data.error);
+                        return;
+                    }
+                    
+                    // Initialize Monthly Spending Chart
+                    initMonthlySpendingChart(data.monthlyLabels, data.monthlyData);
+                    
+                    // Initialize Order Categories Chart
+                    initOrderCategoriesChart(data.categoryLabels, data.categoryData);
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX error:', error);
+                }
+            });
+        }
+        
+        // Initialize Monthly Spending Chart
+        function initMonthlySpendingChart(labels, data) {
+            const ctx = document.getElementById('monthlySpendingChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Monthly Spending',
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'RM ' + value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'RM ' + context.raw.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Initialize Order Categories Chart
+        function initOrderCategoriesChart(labels, data) {
+            const ctx = document.getElementById('orderCategoriesChart').getContext('2d');
+            const backgroundColors = [
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)'
+            ];
+            
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 15,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     </script>
+    <style>
+        /* Main Container Styling */
+        .order-history-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* Order Card Styling */
+        .order-card .card {
+            transition: box-shadow 0.3s, transform 0.2s;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .order-card .card:hover {
+            box-shadow: 0 0 0 4px #4caf5040, 0 8px 24px rgba(0,0,0,0.12);
+            transform: translateY(-5px);
+        }
+        .order-card .card-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .order-card .btn-group .btn {
+            margin-bottom: 8px;
+        }
+        .order-card .btn-group {
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .order-card img {
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+        .order-card img:hover {
+            transform: scale(1.05);
+            border-color: #adb5bd;
+        }
+        .order-card .badge {
+            font-size: 1rem;
+            padding: 0.5em 1em;
+            border-radius: 50px;
+        }
+        .order-card .card-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #343a40;
+        }
+        .order-card .list-group-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        .order-card .list-group-item:hover {
+            background: #e9ecef;
+        }
+        .order-card .btn {
+            font-size: 0.95rem;
+            border-radius: 2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .order-card .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .order-card .btn i {
+            margin-right: 4px;
+        }
+        .order-card .btn-outline-info {
+            color: #0dcaf0;
+            border-color: #0dcaf0;
+        }
+        .order-card .btn-outline-info:hover {
+            background: #0dcaf0;
+            color: #fff;
+        }
+        .order-card .btn-outline-success {
+            color: #198754;
+            border-color: #198754;
+        }
+        .order-card .btn-outline-success:hover {
+            background: #198754;
+            color: #fff;
+        }
+        .order-card .btn-outline-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        .order-card .btn-outline-danger:hover {
+            background: #dc3545;
+            color: #fff;
+        }
+        .order-card .btn-outline-primary {
+            color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .order-card .btn-outline-primary:hover {
+            background: #0d6efd;
+            color: #fff;
+        }
+        .order-card .btn-warning {
+            color: #fff;
+            background: #ffc107;
+            border-color: #ffc107;
+        }
+        .order-card .btn-warning:hover {
+            background: #ffb300;
+            color: #fff;
+        }
+        .order-card .btn-secondary {
+            color: #fff;
+            background: #6c757d;
+            border-color: #6c757d;
+        }
+        .order-card .btn-secondary:hover {
+            background: #495057;
+            color: #fff;
+        }
+        .order-card .btn-success {
+            color: #fff;
+            background: #198754;
+            border-color: #198754;
+        }
+        .order-card .btn-success:hover {
+            background: #157347;
+            color: #fff;
+        }
+        .order-card .btn-group .btn:last-child {
+            margin-right: 0;
+        }
+        .order-card .btn-group .btn {
+            min-width: 110px;
+        }
+        .order-card .btn .spinner-border {
+            margin-left: 6px;
+        }
+        
+        /* Search and Filter Controls */
+        .search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .search-container .form-control {
+            border-radius: 50px;
+            padding-left: 30px;
+            padding-right: 50px;
+            height: 45px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        /* Pagination Styling */
+        .pagination .page-item .page-link {
+            border-radius: 50px;
+            margin: 0 5px;
+            width: 80px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            border: 2px solid #e9ecef;
+            color: #495057;
+            transition: all 0.3s ease;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+        }
+        
+        /* Chart Containers */
+        .chart-container {
+            height: 350px;
+            background-color: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .chart-container:hover {
+             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+         }
+         
+         /* Button Ripple Effect */
+         .btn-ripple {
+             position: absolute;
+             background: rgba(255, 255, 255, 0.4);
+             border-radius: 50%;
+             transform: scale(0);
+             animation: ripple 0.6s linear;
+             pointer-events: none;
+             width: 100px;
+             height: 100px;
+         }
+         
+         @@keyframes ripple {
+             to {
+                 transform: scale(4);
+                 opacity: 0;
+             }
+         }
+         
+         /* Sort Animation */
+         .sort-animation {
+             animation: sortFade 0.5s ease;
+         }
+         
+         @@keyframes sortFade {
+             0% { opacity: 0.5; transform: translateY(10px); }
+             100% { opacity: 1; transform: translateY(0); }
+         }
+         
+         /* Pagination Controls */
+         .pagination-controls {
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             margin-top: 30px;
+             margin-bottom: 20px;
+             gap: 8px;
+             background-color: #f8f9fa;
+             padding: 12px 20px;
+             border-radius: 50px;
+             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+             flex-wrap: wrap;
+         }
+         
+         .pagination-controls .page-btn {
+             min-width: 40px;
+             height: 40px;
+             border-radius: 50%;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             border: 2px solid #e9ecef;
+             background-color: white;
+             color: #495057;
+             font-weight: 500;
+             transition: all 0.3s ease;
+             cursor: pointer;
+             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+             margin: 0 2px;
+         }
+         
+         .pagination-controls .page-btn:hover {
+             background-color: #e9ecef;
+             transform: translateY(-2px);
+             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+         }
+         
+         .pagination-controls .page-btn.active {
+             background-color: #007bff;
+             border-color: #007bff;
+             color: white;
+             box-shadow: 0 4px 8px rgba(0,123,255,0.25);
+         }
+         
+         .pagination-controls .page-btn:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+             box-shadow: none;
+             transform: none;
+         }
+         
+         .pagination-controls .prev-btn,
+         .pagination-controls .next-btn {
+             font-size: 0.9rem;
+             padding: 0 15px;
+             border-radius: 20px;
+             width: auto;
+         }
+         
+         .pagination-controls .page-info {
+             font-size: 0.9rem;
+             color: #6c757d;
+             background-color: white;
+             padding: 8px 15px;
+             border-radius: 20px;
+             margin-left: 10px;
+             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+             display: flex;
+             align-items: center;
+         }
+         
+         .pagination-controls .page-ellipsis {
+             display: inline-flex;
+             align-items: center;
+             justify-content: center;
+             padding: 0 5px;
+             font-weight: bold;
+             color: #6c757d;
+         }
+         
+         /* Animation for page transitions */
+         .order-card.page-transition {
+             animation: pageTransition 0.4s ease;
+         }
+         
+         @@keyframes pageTransition {
+             0% { opacity: 0; transform: translateY(10px); }
+             100% { opacity: 1; transform: translateY(0); }
+         }
+     </style>
 }
 
 <!-- Notification alerts for success/error messages -->
@@ -570,7 +1011,7 @@
                                         <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-receipt me-1"></i> View Receipt
                                         </a>
-                                        <a asp-action="Track" asp-controller="Cart" asp-route-orderNumber="@order.OrderId" class="btn btn-sm btn-outline-info">
+                                        <a asp-action="Track" asp-controller="Cart" asp-route-orderNumber="@order.OrderId" class="btn btn-sm btn-outline-info track-order-btn" data-order-id="@order.OrderId">
                                             <i class="fas fa-truck me-1"></i> Track Order
                                         </a>
                                         <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" style="display:inline-block;" class="email-form">
@@ -580,6 +1021,9 @@
                                                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                             </button>
                                         </form>
+                                        <button type="button" class="btn btn-sm btn-secondary reorder-btn" data-order-id="@order.OrderId">
+                                            <i class="fas fa-redo me-1"></i> Reorder
+                                        </button>
                                         @if (order.Status == "Pending" || order.Status == "Preparing")
                                         {
                                             <button type="button" class="btn btn-sm btn-danger cancel-order-btn" data-order-id="@order.OrderId">

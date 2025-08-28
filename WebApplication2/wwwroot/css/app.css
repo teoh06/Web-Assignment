@@ -207,7 +207,7 @@ header {
     }
 
 nav {
-    background: var(--bg-tertiary);
+    background: var(--bg-primary);
     padding: 0 50px;
     display: flex;
     gap: 8px;
@@ -719,7 +719,7 @@ label > * {
     position: relative;
 }
 
-.bestsellers-section, .featured-section {
+.bestsellers-section, .featured-section, .favorites-section {
     background-color: var(--bg-secondary);
     padding: 40px 20px;
     border-radius: 20px;
