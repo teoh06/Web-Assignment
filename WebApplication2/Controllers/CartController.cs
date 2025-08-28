@@ -1088,6 +1088,43 @@ namespace WebApplication2.Controllers
             _db.SaveChanges();
             return Json(new { success = true, message = $"Added {quantity} x {menuItem.Name} to cart and removed from wish list." });
         }
+
+        // POST: /Cart/Reorder
+        [HttpPost]
+        [Authorize(Roles = "Member")]
+        public async Task<IActionResult> Reorder(int orderId)
+        {
+            var memberEmail = User.Identity.Name;
+            var order = await _db.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId && o.MemberEmail == memberEmail);
+            if (order == null)
+            {
+                return Json(new { success = false, message = "Order not found or you do not have access." });
+            }
+            // Remove existing cart items for this user (session-based cart)
+            HttpContext.Session.Remove("CartItems");
+            var cartItems = new List<CartItemVM>();
+            foreach (var item in order.OrderItems)
+            {
+                var menuItem = await _db.MenuItems.FirstOrDefaultAsync(m => m.MenuItemId == item.MenuItemId);
+                if (menuItem == null) continue; // skip if menu item no longer exists
+                cartItems.Add(new CartItemVM
+                {
+                    MenuItemId = menuItem.MenuItemId,
+                    Name = menuItem.Name,
+                    Price = menuItem.Price, // use current price
+                    Quantity = item.Quantity,
+                    PhotoURL = string.IsNullOrEmpty(menuItem.PhotoURL) ? "default.jpg" : menuItem.PhotoURL,
+                    SelectedPersonalizations = item.SelectedPersonalizations
+                });
+            }
+            HttpContext.Session.SetObjectAsJson("CartItems", cartItems);
+            SaveCartToCookie(cartItems);
+            if (cartItems.Count == 0)
+                return Json(new { success = false, message = "No items could be added to cart. Some menu items may have been removed." });
+            return Json(new { success = true });
+        }
     }
 
     // =======================
