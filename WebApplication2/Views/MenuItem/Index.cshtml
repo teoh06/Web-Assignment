@@ -321,12 +321,206 @@
 }
 
 <style>
-.item-rating { display: block; margin-top: 6px; font-size: 1.1em; color: #ffd700; }
+.menu-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    box-shadow: 0 2px 8px var(--text-primary);
+    border: none;
+    border-radius: 10px;
+}
+
+.menu-item-card {
+    background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+    border-radius: 10px;
+    box-shadow: 0 2px 8px var(--text-primary);
+    overflow: hidden;
+    transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.menu-item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 2px 8px var(--text-primary);
+}
+
+.item-image {
+    position: relative;
+    width: 100%;
+    padding-top: 75%; /* 4:3 Aspect Ratio */
+    overflow: hidden;
+}
+
+.item-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.item-image:hover img {
+    transform: scale(1.1);
+    border-radius: 10px;
+}
+
+.item-price {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.item-rating {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 5px 10px;
+    border-radius: 20px;
+    z-index: 1;
+}
+
+.item-info {
+    padding: 15px;
+    background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.item-name {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: var(--text-primary);
+}
+
+.item-category {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    margin: 0 0 10px 0;
+}
+
+.item-stock {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    margin: 5px 0;
+}
+
+.item-actions {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.quantity-control {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.quantity-control input {
+    width: 70px;
+    text-align: center;
+}
+
+.out-of-stock-badge, .low-stock-badge, .inactive-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.out-of-stock-badge {
+    background-color: #dc3545;
+    color: white;
+}
+
+.low-stock-badge {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.inactive-badge {
+    background-color: #6c757d;
+    color: white;
+}
+
+.star-full, .star-half, .star-empty {
+    display: inline-block;
+}
+
 .star-full { color: #ffd700; }
 .star-half { color: #ffd700; opacity: 0.6; }
 .star-empty { color: #b0b8c1; }
-.avg-rating { color: #fff; font-size: 0.95em; margin-left: 4px; }
-.out-of-stock-badge { position: absolute; top: 10px; right: 10px; background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
-.low-stock-badge { position: absolute; top: 10px; right: 10px; background-color: #ffc107; color: #212529; padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
-.item-stock { color: #6c757d; font-size: 0.9em; margin-top: 5px; }
+
+.avg-rating {
+    color: #fff;
+    font-size: 0.95em;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* Loading indicator styles */
+.loading-indicator {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 3em;
+    margin-bottom: 15px;
+    color: var(--text-muted);
+}
+
+/* Responsive adjustments */
+@@media (max-width: 768px) {
+    .menu-items-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+        padding: 15px;
+    }
+
+    .item-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .quantity-control {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .quantity-control input {
+        width: 100%;
+    }
+}
 </style>
