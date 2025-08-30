@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using WebApplication2.Models;
-using System.Net.Http; // For Azure Vision
+using System.Net.Http; 
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -382,7 +382,7 @@ namespace WebApplication2
                 var jokes = new[]
                 {
                     "Why don't eggs tell jokes? Because they'd crack each other up! Speaking of eggs, have you tried our breakfast items?",
-                    "What do you call a nosy pepper? Jalapeño business! Just like how we mind our business of making great food!",
+                    "What do you call a nosy pepper? Jalapeï¿½o business! Just like how we mind our business of making great food!",
                     "Why did the tomato turn red? Because it saw the salad dressing! Speaking of salads, our Caesar Salad is amazing!",
                     "What do you call a fake noodle? An impasta! But our pasta dishes are 100% authentic and delicious!",
                     "Why don't burgers ever get cold? Because they're always between buns! Try our Classic Burger - it's always hot and fresh!"
@@ -785,7 +785,7 @@ namespace WebApplication2
             if (lowerMessage.Contains("payment") || lowerMessage.Contains("pay") || lowerMessage.Contains("credit") || lowerMessage.Contains("card"))
             {
                 // Add direct link to checkout
-                return "We accept all major credit cards, online banking, and cash on delivery. You can securely save your payment method for faster checkout next time. <a href='/Cart/Payment' target='_blank' style='color:#2196F3;font-weight:bold;'>Go to checkout</a> when you're ready to complete your order.";
+                return "We accept all major credit cards, online banking, and cash on delivery. You can securely save your payment method for faster checkout next time. <a href='/Cart' target='_blank' style='color:#2196F3;font-weight:bold;'>Check your cart</a> when you're ready to complete your order through .";
             }
 
             // Track order

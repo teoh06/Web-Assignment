@@ -80,14 +80,13 @@
     .chat-controls button {
         background: none;
         border: none;
-        color: #fff !important;
         cursor: pointer;
         font-size: 14px;
     }
     
     .chat-body {
         max-height: 400px;
-        display: flex;
+        display: none;
         flex-direction: column;
     }
     
@@ -407,43 +406,79 @@
         }
     }
     
-    // --- Chat history persistence ---
+    // --- Role-based chat history and state persistence ---
     function saveChatHistory() {
-        sessionStorage.setItem('chatHistory', document.getElementById('chatMessages').innerHTML);
+        const roleKey = `chatHistory_${userRole}_${userIdentifier || 'anonymous'}`;
+        const suggestionsKey = `chatSuggestions_${userRole}_${userIdentifier || 'anonymous'}`;
+        localStorage.setItem(roleKey, document.getElementById('chatMessages').innerHTML);
+        localStorage.setItem(suggestionsKey, document.getElementById('chatSuggestions').innerHTML);
+    }
+    
+    function saveChatState() {
+        const chatBody = document.getElementById('chatBody');
+        const isMinimized = chatBody.style.display === 'none';
+        const stateKey = `chatMinimized_${userRole}_${userIdentifier || 'anonymous'}`;
+        localStorage.setItem(stateKey, isMinimized.toString());
+    }
+    
+    function loadChatState() {
+        const stateKey = `chatMinimized_${userRole}_${userIdentifier || 'anonymous'}`;
+        const isMinimized = localStorage.getItem(stateKey);
+        const chatBody = document.getElementById('chatBody');
+        
+        // Default to minimized if no state saved or explicitly minimized
+        if (isMinimized === null || isMinimized === 'true') {
+            chatBody.style.display = 'none';
+        } else {
+            chatBody.style.display = 'flex';
+        }
     }
     
     function loadChatHistory() {
-        var history = sessionStorage.getItem('chatHistory');
+        const roleKey = `chatHistory_${userRole}_${userIdentifier || 'anonymous'}`;
+        const suggestionsKey = `chatSuggestions_${userRole}_${userIdentifier || 'anonymous'}`;
+        var history = localStorage.getItem(roleKey);
+        var suggestions = localStorage.getItem(suggestionsKey);
+        
         if (history) {
             document.getElementById('chatMessages').innerHTML = history;
-        } else {
-            // Welcome message if no history
-            addSupportMessage(`👋 Welcome to QuickBite support! I see you're logged in as a <strong>${userRole}</strong>. How can I help you today?`);
+        }
+        
+        if (suggestions) {
+            document.getElementById('chatSuggestions').innerHTML = suggestions;
+            // Re-attach event listeners to suggestion buttons
+            reattachSuggestionListeners();
+        }
+        
+        // Only show welcome message if no history exists
+        if (!history || document.getElementById('chatMessages').innerHTML.trim() === '') {
+            if (userRole === 'Admin') {
+                addSupportMessage(`⚡ <strong>Admin Dashboard</strong> - Welcome back, ${userIdentifier}! Your administrative command center is ready. What would you like to manage today?`);
+            } else {
+                addSupportMessage(`👋 Welcome to QuickBite support! I see you're logged in as a <strong>${userRole}</strong>. How can I help you today?`);
+            }
             
             // Show role-specific suggestions
-            if (userRole === "Member") {
-                showSuggestions(['Order food', 'Track my order', 'Menu recommendations', 'Delivery options']);
-            } else if (userRole === "Admin") {
-                showSuggestions(['Modify prices', 'Menu management', 'Order statistics', 'Customer feedback']);
-            } else {
-                showSuggestions(['Menu recommendations', 'Create account', 'Delivery options', 'Payment methods']);
-            }
+            showRoleBasedSuggestions();
         }
     }
     
     function clearChatHistory() {
         document.getElementById('chatMessages').innerHTML = '';
-        sessionStorage.removeItem('chatHistory');
-        addSupportMessage(`Chat history cleared. How can I help you today?`);
+        document.getElementById('chatSuggestions').innerHTML = '';
+        const roleKey = `chatHistory_${userRole}_${userIdentifier || 'anonymous'}`;
+        const suggestionsKey = `chatSuggestions_${userRole}_${userIdentifier || 'anonymous'}`;
+        localStorage.removeItem(roleKey);
+        localStorage.removeItem(suggestionsKey);
+        
+        if (userRole === 'Admin') {
+            addSupportMessage(`🗑️ <strong>Admin Session Cleared</strong> - Ready for new administrative tasks. What would you like to manage?`);
+        } else {
+            addSupportMessage(`Chat history cleared. How can I help you today?`);
+        }
         
         // Show role-specific suggestions after clearing
-        if (userRole === "Member") {
-            showSuggestions(['Order food', 'Track my order', 'Menu recommendations', 'Delivery options']);
-        } else if (userRole === "Admin") {
-            showSuggestions(['Modify prices', 'Menu management', 'Order statistics', 'Customer feedback']);
-        } else {
-            showSuggestions(['Menu recommendations', 'Create account', 'Delivery options', 'Payment methods']);
-        }
+        showRoleBasedSuggestions();
     }
     
     // --- Message handling functions ---
@@ -484,6 +519,275 @@
     }
     
     // --- Suggestion buttons ---
+    function reattachSuggestionListeners() {
+        const suggestionBtns = document.querySelectorAll('.suggestion-btn');
+        suggestionBtns.forEach(btn => {
+            btn.onclick = function() {
+                const suggestion = btn.textContent;
+                handleSuggestionClick(suggestion);
+            };
+        });
+    }
+    
+    // --- Role-based access control ---
+    function checkRoleAccess(action) {
+        const restrictedForGuests = ['View cart', 'Checkout', 'Track my order', 'Order history', 'Reorder previous order', 'Track my order (live)', 'Order food'];
+        const adminOnly = ['Modify menu item', 'Modify category', 'Menu management', 'Category management', 'Modify prices', 'Order statistics'];
+        
+        if (userRole === 'Guest' && restrictedForGuests.includes(action)) {
+            return false;
+        }
+        
+        if (userRole !== 'Admin' && adminOnly.includes(action)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function showAccessDeniedMessage(action) {
+        if (userRole === 'Guest') {
+            addSupportMessage(`🔒 <strong>Access Restricted:</strong> "${action}" requires a member account. Please <a href="/Account/Register" target="_blank" style="color: #4CAF50; text-decoration: underline;">create an account</a> or <a href="/Account/Login" target="_blank" style="color: #4CAF50; text-decoration: underline;">login</a> to access this feature.`);
+            showSuggestions(['Show menu', 'Menu recommendations', 'Create account', 'Login', 'Delivery info']);
+        } else {
+            addSupportMessage(`🔒 <strong>Access Restricted:</strong> "${action}" is only available for administrators.`);
+        }
+    }
+    
+    function showRoleBasedSuggestions() {
+        if (userRole === "Member") {
+            showSuggestions(['Order food', 'Track my order', 'Menu recommendations', 'Delivery options', 'Order history']);
+        } else if (userRole === "Admin") {
+            showSuggestions(['Quick Actions', 'Menu Management', 'User Management', 'Order Analytics', 'System Settings', 'Bulk Operations']);
+        } else { // Guest
+            showSuggestions(['Show menu', 'Menu recommendations', 'Create account', 'Login', 'Delivery info']);
+        }
+    }
+    
+    // --- Menu recommendations with funny responses ---
+    function showMenuRecommendations() {
+        const funnyRecommendations = [
+            {
+                message: "🍔 Feeling adventurous? Our Classic Burger is like a warm hug for your taste buds! It's so good, even vegetarians have trust issues with it! 😄",
+                items: ['Classic Burger', 'Cheese Burger']
+            },
+            {
+                message: "🍕 Pizza lovers unite! Our Margherita Pizza is flatter than my jokes but way more satisfying! Fun fact: It's named after a queen, so you'll feel royal eating it! 👑",
+                items: ['Margherita Pizza', 'Pepperoni Pizza']
+            },
+            {
+                message: "🥗 Trying to be healthy? Our Caesar Salad is so fresh, the lettuce is still gossiping about the garden! Plus, croutons are basically bread confetti! 🎉",
+                items: ['Caesar Salad', 'Garden Salad']
+            }
+        ];
+        
+        const randomRec = funnyRecommendations[Math.floor(Math.random() * funnyRecommendations.length)];
+        addSupportMessage(randomRec.message);
+        
+        // Create suggestion buttons for the recommended items
+        const suggestions = [];
+        if (userRole !== 'Guest') {
+            suggestions.push(...randomRec.items.map(item => `Order ${item}`));
+        }
+        suggestions.push('Show menu', 'Another recommendation');
+        if (userRole === 'Guest') {
+            suggestions.push('Create account', 'Login');
+        }
+        
+        showSuggestions(suggestions);
+    }
+    
+    // --- Enhanced Admin Actions ---
+    function showAdminQuickActions() {
+        addSupportMessage(`⚡ <strong>Quick Admin Actions</strong> - Choose from these common administrative tasks:`);
+        showSuggestions(['Add Menu Item', 'Modify Prices', 'View Orders', 'Manage Users', 'System Status', 'Back to Main']);
+    }
+    
+    function showAdminMenuManagement() {
+        addSupportMessage(`🍽️ <strong>Menu Management Hub</strong> - Control your restaurant's menu:`);
+        showSuggestions(['Add New Item', 'Edit Existing Item', 'Remove Item', 'Category Management', 'Bulk Price Update', 'Back to Main']);
+    }
+    
+    function showAdminUserManagement() {
+        addSupportMessage(`👥 <strong>User Management Center</strong> - Manage customer accounts and permissions:`);
+        showSuggestions(['View All Users', 'Search User', 'User Statistics', 'Account Status', 'Role Management', 'Back to Main']);
+    }
+    
+    function showAdminAnalytics() {
+        addSupportMessage(`📊 <strong>Order Analytics Dashboard</strong> - View business insights and statistics:`);
+        showSuggestions(['Daily Sales', 'Popular Items', 'Customer Analytics', 'Revenue Reports', 'Order Trends', 'Back to Main']);
+    }
+    
+    function showAdminSystemSettings() {
+        addSupportMessage(`⚙️ <strong>System Settings</strong> - Configure application settings:`);
+        showSuggestions(['App Settings', 'Email Configuration', 'Payment Settings', 'Backup Data', 'System Logs', 'Back to Main']);
+    }
+    
+    function showAdminBulkOperations() {
+        addSupportMessage(`🔄 <strong>Bulk Operations</strong> - Perform batch operations efficiently:`);
+        showSuggestions(['Bulk Price Update', 'Mass Email', 'Batch Order Status', 'Data Export', 'Import Menu', 'Back to Main']);
+    }
+    
+    function handleSuggestionClick(suggestion) {
+        // Check role-based access first
+        if (!checkRoleAccess(suggestion)) {
+            showAccessDeniedMessage(suggestion);
+            return;
+        }
+        
+        // --- Enhanced Admin Action Handling ---
+        if (userRole === "Admin") {
+            switch(suggestion) {
+                case 'Quick Actions':
+                    showAdminQuickActions();
+                    return;
+                case 'Menu Management':
+                    showAdminMenuManagement();
+                    return;
+                case 'User Management':
+                    showAdminUserManagement();
+                    return;
+                case 'Order Analytics':
+                    showAdminAnalytics();
+                    return;
+                case 'System Settings':
+                    showAdminSystemSettings();
+                    return;
+                case 'Bulk Operations':
+                    showAdminBulkOperations();
+                    return;
+                case 'Back to Main':
+                    showRoleBasedSuggestions();
+                    return;
+                case 'Add Menu Item':
+                case 'Add New Item':
+                    promptAdminAddMenuItem();
+                    return;
+                case 'Edit Existing Item':
+                case 'Modify menu item':
+                    promptAdminModifyMenuItem();
+                    return;
+                case 'Category Management':
+                case 'Modify category':
+                    promptAdminModifyCategory();
+                    return;
+                case 'Menu management':
+                case 'Go to menu management':
+                    showNavigationConfirmation('Menu management');
+                    return;
+                case 'Go to category management':
+                    showNavigationConfirmation('Category management');
+                    return;
+                case 'Modify Prices':
+                    promptAdminModifyPrices();
+                    return;
+                case 'View Orders':
+                    promptAdminViewOrders();
+                    return;
+                case 'Manage Users':
+                    promptAdminManageUsers();
+                    return;
+                case 'System Status':
+                    promptAdminSystemStatus();
+                    return;
+                case 'Remove Item':
+                    promptAdminRemoveItem();
+                    return;
+                case 'Bulk Price Update':
+                    promptAdminBulkPriceUpdate();
+                    return;
+                case 'View All Users':
+                    promptAdminViewAllUsers();
+                    return;
+                case 'Search User':
+                    promptAdminSearchUser();
+                    return;
+                case 'User Statistics':
+                    promptAdminUserStatistics();
+                    return;
+                case 'Daily Sales':
+                    promptAdminDailySales();
+                    return;
+                case 'Popular Items':
+                    promptAdminPopularItems();
+                    return;
+                case 'Customer Analytics':
+                    promptAdminCustomerAnalytics();
+                    return;
+                case 'Revenue Reports':
+                    promptAdminRevenueReports();
+                    return;
+                case 'Order Trends':
+                    promptAdminOrderTrends();
+                    return;
+                case 'App Settings':
+                    promptAdminAppSettings();
+                    return;
+                case 'Email Configuration':
+                    promptAdminEmailConfig();
+                    return;
+                case 'Payment Settings':
+                    promptAdminPaymentSettings();
+                    return;
+                case 'Backup Data':
+                    promptAdminBackupData();
+                    return;
+                case 'System Logs':
+                    promptAdminSystemLogs();
+                    return;
+                case 'Mass Email':
+                    promptAdminMassEmail();
+                    return;
+                case 'Batch Order Status':
+                    promptAdminBatchOrderStatus();
+                    return;
+                case 'Data Export':
+                    promptAdminDataExport();
+                    return;
+                case 'Import Menu':
+                    promptAdminImportMenu();
+                    return;
+            }
+        }
+        
+        // --- Menu recommendations with funny responses ---
+        if (suggestion === 'Menu recommendations') {
+            showMenuRecommendations();
+            return;
+        }
+        
+        if (suggestion === 'Another recommendation') {
+            showMenuRecommendations();
+            return;
+        }
+        
+        // --- Reorder feature ---
+        if (suggestion === 'Reorder previous order') {
+            showReorderConfirmation();
+            return;
+        }
+        // --- Live order tracking feature ---
+        if (suggestion === 'Track my order (live)') {
+            promptTrackOrderLive();
+            return;
+        }
+        // --- Account creation/login for guests ---
+        if (suggestion === 'Create account') {
+            showNavigationConfirmation('Create account');
+            return;
+        }
+        if (suggestion === 'Login') {
+            showNavigationConfirmation('Login');
+            return;
+        }
+        
+        if (['View cart', 'Checkout', 'Track my order', 'Show menu', 'Order history', 'Order food'].includes(suggestion)) {
+            showNavigationConfirmation(suggestion);
+        } else {
+            handleUserInput(suggestion);
+        }
+    }
+    
     function showSuggestions(suggestions) {
         const suggestionsContainer = document.getElementById('chatSuggestions');
         suggestionsContainer.innerHTML = '';
@@ -492,31 +796,11 @@
             btn.className = 'suggestion-btn';
             btn.textContent = suggestion;
             btn.onclick = function() {
-                // --- Reorder feature ---
-                if (suggestion === 'Reorder previous order') {
-                    showReorderConfirmation();
-                    return;
-                }
-                // --- Live order tracking feature ---
-                if (suggestion === 'Track my order (live)') {
-                    promptTrackOrderLive();
-                    return;
-                }
-                // ...existing admin and navigation logic...
-                if (userRole === "Admin") {
-                    if (suggestion === 'Modify menu item') { promptAdminModifyMenuItem(); return; }
-                    if (suggestion === 'Modify category') { promptAdminModifyCategory(); return; }
-                    if (suggestion === 'Menu management' || suggestion === 'Go to menu management') { showNavigationConfirmation('Menu management'); return; }
-                    if (suggestion === 'Category management' || suggestion === 'Go to category management') { showNavigationConfirmation('Category management'); return; }
-                }
-                if (['View cart', 'Checkout', 'Track my order', 'Show menu', 'Menu recommendations', 'Order history'].includes(suggestion)) {
-                    showNavigationConfirmation(suggestion);
-                } else {
-                    handleUserInput(suggestion);
-                }
+                handleSuggestionClick(suggestion);
             };
             suggestionsContainer.appendChild(btn);
         });
+        saveChatHistory(); // Save suggestions state
     }
 
     // --- Reorder confirmation dialog ---
@@ -647,20 +931,11 @@
         showSuggestions(customSuggestions);
     });
     
-    // --- Fix: Ensure chat is initialized and welcome message is shown after DOM is ready and SignalR is connected ---
-    function showInitialWelcomeIfNeeded() {
-        const chatMessages = document.getElementById('chatMessages');
-        if (!chatMessages) return;
-        if (!sessionStorage.getItem('chatHistory') || chatMessages.innerHTML.trim() === '') {
-            addSupportMessage(`👋 Welcome to QuickBite support! I see you're logged in as a <strong>${userRole}</strong>. How can I help you today?`);
-            if (userRole === "Member") {
-                showSuggestions(['Order food', 'Track my order', 'Menu recommendations', 'Delivery options']);
-            } else if (userRole === "Admin") {
-                showSuggestions(['Modify prices', 'Menu management', 'Order statistics', 'Customer feedback']);
-            } else {
-                showSuggestions(['Menu recommendations', 'Create account', 'Delivery options', 'Payment methods']);
-            }
-        }
+    // --- Initialize chat without auto-showing welcome ---
+    function initializeChatContent() {
+        // Load existing chat state and history
+        loadChatState();
+        loadChatHistory();
     }
 
     // --- Initialize chat ---
@@ -669,8 +944,7 @@
             await connection.start();
             setConnectionStatus(true);
             console.log("SignalR Connected.");
-            loadChatHistory();
-            showInitialWelcomeIfNeeded();
+            initializeChatContent();
             
             // Add event listeners for user input
             const sendBtn = document.getElementById('chatSendBtn');
@@ -707,6 +981,7 @@
                     const chatBody = document.getElementById('chatBody');
                     if (chatBody) {
                         chatBody.style.display = chatBody.style.display === 'none' ? 'flex' : 'none';
+                        saveChatState(); // Save minimized state
                     }
                 });
             }
@@ -732,6 +1007,7 @@
             if (e.target.id === 'chatHeader' || e.target.tagName === 'I' && e.target.parentNode.id === 'chatHeader') {
                 var body = document.getElementById('chatBody');
                 body.style.display = body.style.display === 'none' ? 'flex' : 'none';
+                saveChatState(); // Save state when toggled via header
             }
         };
     });
@@ -762,8 +1038,15 @@
         });
     }
 
-    // --- Add to cart handler (missing in original) ---
+    // --- Add to cart handler with role checking ---
     function addItemsToCart(items) {
+        // Check if user has permission to add to cart
+        if (userRole === 'Guest') {
+            addSupportMessage('🔒 <strong>Login Required:</strong> You need to be logged in to add items to cart. Please <a href="/Account/Login" target="_blank" style="color: #4CAF50; text-decoration: underline;">login</a> or <a href="/Account/Register" target="_blank" style="color: #4CAF50; text-decoration: underline;">create an account</a> first.');
+            showSuggestions(['Login', 'Create account', 'Show menu', 'Item details']);
+            return;
+        }
+        
         // Get anti-forgery token from page (if present)
         let token = document.querySelector('input[name="__RequestVerificationToken"]');
         let antiForgeryToken = token ? token.value : null;
@@ -817,7 +1100,7 @@
         });
     }
 
-    // --- User input handler ---
+    // --- User input handler with role-based processing ---
     async function handleUserInput(message) {
         if (!message || !message.trim()) return;
         
@@ -829,6 +1112,34 @@
         
         // Add user message to chat
         addUserMessage(message);
+        
+        // Check for role-restricted keywords in user input
+        const restrictedKeywords = {
+            'Guest': ['cart', 'checkout', 'order', 'payment', 'track order', 'order history'],
+            'Member': ['admin', 'modify', 'manage users', 'statistics'],
+            'Admin': [] // Admin has no restrictions
+        };
+        
+        const userKeywords = restrictedKeywords[userRole] || [];
+        const messageWords = message.toLowerCase().split(' ');
+        const hasRestrictedKeyword = userKeywords.some(keyword => 
+            messageWords.some(word => word.includes(keyword.toLowerCase()))
+        );
+        
+        if (hasRestrictedKeyword && userRole === 'Guest') {
+            removeTypingIndicator();
+            
+            // Check if they're asking about menu recommendations specifically
+            if (message.toLowerCase().includes('recommend') || message.toLowerCase().includes('suggestion')) {
+                showMenuRecommendations();
+                return;
+            }
+            
+            addSupportMessage(`🔒 I understand you're interested in "${message}", but this feature requires a member account. I can help you with menu browsing, item details, or account creation instead!`);
+            showSuggestions(['Show menu', 'Menu recommendations', 'Create account', 'Login', 'Item details']);
+            return;
+        }
+        
         showTypingIndicator();
         
         try {
@@ -839,7 +1150,7 @@
                 console.log('Reconnected to SignalR hub');
             }
             
-            // Send message to hub
+            // Send message to hub with role context
             await connection.invoke('ProcessUserMessage', userRole, userIdentifier, message);
         } catch (error) {
             console.error('Error sending message:', error);
@@ -880,6 +1191,10 @@
                 url = '/MenuItem';
                 confirmMessage = 'Browse our delicious menu?';
                 break;
+            case 'Order food':
+                url = '/MenuItem';
+                confirmMessage = 'Browse our menu to place an order?';
+                break;
             case 'Order history':
                 url = '/Cart/History';
                 confirmMessage = 'View your order history?';
@@ -891,6 +1206,14 @@
             case 'Category management':
                 url = '/Category/Index';
                 confirmMessage = 'Go to category management page?';
+                break;
+            case 'Create account':
+                url = '/Account/Register';
+                confirmMessage = 'Go to account registration page?';
+                break;
+            case 'Login':
+                url = '/Account/Login';
+                confirmMessage = 'Go to login page?';
                 break;
             default:
                 handleUserInput(action);
@@ -923,25 +1246,72 @@
         });
     }
 
-    // --- Admin modify menu item prompt ---
+    // --- Enhanced Admin prompts ---
+    function promptAdminAddMenuItem() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p><strong>🍽️ Add New Menu Item</strong></p>
+                <input id="newItemName" type="text" style="width:90%; margin-bottom:8px;" placeholder="Item Name (e.g. Deluxe Burger)" />
+                <input id="newItemDescription" type="text" style="width:90%; margin-bottom:8px;" placeholder="Description" />
+                <input id="newItemPrice" type="number" step="0.01" style="width:90%; margin-bottom:8px;" placeholder="Price (e.g. 12.99)" />
+                <select id="newItemCategory" style="width:90%; margin-bottom:10px;">
+                    <option value="">Select Category</option>
+                    <option value="Main Course">Main Course</option>
+                    <option value="Appetizer">Appetizer</option>
+                    <option value="Dessert">Dessert</option>
+                    <option value="Beverage">Beverage</option>
+                </select>
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Add Item</button>
+                    <button class="confirm-no">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        
+        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            const name = document.getElementById('newItemName').value;
+            const description = document.getElementById('newItemDescription').value;
+            const price = document.getElementById('newItemPrice').value;
+            const category = document.getElementById('newItemCategory').value;
+            msgDiv.remove();
+            
+            if (name && description && price && category) {
+                showTypingIndicator();
+                await connection.invoke('AddMenuItem', name, description, price, category);
+            } else {
+                addSupportMessage('⚠️ Please fill in all fields to add the menu item.');
+                showAdminMenuManagement();
+            }
+        });
+        
+        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            msgDiv.remove();
+            addSupportMessage('Menu item addition cancelled.');
+            showAdminMenuManagement();
+        });
+    }
+    
     function promptAdminModifyMenuItem() {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'support-message';
         msgDiv.innerHTML = `
             <div class="admin-confirmation">
-                <p>Enter menu item name to modify:</p>
-                <input id="menuItemInput" type="text" style="width:90%" placeholder="e.g. Classic Burger" />
-                <p>Select field to modify:</p>
-                <select id="fieldSelect" style="width:90%; margin-bottom:10px;">
+                <p><strong>✏️ Modify Menu Item</strong></p>
+                <input id="menuItemInput" type="text" style="width:90%; margin-bottom:8px;" placeholder="Item name to modify (e.g. Classic Burger)" />
+                <select id="fieldSelect" style="width:90%; margin-bottom:8px;">
                     <option value="name">Name</option>
                     <option value="description">Description</option>
                     <option value="price">Price</option>
                     <option value="photourl">Photo URL</option>
+                    <option value="category">Category</option>
                 </select>
-                <p>Enter new value:</p>
-                <input id="newValueInput" type="text" style="width:90%" placeholder="New value" />
+                <input id="newValueInput" type="text" style="width:90%; margin-bottom:10px;" placeholder="New value" />
                 <div class="admin-confirmation-buttons">
-                    <button class="confirm-yes">Modify</button>
+                    <button class="confirm-yes">Update</button>
                     <button class="confirm-no">Cancel</button>
                 </div>
             </div>
@@ -959,13 +1329,15 @@
                 showTypingIndicator();
                 await connection.invoke('ModifyMenuItem', itemName, field, newValue);
             } else {
-                addSupportMessage('Please fill in all fields.');
+                addSupportMessage('⚠️ Please fill in all fields to modify the item.');
+                showAdminMenuManagement();
             }
         });
         
         msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
             msgDiv.remove();
             addSupportMessage('Menu item modification cancelled.');
+            showAdminMenuManagement();
         });
     }
 
@@ -1007,14 +1379,233 @@
         });
     }
 
+    // --- Additional Admin Prompt Functions ---
+    function promptAdminModifyPrices() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p><strong>💰 Modify Prices</strong></p>
+                <input id="priceItemName" type="text" style="width:90%; margin-bottom:8px;" placeholder="Item name (e.g. Classic Burger)" />
+                <input id="newPrice" type="number" step="0.01" style="width:90%; margin-bottom:10px;" placeholder="New price (e.g. 15.99)" />
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Update Price</button>
+                    <button class="confirm-no">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        
+        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            const itemName = document.getElementById('priceItemName').value;
+            const newPrice = document.getElementById('newPrice').value;
+            msgDiv.remove();
+            
+            if (itemName && newPrice) {
+                showTypingIndicator();
+                await connection.invoke('ModifyMenuItem', itemName, 'price', newPrice);
+            } else {
+                addSupportMessage('⚠️ Please fill in both item name and new price.');
+                showAdminQuickActions();
+            }
+        });
+        
+        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            msgDiv.remove();
+            addSupportMessage('Price modification cancelled.');
+            showAdminQuickActions();
+        });
+    }
+    
+    function promptAdminViewOrders() {
+        addSupportMessage('📋 <strong>Order Management</strong> - Viewing recent orders...');
+        showTypingIndicator();
+        connection.invoke('GetRecentOrders', userRole, userIdentifier);
+    }
+    
+    function promptAdminManageUsers() {
+        addSupportMessage('👥 <strong>User Management</strong> - Loading user management options...');
+        showAdminUserManagement();
+    }
+    
+    function promptAdminSystemStatus() {
+        addSupportMessage('🔍 <strong>System Status</strong> - Checking system health...');
+        showTypingIndicator();
+        connection.invoke('GetSystemStatus', userRole, userIdentifier);
+    }
+    
+    function promptAdminRemoveItem() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p><strong>🗑️ Remove Menu Item</strong></p>
+                <p style="color: #dc3545; font-size: 12px;">⚠️ This action cannot be undone!</p>
+                <input id="removeItemName" type="text" style="width:90%; margin-bottom:10px;" placeholder="Item name to remove" />
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes" style="background-color: #dc3545;">Remove Item</button>
+                    <button class="confirm-no">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        
+        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            const itemName = document.getElementById('removeItemName').value;
+            msgDiv.remove();
+            
+            if (itemName) {
+                showTypingIndicator();
+                await connection.invoke('RemoveMenuItem', itemName);
+            } else {
+                addSupportMessage('⚠️ Please enter the item name to remove.');
+                showAdminMenuManagement();
+            }
+        });
+        
+        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            msgDiv.remove();
+            addSupportMessage('Item removal cancelled.');
+            showAdminMenuManagement();
+        });
+    }
+    
+    function promptAdminBulkPriceUpdate() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p><strong>📊 Bulk Price Update</strong></p>
+                <select id="bulkUpdateType" style="width:90%; margin-bottom:8px;">
+                    <option value="percentage">Percentage Change</option>
+                    <option value="fixed">Fixed Amount Change</option>
+                </select>
+                <input id="bulkUpdateValue" type="number" step="0.01" style="width:90%; margin-bottom:8px;" placeholder="Value (e.g. 10 for 10% or $10)" />
+                <select id="bulkUpdateCategory" style="width:90%; margin-bottom:10px;">
+                    <option value="all">All Items</option>
+                    <option value="Main Course">Main Course</option>
+                    <option value="Appetizer">Appetizer</option>
+                    <option value="Dessert">Dessert</option>
+                    <option value="Beverage">Beverage</option>
+                </select>
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Apply Changes</button>
+                    <button class="confirm-no">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        
+        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            const updateType = document.getElementById('bulkUpdateType').value;
+            const updateValue = document.getElementById('bulkUpdateValue').value;
+            const category = document.getElementById('bulkUpdateCategory').value;
+            msgDiv.remove();
+            
+            if (updateValue) {
+                showTypingIndicator();
+                await connection.invoke('BulkPriceUpdate', updateType, updateValue, category);
+            } else {
+                addSupportMessage('⚠️ Please enter an update value.');
+                showAdminBulkOperations();
+            }
+        });
+        
+        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            msgDiv.remove();
+            addSupportMessage('Bulk price update cancelled.');
+            showAdminBulkOperations();
+        });
+    }
+    
+    // Placeholder functions for other admin actions
+    function promptAdminViewAllUsers() {
+        addSupportMessage('👥 Loading all users...');
+        showTypingIndicator();
+        connection.invoke('GetAllUsers', userRole, userIdentifier);
+    }
+    
+    function promptAdminSearchUser() {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'support-message';
+        msgDiv.innerHTML = `
+            <div class="admin-confirmation">
+                <p><strong>🔍 Search User</strong></p>
+                <input id="searchUserInput" type="text" style="width:90%; margin-bottom:10px;" placeholder="Enter username or email" />
+                <div class="admin-confirmation-buttons">
+                    <button class="confirm-yes">Search</button>
+                    <button class="confirm-no">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('chatMessages').appendChild(msgDiv);
+        scrollToBottom();
+        
+        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
+            const searchTerm = document.getElementById('searchUserInput').value;
+            msgDiv.remove();
+            
+            if (searchTerm) {
+                showTypingIndicator();
+                await connection.invoke('SearchUser', searchTerm);
+            } else {
+                addSupportMessage('⚠️ Please enter a search term.');
+                showAdminUserManagement();
+            }
+        });
+        
+        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
+            msgDiv.remove();
+            showAdminUserManagement();
+        });
+    }
+    
+    // Simple prompt functions for analytics and other features
+    function promptAdminUserStatistics() { addSupportMessage('📊 Loading user statistics...'); showTypingIndicator(); connection.invoke('GetUserStatistics'); }
+    function promptAdminDailySales() { addSupportMessage('💰 Loading daily sales report...'); showTypingIndicator(); connection.invoke('GetDailySales'); }
+    function promptAdminPopularItems() { addSupportMessage('🔥 Loading popular items report...'); showTypingIndicator(); connection.invoke('GetPopularItems'); }
+    function promptAdminCustomerAnalytics() { addSupportMessage('👤 Loading customer analytics...'); showTypingIndicator(); connection.invoke('GetCustomerAnalytics'); }
+    function promptAdminRevenueReports() { addSupportMessage('📈 Loading revenue reports...'); showTypingIndicator(); connection.invoke('GetRevenueReports'); }
+    function promptAdminOrderTrends() { addSupportMessage('📊 Loading order trends...'); showTypingIndicator(); connection.invoke('GetOrderTrends'); }
+    function promptAdminAppSettings() { addSupportMessage('⚙️ Loading application settings...'); showTypingIndicator(); connection.invoke('GetAppSettings'); }
+    function promptAdminEmailConfig() { addSupportMessage('📧 Loading email configuration...'); showTypingIndicator(); connection.invoke('GetEmailConfig'); }
+    function promptAdminPaymentSettings() { addSupportMessage('💳 Loading payment settings...'); showTypingIndicator(); connection.invoke('GetPaymentSettings'); }
+    function promptAdminBackupData() { addSupportMessage('💾 Initiating data backup...'); showTypingIndicator(); connection.invoke('BackupData'); }
+    function promptAdminSystemLogs() { addSupportMessage('📋 Loading system logs...'); showTypingIndicator(); connection.invoke('GetSystemLogs'); }
+    function promptAdminMassEmail() { addSupportMessage('📧 Loading mass email interface...'); showTypingIndicator(); connection.invoke('GetMassEmailInterface'); }
+    function promptAdminBatchOrderStatus() { addSupportMessage('📦 Loading batch order status...'); showTypingIndicator(); connection.invoke('GetBatchOrderStatus'); }
+    function promptAdminDataExport() { addSupportMessage('📤 Preparing data export...'); showTypingIndicator(); connection.invoke('ExportData'); }
+    function promptAdminImportMenu() { addSupportMessage('📥 Loading menu import interface...'); showTypingIndicator(); connection.invoke('GetMenuImportInterface'); }
+    
     // --- SignalR event handlers for admin modifications ---
     connection.on("MenuItemModified", (message) => {
         removeTypingIndicator();
         addSupportMessage(message);
+        showAdminMenuManagement();
     });
     
     connection.on("CategoryModified", (message) => {
         removeTypingIndicator();
         addSupportMessage(message);
+        showAdminMenuManagement();
+    });
+    
+    connection.on("AdminActionResult", (message) => {
+        removeTypingIndicator();
+        addSupportMessage(message);
+        showRoleBasedSuggestions();
+    });
+    
+    connection.on("AdminDataResult", (data) => {
+        removeTypingIndicator();
+        addSupportMessage(data.message || data);
+        if (data.suggestions) {
+            showSuggestions(data.suggestions);
+        } else {
+            showRoleBasedSuggestions();
+        }
     });
 </script>
