@@ -24,27 +24,38 @@
     }
 }
 
-<div id="chatWidget" class="chat-widget">
-    <div id="chatHeader" class="chat-header">
-        <i class="fas fa-comments"></i> Customer Support Chat
-        <div class="chat-controls">
-            <button id="chatClearBtn" title="Clear chat history"><i class="fas fa-trash"></i></button>
-            <button id="chatMinimizeBtn" title="Minimize chat"><i class="fas fa-minus"></i></button>
+@if (userRole != "Admin")
+{
+    <div id="chatWidget" class="chat-widget">
+        <div id="chatHeader" class="chat-header">
+            <i class="fas fa-comments"></i> Customer Support Chat
+            <div class="chat-controls">
+                <button id="chatClearBtn" title="Clear chat history"><i class="fas fa-trash"></i></button>
+                <button id="chatMinimizeBtn" title="Minimize chat"><i class="fas fa-minus"></i></button>
+            </div>
+        </div>
+        <div id="chatBody" class="chat-body">
+            <div id="chatMessages" class="chat-messages">
+                <!-- Messages will appear here -->
+            </div>
+            <div id="chatSuggestions" class="chat-suggestions">
+                <!-- Quick suggestion buttons will appear here -->
+            </div>
+            <div class="chat-input-container">
+                <input id="chatInput" class="chat-input" type="text" placeholder="Type your message..." />
+                <button id="chatSendBtn" class="chat-send-btn">Send</button>
+            </div>
+            <div id="chatFeedback" style="display:none; margin:10px 0;">
+                <span>Rate your experience:</span>
+                <button class="feedback-btn" data-rating="5">😊</button>
+                <button class="feedback-btn" data-rating="4">🙂</button>
+                <button class="feedback-btn" data-rating="3">😐</button>
+                <button class="feedback-btn" data-rating="2">🙁</button>
+                <button class="feedback-btn" data-rating="1">😡</button>
+            </div>
         </div>
     </div>
-    <div id="chatBody" class="chat-body">
-        <div id="chatMessages" class="chat-messages">
-            <!-- Messages will appear here -->
-        </div>
-        <div id="chatSuggestions" class="chat-suggestions">
-            <!-- Quick suggestion buttons will appear here -->
-        </div>
-        <div class="chat-input-container">
-            <input id="chatInput" class="chat-input" type="text" placeholder="Type your message..." />
-            <button id="chatSendBtn" class="chat-send-btn">Send</button>
-        </div>
-    </div>
-</div>
+}
 
 <style>
     .chat-widget {
@@ -79,6 +90,7 @@
     
     .chat-controls button {
         background: none;
+        color: var(--text-primary);
         border: none;
         cursor: pointer;
         font-size: 14px;
@@ -578,6 +590,26 @@
             {
                 message: "🥗 Trying to be healthy? Our Caesar Salad is so fresh, the lettuce is still gossiping about the garden! Plus, croutons are basically bread confetti! 🎉",
                 items: ['Caesar Salad', 'Garden Salad']
+            },
+            {
+                message: "🍟 Craving crispy goodness? Our Fish and Chips are so flaky, even the fish is jealous of the batter! And don’t worry, no fishy business here—just deliciousness! 🐟",
+                items: ['Fish and Chip']
+            },
+            {
+                message: "🥤 Need a pick-me-up? Our Iced Latte is so cool, it’ll make your day chillier than your ex’s excuses! Plus, it’s got layers like your complicated love life. ☕❄️",
+                items: ['Iced Latte']
+            },
+            {
+                message: "🍕 Margherita Pizza so fresh, it might just jump off the plate! Perfect for those who like their pizza like their jokes—cheesy and a little bit saucy! 😜",
+                items: ['Margherita Pizza']
+            },
+            {
+                message: "🍰 Pudding or Tiramisu? Why choose? Indulge in both! It’s the sweet way to end your day—like a hug from your dessert-loving grandma! 🍮",
+                items: ['Pudding', 'Tiramisu']
+            },
+            {
+                message: "🥤 Out of stock? Don’t worry, we’re just giving other items a chance to shine! But seriously, come back soon for more delicious surprises! ✨",
+                items: []
             }
         ];
         
@@ -1213,7 +1245,7 @@
                 break;
             case 'Login':
                 url = '/Account/Login';
-                confirmMessage = 'Go to login page?';
+                confirmMessage = 'Go to login page now?';
                 break;
             default:
                 handleUserInput(action);
@@ -1245,367 +1277,4 @@
             addSupportMessage('No problem! What else can I help you with?');
         });
     }
-
-    // --- Enhanced Admin prompts ---
-    function promptAdminAddMenuItem() {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'support-message';
-        msgDiv.innerHTML = `
-            <div class="admin-confirmation">
-                <p><strong>🍽️ Add New Menu Item</strong></p>
-                <input id="newItemName" type="text" style="width:90%; margin-bottom:8px;" placeholder="Item Name (e.g. Deluxe Burger)" />
-                <input id="newItemDescription" type="text" style="width:90%; margin-bottom:8px;" placeholder="Description" />
-                <input id="newItemPrice" type="number" step="0.01" style="width:90%; margin-bottom:8px;" placeholder="Price (e.g. 12.99)" />
-                <select id="newItemCategory" style="width:90%; margin-bottom:10px;">
-                    <option value="">Select Category</option>
-                    <option value="Main Course">Main Course</option>
-                    <option value="Appetizer">Appetizer</option>
-                    <option value="Dessert">Dessert</option>
-                    <option value="Beverage">Beverage</option>
-                </select>
-                <div class="admin-confirmation-buttons">
-                    <button class="confirm-yes">Add Item</button>
-                    <button class="confirm-no">Cancel</button>
-                </div>
-            </div>
-        `;
-        document.getElementById('chatMessages').appendChild(msgDiv);
-        scrollToBottom();
-        
-        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
-            const name = document.getElementById('newItemName').value;
-            const description = document.getElementById('newItemDescription').value;
-            const price = document.getElementById('newItemPrice').value;
-            const category = document.getElementById('newItemCategory').value;
-            msgDiv.remove();
-            
-            if (name && description && price && category) {
-                showTypingIndicator();
-                await connection.invoke('AddMenuItem', name, description, price, category);
-            } else {
-                addSupportMessage('⚠️ Please fill in all fields to add the menu item.');
-                showAdminMenuManagement();
-            }
-        });
-        
-        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
-            msgDiv.remove();
-            addSupportMessage('Menu item addition cancelled.');
-            showAdminMenuManagement();
-        });
-    }
-    
-    function promptAdminModifyMenuItem() {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'support-message';
-        msgDiv.innerHTML = `
-            <div class="admin-confirmation">
-                <p><strong>✏️ Modify Menu Item</strong></p>
-                <input id="menuItemInput" type="text" style="width:90%; margin-bottom:8px;" placeholder="Item name to modify (e.g. Classic Burger)" />
-                <select id="fieldSelect" style="width:90%; margin-bottom:8px;">
-                    <option value="name">Name</option>
-                    <option value="description">Description</option>
-                    <option value="price">Price</option>
-                    <option value="photourl">Photo URL</option>
-                    <option value="category">Category</option>
-                </select>
-                <input id="newValueInput" type="text" style="width:90%; margin-bottom:10px;" placeholder="New value" />
-                <div class="admin-confirmation-buttons">
-                    <button class="confirm-yes">Update</button>
-                    <button class="confirm-no">Cancel</button>
-                </div>
-            </div>
-        `;
-        document.getElementById('chatMessages').appendChild(msgDiv);
-        scrollToBottom();
-        
-        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
-            const itemName = document.getElementById('menuItemInput').value;
-            const field = document.getElementById('fieldSelect').value;
-            const newValue = document.getElementById('newValueInput').value;
-            msgDiv.remove();
-            
-            if (itemName && field && newValue) {
-                showTypingIndicator();
-                await connection.invoke('ModifyMenuItem', itemName, field, newValue);
-            } else {
-                addSupportMessage('⚠️ Please fill in all fields to modify the item.');
-                showAdminMenuManagement();
-            }
-        });
-        
-        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
-            msgDiv.remove();
-            addSupportMessage('Menu item modification cancelled.');
-            showAdminMenuManagement();
-        });
-    }
-
-    // --- Admin modify category prompt ---
-    function promptAdminModifyCategory() {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'support-message';
-        msgDiv.innerHTML = `
-            <div class="admin-confirmation">
-                <p>Enter current category name:</p>
-                <input id="currentCategoryInput" type="text" style="width:90%" placeholder="e.g. Main Course" />
-                <p>Enter new category name:</p>
-                <input id="newCategoryInput" type="text" style="width:90%" placeholder="New category name" />
-                <div class="admin-confirmation-buttons">
-                    <button class="confirm-yes">Modify</button>
-                    <button class="confirm-no">Cancel</button>
-                </div>
-            </div>
-        `;
-        document.getElementById('chatMessages').appendChild(msgDiv);
-        scrollToBottom();
-        
-        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
-            const currentName = document.getElementById('currentCategoryInput').value;
-            const newName = document.getElementById('newCategoryInput').value;
-            msgDiv.remove();
-            
-            if (currentName && newName) {
-                showTypingIndicator();
-                await connection.invoke('ModifyCategory', currentName, newName);
-            } else {
-                addSupportMessage('Please fill in both category names.');
-            }
-        });
-        
-        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
-            msgDiv.remove();
-            addSupportMessage('Category modification cancelled.');
-        });
-    }
-
-    // --- Additional Admin Prompt Functions ---
-    function promptAdminModifyPrices() {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'support-message';
-        msgDiv.innerHTML = `
-            <div class="admin-confirmation">
-                <p><strong>💰 Modify Prices</strong></p>
-                <input id="priceItemName" type="text" style="width:90%; margin-bottom:8px;" placeholder="Item name (e.g. Classic Burger)" />
-                <input id="newPrice" type="number" step="0.01" style="width:90%; margin-bottom:10px;" placeholder="New price (e.g. 15.99)" />
-                <div class="admin-confirmation-buttons">
-                    <button class="confirm-yes">Update Price</button>
-                    <button class="confirm-no">Cancel</button>
-                </div>
-            </div>
-        `;
-        document.getElementById('chatMessages').appendChild(msgDiv);
-        scrollToBottom();
-        
-        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
-            const itemName = document.getElementById('priceItemName').value;
-            const newPrice = document.getElementById('newPrice').value;
-            msgDiv.remove();
-            
-            if (itemName && newPrice) {
-                showTypingIndicator();
-                await connection.invoke('ModifyMenuItem', itemName, 'price', newPrice);
-            } else {
-                addSupportMessage('⚠️ Please fill in both item name and new price.');
-                showAdminQuickActions();
-            }
-        });
-        
-        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
-            msgDiv.remove();
-            addSupportMessage('Price modification cancelled.');
-            showAdminQuickActions();
-        });
-    }
-    
-    function promptAdminViewOrders() {
-        addSupportMessage('📋 <strong>Order Management</strong> - Viewing recent orders...');
-        showTypingIndicator();
-        connection.invoke('GetRecentOrders', userRole, userIdentifier);
-    }
-    
-    function promptAdminManageUsers() {
-        addSupportMessage('👥 <strong>User Management</strong> - Loading user management options...');
-        showAdminUserManagement();
-    }
-    
-    function promptAdminSystemStatus() {
-        addSupportMessage('🔍 <strong>System Status</strong> - Checking system health...');
-        showTypingIndicator();
-        connection.invoke('GetSystemStatus', userRole, userIdentifier);
-    }
-    
-    function promptAdminRemoveItem() {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'support-message';
-        msgDiv.innerHTML = `
-            <div class="admin-confirmation">
-                <p><strong>🗑️ Remove Menu Item</strong></p>
-                <p style="color: #dc3545; font-size: 12px;">⚠️ This action cannot be undone!</p>
-                <input id="removeItemName" type="text" style="width:90%; margin-bottom:10px;" placeholder="Item name to remove" />
-                <div class="admin-confirmation-buttons">
-                    <button class="confirm-yes" style="background-color: #dc3545;">Remove Item</button>
-                    <button class="confirm-no">Cancel</button>
-                </div>
-            </div>
-        `;
-        document.getElementById('chatMessages').appendChild(msgDiv);
-        scrollToBottom();
-        
-        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
-            const itemName = document.getElementById('removeItemName').value;
-            msgDiv.remove();
-            
-            if (itemName) {
-                showTypingIndicator();
-                await connection.invoke('RemoveMenuItem', itemName);
-            } else {
-                addSupportMessage('⚠️ Please enter the item name to remove.');
-                showAdminMenuManagement();
-            }
-        });
-        
-        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
-            msgDiv.remove();
-            addSupportMessage('Item removal cancelled.');
-            showAdminMenuManagement();
-        });
-    }
-    
-    function promptAdminBulkPriceUpdate() {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'support-message';
-        msgDiv.innerHTML = `
-            <div class="admin-confirmation">
-                <p><strong>📊 Bulk Price Update</strong></p>
-                <select id="bulkUpdateType" style="width:90%; margin-bottom:8px;">
-                    <option value="percentage">Percentage Change</option>
-                    <option value="fixed">Fixed Amount Change</option>
-                </select>
-                <input id="bulkUpdateValue" type="number" step="0.01" style="width:90%; margin-bottom:8px;" placeholder="Value (e.g. 10 for 10% or $10)" />
-                <select id="bulkUpdateCategory" style="width:90%; margin-bottom:10px;">
-                    <option value="all">All Items</option>
-                    <option value="Main Course">Main Course</option>
-                    <option value="Appetizer">Appetizer</option>
-                    <option value="Dessert">Dessert</option>
-                    <option value="Beverage">Beverage</option>
-                </select>
-                <div class="admin-confirmation-buttons">
-                    <button class="confirm-yes">Apply Changes</button>
-                    <button class="confirm-no">Cancel</button>
-                </div>
-            </div>
-        `;
-        document.getElementById('chatMessages').appendChild(msgDiv);
-        scrollToBottom();
-        
-        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
-            const updateType = document.getElementById('bulkUpdateType').value;
-            const updateValue = document.getElementById('bulkUpdateValue').value;
-            const category = document.getElementById('bulkUpdateCategory').value;
-            msgDiv.remove();
-            
-            if (updateValue) {
-                showTypingIndicator();
-                await connection.invoke('BulkPriceUpdate', updateType, updateValue, category);
-            } else {
-                addSupportMessage('⚠️ Please enter an update value.');
-                showAdminBulkOperations();
-            }
-        });
-        
-        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
-            msgDiv.remove();
-            addSupportMessage('Bulk price update cancelled.');
-            showAdminBulkOperations();
-        });
-    }
-    
-    // Placeholder functions for other admin actions
-    function promptAdminViewAllUsers() {
-        addSupportMessage('👥 Loading all users...');
-        showTypingIndicator();
-        connection.invoke('GetAllUsers', userRole, userIdentifier);
-    }
-    
-    function promptAdminSearchUser() {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'support-message';
-        msgDiv.innerHTML = `
-            <div class="admin-confirmation">
-                <p><strong>🔍 Search User</strong></p>
-                <input id="searchUserInput" type="text" style="width:90%; margin-bottom:10px;" placeholder="Enter username or email" />
-                <div class="admin-confirmation-buttons">
-                    <button class="confirm-yes">Search</button>
-                    <button class="confirm-no">Cancel</button>
-                </div>
-            </div>
-        `;
-        document.getElementById('chatMessages').appendChild(msgDiv);
-        scrollToBottom();
-        
-        msgDiv.querySelector('.confirm-yes').addEventListener('click', async () => {
-            const searchTerm = document.getElementById('searchUserInput').value;
-            msgDiv.remove();
-            
-            if (searchTerm) {
-                showTypingIndicator();
-                await connection.invoke('SearchUser', searchTerm);
-            } else {
-                addSupportMessage('⚠️ Please enter a search term.');
-                showAdminUserManagement();
-            }
-        });
-        
-        msgDiv.querySelector('.confirm-no').addEventListener('click', () => {
-            msgDiv.remove();
-            showAdminUserManagement();
-        });
-    }
-    
-    // Simple prompt functions for analytics and other features
-    function promptAdminUserStatistics() { addSupportMessage('📊 Loading user statistics...'); showTypingIndicator(); connection.invoke('GetUserStatistics'); }
-    function promptAdminDailySales() { addSupportMessage('💰 Loading daily sales report...'); showTypingIndicator(); connection.invoke('GetDailySales'); }
-    function promptAdminPopularItems() { addSupportMessage('🔥 Loading popular items report...'); showTypingIndicator(); connection.invoke('GetPopularItems'); }
-    function promptAdminCustomerAnalytics() { addSupportMessage('👤 Loading customer analytics...'); showTypingIndicator(); connection.invoke('GetCustomerAnalytics'); }
-    function promptAdminRevenueReports() { addSupportMessage('📈 Loading revenue reports...'); showTypingIndicator(); connection.invoke('GetRevenueReports'); }
-    function promptAdminOrderTrends() { addSupportMessage('📊 Loading order trends...'); showTypingIndicator(); connection.invoke('GetOrderTrends'); }
-    function promptAdminAppSettings() { addSupportMessage('⚙️ Loading application settings...'); showTypingIndicator(); connection.invoke('GetAppSettings'); }
-    function promptAdminEmailConfig() { addSupportMessage('📧 Loading email configuration...'); showTypingIndicator(); connection.invoke('GetEmailConfig'); }
-    function promptAdminPaymentSettings() { addSupportMessage('💳 Loading payment settings...'); showTypingIndicator(); connection.invoke('GetPaymentSettings'); }
-    function promptAdminBackupData() { addSupportMessage('💾 Initiating data backup...'); showTypingIndicator(); connection.invoke('BackupData'); }
-    function promptAdminSystemLogs() { addSupportMessage('📋 Loading system logs...'); showTypingIndicator(); connection.invoke('GetSystemLogs'); }
-    function promptAdminMassEmail() { addSupportMessage('📧 Loading mass email interface...'); showTypingIndicator(); connection.invoke('GetMassEmailInterface'); }
-    function promptAdminBatchOrderStatus() { addSupportMessage('📦 Loading batch order status...'); showTypingIndicator(); connection.invoke('GetBatchOrderStatus'); }
-    function promptAdminDataExport() { addSupportMessage('📤 Preparing data export...'); showTypingIndicator(); connection.invoke('ExportData'); }
-    function promptAdminImportMenu() { addSupportMessage('📥 Loading menu import interface...'); showTypingIndicator(); connection.invoke('GetMenuImportInterface'); }
-    
-    // --- SignalR event handlers for admin modifications ---
-    connection.on("MenuItemModified", (message) => {
-        removeTypingIndicator();
-        addSupportMessage(message);
-        showAdminMenuManagement();
-    });
-    
-    connection.on("CategoryModified", (message) => {
-        removeTypingIndicator();
-        addSupportMessage(message);
-        showAdminMenuManagement();
-    });
-    
-    connection.on("AdminActionResult", (message) => {
-        removeTypingIndicator();
-        addSupportMessage(message);
-        showRoleBasedSuggestions();
-    });
-    
-    connection.on("AdminDataResult", (data) => {
-        removeTypingIndicator();
-        addSupportMessage(data.message || data);
-        if (data.suggestions) {
-            showSuggestions(data.suggestions);
-        } else {
-            showRoleBasedSuggestions();
-        }
-    });
 </script>

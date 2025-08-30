@@ -59,6 +59,7 @@ public static class SeedData
     {
         if (context.MenuItems.Any()) return;
         var dbCategories = context.Categories.ToList();
+        var rand = new Random();
         var menuItems = new[]
         {
             new MenuItem
@@ -126,6 +127,10 @@ public static class SeedData
                 CategoryId = dbCategories.Single(c => c.Name == "Beverages").CategoryId
             }
         };
+        foreach (var item in menuItems)
+        {
+            item.StockQuantity = rand.Next(50, 61);
+        }
         context.MenuItems.AddRange(menuItems);
         context.SaveChanges();
     }
