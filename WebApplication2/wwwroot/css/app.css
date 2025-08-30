@@ -1915,7 +1915,7 @@ html.dark-theme .card div {
 .auth-card {
     background: var(--card-bg);
     border-radius: 20px;
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 2px 8px var(--text-primary);
     overflow: hidden;
     max-width: 480px;
     width: 100%;
