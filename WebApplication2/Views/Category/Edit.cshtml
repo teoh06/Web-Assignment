@@ -73,11 +73,9 @@
     </div>
     <style>
         .category-edit-form {
-            background: #10151c;
             border-radius: 16px;
             padding: 32px;
-            box-shadow: 0 4px 24px #0002;
-            color: #fff;
+            box-shadow: 0 2px 8px var(--text-primary);
             margin: 40px auto;
             max-width: 1200px;
         }
@@ -108,17 +106,14 @@
             gap: 32px;
         }
         .edit-card {
-            background: #181f2a;
             border-radius: 10px;
-            box-shadow: 0 2px 8px #0003;
+            box-shadow: 0 2px 8px var(--text-primary);
             padding: 24px;
-            color: #fff;
             border: 1px solid #222a36;
         }
         .edit-card-header {
             font-size: 1.4rem;
             font-family: 'Victor Mono', monospace;
-            color: #fff;
             margin-bottom: 18px;
             display: flex;
             align-items: center;
@@ -158,21 +153,19 @@
         }
         .save-btn {
             background: var(--gradient-warm);
-            color: #fff;
             font-weight: bold;
         }
         .save-btn:hover {
             filter: brightness(1.08);
         }
         .reset-btn {
-            background: #222a36;
-            color: #fff;
             font-weight: bold;
             border: 1px solid #333a4a;
         }
         .reset-btn:hover {
-            background: #181f2a;
-            color: #fff;
+            cursor: pointer; /* Pointer cursor on hover */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow effect */
+            transition: all 0.3s ease; /* Smooth transition for hover effects */
         }
         .option-list {
             margin-top: 18px;
@@ -184,9 +177,10 @@
             margin-bottom: 6px;
         }
         .option-input {
-            background: #222a36;
-            color: #fff;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             border: 1px solid #333a4a;
+            box-shadow: 0 2px 8px var(--text-primary);
             border-radius: 6px;
             padding: 6px 12px;
             font-size: 1em;

@@ -492,7 +492,7 @@ label > * {
     padding: 60px 20px;
     border-radius: 0 0 30px 30px;
     margin-bottom: 40px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 2px 8px var(--text-primary);
     position: relative;
     overflow: hidden;
 }
@@ -724,6 +724,7 @@ label > * {
     padding: 40px 20px;
     border-radius: 20px;
     margin: 60px 0;
+    box-shadow: 0 2px 8px var(--text-primary);
 }
 
 .favorites-section {
@@ -2520,7 +2521,7 @@ html.dark-theme .card .list-group-item {
     background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
     padding: 20px;
     border-radius: 10px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 8px var(--text-primary);
     margin-bottom: 1.5rem;
 }
 
@@ -2528,6 +2529,7 @@ html.dark-theme .card .list-group-item {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    border: none;
 }
 
 .filters-row {
@@ -2570,7 +2572,7 @@ html.dark-theme .card .list-group-item {
     background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
     border-radius: 14px;
     overflow: hidden;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 2px 8px var(--text-primary);
     transition: transform 0.3s, box-shadow 0.3s;
     position: relative;
     padding: 18px 16px 16px 16px;
@@ -2579,7 +2581,7 @@ html.dark-theme .card .list-group-item {
 
 .menu-item-card:hover {
     transform: translateY(-6px) scale(1.03);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 2px 8px var(--text-primary);
 }
 
 .item-image {
@@ -3020,4 +3022,8 @@ label {
 
 .stock-label {
     color: var(--text-primary) !important;
+}
+
+.glowing {
+    box-shadow: 0 2px 8px var(--text-primary);
 }
