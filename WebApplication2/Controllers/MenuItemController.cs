@@ -694,7 +694,7 @@ public class MenuItemController : Controller
             var line = await reader.ReadLineAsync();
             if (string.IsNullOrWhiteSpace(line)) continue;
 
-            var parts = line.Split(',');
+            var parts = line.Split(';');
             if (parts.Length < 4) continue;
 
             string name = parts[0].Trim();
