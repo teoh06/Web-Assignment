@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -682,11 +682,11 @@ public class MenuItemController : Controller
     {
         if (txtFile == null || txtFile.Length == 0)
         {
-            TempData["BulkUploadMessage"] = "No file selected.";
-            return RedirectToAction("Create");
+            return Content("No file selected.");
         }
 
         var categories = await db.Categories.ToListAsync();
+        int addedCount = 0;
 
         using var reader = new StreamReader(txtFile.OpenReadStream());
         while (!reader.EndOfStream)
@@ -699,7 +699,12 @@ public class MenuItemController : Controller
 
             string name = parts[0].Trim();
             string description = parts[1].Trim();
-            if (!decimal.TryParse(parts[2].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var price)) continue;
+
+            if (!decimal.TryParse(parts[2].Trim(),
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var price)) continue;
+
             string categoryName = parts[3].Trim();
             string photoURL = parts.Length >= 5 ? parts[4].Trim() : null;
 
@@ -712,7 +717,6 @@ public class MenuItemController : Controller
                 categories.Add(category);
             }
 
-            // Try to parse stock quantity if available (6th column), default to 0 if not provided
             int stockQuantity = 0;
             if (parts.Length >= 6 && int.TryParse(parts[5].Trim(), out var parsedStock))
             {
@@ -729,12 +733,16 @@ public class MenuItemController : Controller
                 IsActive = true,
                 StockQuantity = stockQuantity
             });
+
+            addedCount++;
         }
 
         await db.SaveChangesAsync();
-        TempData["BulkUploadMessage"] = "Menu items uploaded successfully!";
-        return RedirectToAction("Create");
+
+        // ✅ Return plain text for AJAX
+        return Content($"{addedCount} menu items uploaded successfully!");
     }
+
 
     [HttpPost]
     [ValidateAntiForgeryToken]
