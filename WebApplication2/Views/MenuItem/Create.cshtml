@@ -159,10 +159,79 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Multiple photo upload handling
+
+            /* -----------------------------
+             * Bulk TXT Upload (AJAX)
+             * ----------------------------- */
+            const txtDropArea = document.getElementById('txtDropArea');
+            const txtFileInput = document.getElementById('txtFileInput');
+            const txtDropText = document.getElementById('txtDropText');
+            const txtPreviewContent = document.getElementById('txtPreviewContent');
+            const bulkUploadMessage = document.getElementById('bulkUploadMessage');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                txtDropArea.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                txtDropArea.addEventListener(eventName, () => txtDropArea.classList.add('active'));
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                txtDropArea.addEventListener(eventName, () => txtDropArea.classList.remove('active'));
+            });
+
+            txtDropArea.addEventListener('click', () => txtFileInput.click());
+
+            txtFileInput.addEventListener('change', () => {
+                if (txtFileInput.files.length > 0) {
+                    uploadTxtFile(txtFileInput.files[0]);
+                }
+            });
+
+            txtDropArea.addEventListener('drop', e => {
+                if (e.dataTransfer.files.length > 0) {
+                    uploadTxtFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            function uploadTxtFile(file) {
+                if (!file || !file.name.endsWith('.txt')) {
+                    bulkUploadMessage.innerHTML = '<div class="alert alert-danger">Only .txt files are allowed.</div>';
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('txtFile', file);
+
+                // get antiforgery token
+                const token = document.querySelector('#dummyTokenForm input[name="__RequestVerificationToken"]').value;
+
+                fetch('/MenuItem/BulkUpload', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': token
+                    }
+                })
+                .then(res => res.text())
+                .then(data => {
+                    bulkUploadMessage.innerHTML = `<div class="alert alert-success">${data}</div>`;
+                })
+                .catch(err => {
+                    bulkUploadMessage.innerHTML = `<div class="alert alert-danger">Upload failed: ${err}</div>`;
+                });
+            }
+
+
+            /* -----------------------------
+             * Multiple Photo Upload
+             * ----------------------------- */
             const photoDropArea = document.getElementById('photoDropArea');
             const photoInput = document.getElementById('photoInput');
             const photoPreview = document.getElementById('photoPreview');
@@ -207,8 +276,11 @@
                     reader.readAsDataURL(file);
                 }
             }
-            
-            // Single image processing handling
+
+
+            /* -----------------------------
+             * Single Image Processing
+             * ----------------------------- */
             const dropArea = document.getElementById('drop-area');
             const imageInput = document.getElementById('imageInput');
             const dropText = document.getElementById('drop-text');
@@ -216,8 +288,7 @@
             const deleteBtn = document.getElementById('deletePhoto');
             const processingControls = document.getElementById('imageProcessingControls');
             const processedImageData = document.getElementById('processedImageData');
-            
-            // Image processing elements
+
             const resizeBtn = document.getElementById('resizeBtn');
             const resetBtn = document.getElementById('resetBtn');
             const rotateLeftBtn = document.getElementById('rotateLeftBtn');
@@ -225,31 +296,25 @@
             const enableCropBtn = document.getElementById('enableCropBtn');
             const cropBtn = document.getElementById('cropBtn');
             const cancelCropBtn = document.getElementById('cancelCropBtn');
-            
+
             let originalImage = null;
             let currentImage = null;
             let cropper = null;
-            
-            // Drag and drop handling
+
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, e => {
                     e.preventDefault();
                     e.stopPropagation();
                 }, false);
             });
-            
+
             ['dragenter', 'dragover'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => {
-                    dropArea.classList.add('active');
-                }, false);
+                dropArea.addEventListener(eventName, () => dropArea.classList.add('active'), false);
             });
-            
             ['dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => {
-                    dropArea.classList.remove('active');
-                }, false);
+                dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'), false);
             });
-            
+
             dropArea.addEventListener('drop', e => {
                 const dt = e.dataTransfer;
                 if (dt.files.length > 0) {
@@ -257,17 +322,15 @@
                     handleFile(dt.files[0]);
                 }
             });
-            
-            dropArea.addEventListener('click', () => {
-                imageInput.click();
-            });
-            
+
+            dropArea.addEventListener('click', () => imageInput.click());
+
             imageInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     handleFile(e.target.files[0]);
                 }
             });
-            
+
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 clearPreview();
@@ -277,8 +340,7 @@
                     cropper = null;
                 }
             });
-            
-            // Image processing event handlers
+
             resizeBtn.addEventListener('click', resizeImage);
             resetBtn.addEventListener('click', resetImage);
             rotateLeftBtn.addEventListener('click', () => rotateImage(-90));
@@ -286,32 +348,25 @@
             enableCropBtn.addEventListener('click', enableCrop);
             cropBtn.addEventListener('click', applyCrop);
             cancelCropBtn.addEventListener('click', cancelCrop);
-            
+
             function handleFile(file) {
-                if (!file || !file.type.startsWith('image/')) {
-                    return;
-                }
-                
+                if (!file || !file.type.startsWith('image/')) return;
+
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    // Store original image data
                     originalImage = e.target.result;
                     currentImage = originalImage;
-                    
-                    // Update preview
                     updatePreview(currentImage);
-                    
-                    // Show processing controls
                     processingControls.style.display = 'block';
                 };
                 reader.readAsDataURL(file);
             }
-            
+
             function updatePreview(imageData) {
                 previewImages.innerHTML = '';
                 dropText.style.display = 'none';
                 deleteBtn.style.display = 'block';
-                
+
                 const img = document.createElement('img');
                 img.src = imageData;
                 img.id = 'previewImage';
@@ -319,11 +374,10 @@
                 img.style.maxWidth = '100%';
                 img.style.maxHeight = '300px';
                 previewImages.appendChild(img);
-                
-                // Store processed image data
+
                 processedImageData.value = imageData;
             }
-            
+
             function clearPreview() {
                 imageInput.value = '';
                 previewImages.innerHTML = '';
@@ -331,28 +385,26 @@
                 deleteBtn.style.display = 'none';
                 processedImageData.value = '';
             }
-            
+
             function resizeImage() {
                 const width = parseInt(document.getElementById('resizeWidth').value);
                 const height = parseInt(document.getElementById('resizeHeight').value);
-                
+
                 if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
                     alert('Please enter valid dimensions');
                     return;
                 }
-                
+
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                
+
                 const img = new Image();
                 img.onload = function() {
                     ctx.drawImage(img, 0, 0, width, height);
                     currentImage = canvas.toDataURL('image/jpeg');
                     updatePreview(currentImage);
-                    
-                    // Destroy cropper if active
                     if (cropper) {
                         cropper.destroy();
                         cropper = null;
@@ -363,13 +415,11 @@
                 };
                 img.src = currentImage;
             }
-            
+
             function resetImage() {
                 if (originalImage) {
                     currentImage = originalImage;
                     updatePreview(currentImage);
-                    
-                    // Destroy cropper if active
                     if (cropper) {
                         cropper.destroy();
                         cropper = null;
@@ -379,14 +429,13 @@
                     }
                 }
             }
-            
+
             function rotateImage(degrees) {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                
+
                 const img = new Image();
                 img.onload = function() {
-                    // For 90 or 270 degree rotations, swap width and height
                     if (Math.abs(degrees) === 90 || Math.abs(degrees) === 270) {
                         canvas.width = img.height;
                         canvas.height = img.width;
@@ -394,16 +443,12 @@
                         canvas.width = img.width;
                         canvas.height = img.height;
                     }
-                    
-                    // Translate and rotate
                     ctx.translate(canvas.width / 2, canvas.height / 2);
                     ctx.rotate(degrees * Math.PI / 180);
                     ctx.drawImage(img, -img.width / 2, -img.height / 2);
-                    
+
                     currentImage = canvas.toDataURL('image/jpeg');
                     updatePreview(currentImage);
-                    
-                    // Destroy cropper if active
                     if (cropper) {
                         cropper.destroy();
                         cropper = null;
@@ -414,66 +459,49 @@
                 };
                 img.src = currentImage;
             }
-            
+
             function enableCrop() {
                 const image = document.getElementById('previewImage');
                 if (!image) return;
-                
-                // Initialize cropper
                 cropper = new Cropper(image, {
-                    aspectRatio: NaN, // Free aspect ratio
-                    viewMode: 1,      // Restrict crop box to not exceed the size of the canvas
+                    aspectRatio: NaN,
+                    viewMode: 1,
                     guides: true,
                     highlight: true,
                     dragMode: 'crop'
                 });
-                
-                // Show/hide buttons
                 enableCropBtn.style.display = 'none';
                 cropBtn.style.display = 'inline-block';
                 cancelCropBtn.style.display = 'inline-block';
             }
-            
+
             function applyCrop() {
                 if (!cropper) return;
-                
-                // Get cropped canvas
                 const canvas = cropper.getCroppedCanvas();
                 if (!canvas) return;
-                
-                // Update current image with cropped version
                 currentImage = canvas.toDataURL('image/jpeg');
-                
-                // Destroy cropper
                 cropper.destroy();
                 cropper = null;
-                
-                // Update preview with cropped image
                 updatePreview(currentImage);
-                
-                // Show/hide buttons
                 enableCropBtn.style.display = 'block';
                 cropBtn.style.display = 'none';
                 cancelCropBtn.style.display = 'none';
             }
-            
+
             function cancelCrop() {
                 if (!cropper) return;
-                
-                // Destroy cropper
                 cropper.destroy();
                 cropper = null;
-                
-                // Restore current image
                 updatePreview(currentImage);
-                
-                // Show/hide buttons
                 enableCropBtn.style.display = 'block';
                 cropBtn.style.display = 'none';
                 cancelCropBtn.style.display = 'none';
             }
+
         });
     </script>
+}
+
 
 
     <style>
