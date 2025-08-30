@@ -990,5 +990,14 @@ namespace WebApplication2
             _db.SaveChanges();
             await Clients.Caller.SendAsync("ReorderResult", $"Previous order #{order.OrderId} has been added to your cart. <a href='/Cart'>View cart</a> to proceed to checkout.");
         }
+
+        public async Task SendFeedback(string userRole, string userIdentifier, string rating)
+        {
+            // Save feedback to DB (if you have a Feedback table)
+            // For demo, just send a thank you message and log
+            await Clients.Caller.SendAsync("ReceiveResponse", $"Feedback received: {rating} star(s). Thank you!");
+            // Optionally, show suggestions after feedback
+            await Clients.Caller.SendAsync("ShowSuggestions", new[] { "Order food", "Show menu", "Track my order", "Contact support" });
+        }
     }
 }
