@@ -29,9 +29,9 @@
                 </div>
             </div>
             <small class="form-text text-muted">
-                TXT format: Name, Description, Price, CategoryName, OptionalPhotoURL <br />
-                Example 1: Cheeseburger, Juicy beef burger with cheese, 12.50, Main Course, https://example.com/images/cheeseburger.jpg <br />
-                Example 2: Chocolate Cake, Rich chocolate cake slice, 7.00, Desserts, https://example.com/images/chocolatecake.jpg
+                TXT format: Name; Description; Price; CategoryName; OptionalPhotoURL <br />
+                Example 1: Cheeseburger; Juicy beef burger with cheese; 12.50; Main Course; https://example.com/images/cheeseburger.jpg <br />
+                Example 2: Chocolate Cake; Rich chocolate cake slice; 7.00; Desserts; https://example.com/images/chocolatecake.jpg
             </small>
             <br />
             <br />
@@ -159,24 +159,120 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Multiple photo upload handling
+            /* ============================
+             * BULK TXT UPLOAD (AJAX)
+             * ============================ */
+            const txtDropArea = document.getElementById('txtDropArea');
+            const txtFileInput = document.getElementById('txtFileInput');
+            const txtDropText = document.getElementById('txtDropText');
+            const txtPreviewContent = document.getElementById('txtPreviewContent');
+            const bulkUploadMessage = document.getElementById('bulkUploadMessage');
+
+            // Prevent default on drag events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                txtDropArea.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            // Visual feedback
+            ['dragenter', 'dragover'].forEach(eventName => {
+                txtDropArea.addEventListener(eventName, () => txtDropArea.classList.add('active'));
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                txtDropArea.addEventListener(eventName, () => txtDropArea.classList.remove('active'));
+            });
+
+            // Click to browse
+            txtDropArea.addEventListener('click', () => txtFileInput.click());
+
+            // File chosen by dialog
+            txtFileInput.addEventListener('change', () => {
+                if (txtFileInput.files.length > 0) {
+                    handleTxtFile(txtFileInput.files[0]);
+                }
+            });
+
+            // File dropped
+            txtDropArea.addEventListener('drop', e => {
+                if (e.dataTransfer.files.length > 0) {
+                    handleTxtFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            function handleTxtFile(file) {
+                if (!file) return;
+                const isTxt = file.name.toLowerCase().endsWith('.txt') || file.type === 'text/plain';
+                if (!isTxt) {
+                    bulkUploadMessage.innerHTML = '<div class="alert alert-danger">Only .txt files are allowed.</div>';
+                    return;
+                }
+
+                // Optional: quick preview of first few lines
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const text = (e.target.result || '').toString();
+                    const lines = text.split(/\r?\n/).filter(Boolean).slice(0, 5);
+                    txtPreviewContent.innerHTML = `
+                        <div class="text-start">
+                            <strong>Preview (${file.name}):</strong>
+                            <pre style="white-space:pre-wrap;margin-top:6px;">${lines.join('\n')}</pre>
+                        </div>`;
+                    txtDropText && (txtDropText.style.display = 'none');
+                };
+                reader.readAsText(file);
+
+                uploadTxtFile(file);
+            }
+
+            function uploadTxtFile(file) {
+                const formData = new FormData();
+                formData.append('txtFile', file);
+
+                const tokenInput = document.querySelector('#dummyTokenForm input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : null;
+
+                fetch('/MenuItem/BulkUpload', {
+                    method: 'POST',
+                    body: formData,
+                    headers: token ? { 'RequestVerificationToken': token } : {}
+                })
+                .then(async res => {
+                    const text = await res.text();
+                    if (!res.ok) throw new Error(text || 'Server error');
+                    bulkUploadMessage.innerHTML = `<div class="alert alert-success">${text}</div>`;
+                })
+                .catch(err => {
+                    bulkUploadMessage.innerHTML = `<div class="alert alert-danger">Upload failed: ${err.message}</div>`;
+                });
+            }
+
+
+            /* ============================
+             * MULTIPLE PHOTO UPLOAD
+             * ============================ */
             const photoDropArea = document.getElementById('photoDropArea');
             const photoInput = document.getElementById('photoInput');
             const photoPreview = document.getElementById('photoPreview');
             const photoDropText = document.getElementById('photoDropText');
 
+            // Prevent default on drag events
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 photoDropArea.addEventListener(eventName, e => {
                     e.preventDefault();
                     e.stopPropagation();
                 });
             });
-
-            ['dragenter', 'dragover'].forEach(eventName => photoDropArea.classList.add('active'));
-            ['dragleave', 'drop'].forEach(eventName => photoDropArea.classList.remove('active'));
+            // Visual feedback (FIXED: attach to events, not at load)
+            ['dragenter', 'dragover'].forEach(eventName => {
+                photoDropArea.addEventListener(eventName, () => photoDropArea.classList.add('active'));
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                photoDropArea.addEventListener(eventName, () => photoDropArea.classList.remove('active'));
+            });
 
             photoDropArea.addEventListener('click', () => photoInput.click());
 
@@ -207,8 +303,11 @@
                     reader.readAsDataURL(file);
                 }
             }
-            
-            // Single image processing handling
+
+
+            /* ============================
+             * SINGLE IMAGE PROCESSING
+             * ============================ */
             const dropArea = document.getElementById('drop-area');
             const imageInput = document.getElementById('imageInput');
             const dropText = document.getElementById('drop-text');
@@ -216,8 +315,7 @@
             const deleteBtn = document.getElementById('deletePhoto');
             const processingControls = document.getElementById('imageProcessingControls');
             const processedImageData = document.getElementById('processedImageData');
-            
-            // Image processing elements
+
             const resizeBtn = document.getElementById('resizeBtn');
             const resetBtn = document.getElementById('resetBtn');
             const rotateLeftBtn = document.getElementById('rotateLeftBtn');
@@ -225,31 +323,26 @@
             const enableCropBtn = document.getElementById('enableCropBtn');
             const cropBtn = document.getElementById('cropBtn');
             const cancelCropBtn = document.getElementById('cancelCropBtn');
-            
+
             let originalImage = null;
             let currentImage = null;
             let cropper = null;
-            
-            // Drag and drop handling
+
+            // Prevent default on drag events
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, e => {
                     e.preventDefault();
                     e.stopPropagation();
                 }, false);
             });
-            
+            // Visual feedback
             ['dragenter', 'dragover'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => {
-                    dropArea.classList.add('active');
-                }, false);
+                dropArea.addEventListener(eventName, () => dropArea.classList.add('active'), false);
             });
-            
             ['dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => {
-                    dropArea.classList.remove('active');
-                }, false);
+                dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'), false);
             });
-            
+
             dropArea.addEventListener('drop', e => {
                 const dt = e.dataTransfer;
                 if (dt.files.length > 0) {
@@ -257,17 +350,15 @@
                     handleFile(dt.files[0]);
                 }
             });
-            
-            dropArea.addEventListener('click', () => {
-                imageInput.click();
-            });
-            
+
+            dropArea.addEventListener('click', () => imageInput.click());
+
             imageInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     handleFile(e.target.files[0]);
                 }
             });
-            
+
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 clearPreview();
@@ -277,8 +368,7 @@
                     cropper = null;
                 }
             });
-            
-            // Image processing event handlers
+
             resizeBtn.addEventListener('click', resizeImage);
             resetBtn.addEventListener('click', resetImage);
             rotateLeftBtn.addEventListener('click', () => rotateImage(-90));
@@ -286,32 +376,25 @@
             enableCropBtn.addEventListener('click', enableCrop);
             cropBtn.addEventListener('click', applyCrop);
             cancelCropBtn.addEventListener('click', cancelCrop);
-            
+
             function handleFile(file) {
-                if (!file || !file.type.startsWith('image/')) {
-                    return;
-                }
-                
+                if (!file || !file.type.startsWith('image/')) return;
+
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    // Store original image data
                     originalImage = e.target.result;
                     currentImage = originalImage;
-                    
-                    // Update preview
                     updatePreview(currentImage);
-                    
-                    // Show processing controls
                     processingControls.style.display = 'block';
                 };
                 reader.readAsDataURL(file);
             }
-            
+
             function updatePreview(imageData) {
                 previewImages.innerHTML = '';
                 dropText.style.display = 'none';
                 deleteBtn.style.display = 'block';
-                
+
                 const img = document.createElement('img');
                 img.src = imageData;
                 img.id = 'previewImage';
@@ -319,11 +402,10 @@
                 img.style.maxWidth = '100%';
                 img.style.maxHeight = '300px';
                 previewImages.appendChild(img);
-                
-                // Store processed image data
+
                 processedImageData.value = imageData;
             }
-            
+
             function clearPreview() {
                 imageInput.value = '';
                 previewImages.innerHTML = '';
@@ -331,28 +413,26 @@
                 deleteBtn.style.display = 'none';
                 processedImageData.value = '';
             }
-            
+
             function resizeImage() {
                 const width = parseInt(document.getElementById('resizeWidth').value);
                 const height = parseInt(document.getElementById('resizeHeight').value);
-                
+
                 if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
                     alert('Please enter valid dimensions');
                     return;
                 }
-                
+
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                
+
                 const img = new Image();
-                img.onload = function() {
+                img.onload = function () {
                     ctx.drawImage(img, 0, 0, width, height);
                     currentImage = canvas.toDataURL('image/jpeg');
                     updatePreview(currentImage);
-                    
-                    // Destroy cropper if active
                     if (cropper) {
                         cropper.destroy();
                         cropper = null;
@@ -363,13 +443,11 @@
                 };
                 img.src = currentImage;
             }
-            
+
             function resetImage() {
                 if (originalImage) {
                     currentImage = originalImage;
                     updatePreview(currentImage);
-                    
-                    // Destroy cropper if active
                     if (cropper) {
                         cropper.destroy();
                         cropper = null;
@@ -379,14 +457,13 @@
                     }
                 }
             }
-            
+
             function rotateImage(degrees) {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                
+
                 const img = new Image();
-                img.onload = function() {
-                    // For 90 or 270 degree rotations, swap width and height
+                img.onload = function () {
                     if (Math.abs(degrees) === 90 || Math.abs(degrees) === 270) {
                         canvas.width = img.height;
                         canvas.height = img.width;
@@ -394,16 +471,12 @@
                         canvas.width = img.width;
                         canvas.height = img.height;
                     }
-                    
-                    // Translate and rotate
                     ctx.translate(canvas.width / 2, canvas.height / 2);
                     ctx.rotate(degrees * Math.PI / 180);
                     ctx.drawImage(img, -img.width / 2, -img.height / 2);
-                    
+
                     currentImage = canvas.toDataURL('image/jpeg');
                     updatePreview(currentImage);
-                    
-                    // Destroy cropper if active
                     if (cropper) {
                         cropper.destroy();
                         cropper = null;
@@ -414,60 +487,40 @@
                 };
                 img.src = currentImage;
             }
-            
+
             function enableCrop() {
                 const image = document.getElementById('previewImage');
                 if (!image) return;
-                
-                // Initialize cropper
                 cropper = new Cropper(image, {
-                    aspectRatio: NaN, // Free aspect ratio
-                    viewMode: 1,      // Restrict crop box to not exceed the size of the canvas
+                    aspectRatio: NaN,
+                    viewMode: 1,
                     guides: true,
                     highlight: true,
                     dragMode: 'crop'
                 });
-                
-                // Show/hide buttons
                 enableCropBtn.style.display = 'none';
                 cropBtn.style.display = 'inline-block';
                 cancelCropBtn.style.display = 'inline-block';
             }
-            
+
             function applyCrop() {
                 if (!cropper) return;
-                
-                // Get cropped canvas
                 const canvas = cropper.getCroppedCanvas();
                 if (!canvas) return;
-                
-                // Update current image with cropped version
                 currentImage = canvas.toDataURL('image/jpeg');
-                
-                // Destroy cropper
                 cropper.destroy();
                 cropper = null;
-                
-                // Update preview with cropped image
                 updatePreview(currentImage);
-                
-                // Show/hide buttons
                 enableCropBtn.style.display = 'block';
                 cropBtn.style.display = 'none';
                 cancelCropBtn.style.display = 'none';
             }
-            
+
             function cancelCrop() {
                 if (!cropper) return;
-                
-                // Destroy cropper
                 cropper.destroy();
                 cropper = null;
-                
-                // Restore current image
                 updatePreview(currentImage);
-                
-                // Show/hide buttons
                 enableCropBtn.style.display = 'block';
                 cropBtn.style.display = 'none';
                 cancelCropBtn.style.display = 'none';
@@ -475,13 +528,12 @@
         });
     </script>
 
-
     <style>
         .drag-area {
             border: 2px dashed #ccc;
             padding: 20px;
             text-align: center;
-            cursor: pointer;    
+            cursor: pointer;
             border-radius: 5px;
             transition: border-color 0.3s, background-color 0.3s;
             margin-bottom: 10px;
@@ -501,6 +553,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
         }
-
     </style>
+}
+
 }
