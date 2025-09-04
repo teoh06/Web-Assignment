@@ -411,6 +411,20 @@
                 .then(html => {
                     animationBox.style.display = 'none';
                     orderResult.innerHTML = html;
+                    // Execute any scripts embedded in the partial so tracking logic runs
+                    try {
+                        var scripts = orderResult.querySelectorAll('script');
+                        scripts.forEach(function(script) {
+                            var newScript = document.createElement('script');
+                            if (script.src) {
+                                newScript.src = script.src;
+                            } else {
+                                newScript.text = script.textContent;
+                            }
+                            document.body.appendChild(newScript);
+                            document.body.removeChild(newScript);
+                        });
+                    } catch (e) { console.error('Failed to execute tracking scripts:', e); }
                 })
                 .catch(() => {
                     animationBox.style.display = 'none';
@@ -441,6 +455,20 @@
                 .then(html => {
                     animationBox.style.display = 'none';
                     orderResult.innerHTML = html;
+                    // Execute any scripts embedded in the partial so tracking logic runs
+                    try {
+                        var scripts = orderResult.querySelectorAll('script');
+                        scripts.forEach(function(script) {
+                            var newScript = document.createElement('script');
+                            if (script.src) {
+                                newScript.src = script.src;
+                            } else {
+                                newScript.text = script.textContent;
+                            }
+                            document.body.appendChild(newScript);
+                            document.body.removeChild(newScript);
+                        });
+                    } catch (e) { console.error('Failed to execute tracking scripts:', e); }
                 })
                 .catch(() => {
                     animationBox.style.display = 'none';

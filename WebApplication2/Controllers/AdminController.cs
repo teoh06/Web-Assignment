@@ -254,7 +254,7 @@ public class AdminController : Controller
             if (order == null) return Json(new { success = false, message = "Order not found" });
             
             // Validate status
-            var validStatuses = new[] { "Pending", "Paid", "Preparing", "Out for Delivery", "Delivered", "Cancelled", "Refunded" };
+            var validStatuses = new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Out for Delivery", "Delivered", "Cancelled", "Refunded" };
             if (string.IsNullOrEmpty(status) || !validStatuses.Contains(status))
             {
                 return Json(new { success = false, message = "Invalid status" });
