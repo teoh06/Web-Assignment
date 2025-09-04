@@ -16,6 +16,17 @@
             <p class="auth-subtitle">Sign in to your QuickBite account</p>
         </div>
 
+        @if (ViewBag.PendingVerificationEmail != null)
+        {
+            <div class="alert alert-warning" role="alert" style="margin-bottom: 16px;">
+                Your account is not verified yet. Please enter the verification code sent to <strong>@ViewBag.PendingVerificationEmail</strong>.
+                <div class="mt-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("RequestOtp", "Account", new { email = (string)ViewBag.PendingVerificationEmail, action = "complete your login", returnUrl = Url.Action("Login", "Account") })">Resend Code</a>
+                    <a class="btn btn-sm btn-primary ms-2" href="@Url.Action("VerifyOtp", "Account", new { email = (string)ViewBag.PendingVerificationEmail, action = "complete your login", returnUrl = Url.Action("Login", "Account") })">Enter Code</a>
+                </div>
+            </div>
+        }
+
         <!-- Form Section -->
         <form class="auth-form" method="post">
             <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>

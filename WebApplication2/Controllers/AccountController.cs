@@ -91,6 +91,11 @@ public class AccountController : Controller
 
             ModelState.AddModelError("", $"Login credentials not matched. ({failCount}/{MaxFailedAttempts})");
         }
+        else if (!string.IsNullOrEmpty(u.OtpCode))
+        {
+            ModelState.AddModelError("", "Your account is not verified yet. Please check your email for the verification code.");
+            ViewBag.PendingVerificationEmail = u.Email;
+        }
         else if (u.IsPendingDeletion) // Add this condition
         {
             ModelState.AddModelError("", "This account is pending deletion. Please check your email for restoration options.");
@@ -205,8 +210,21 @@ public class AccountController : Controller
             });
             db.SaveChanges();
 
-            TempData["Info"] = "Register successfully. Please login.";
-            return RedirectToAction("Login");
+            // Send OTP and redirect to verification page
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == vm.Email);
+            var action = "complete your registration";
+            bool sent = await SendOtpEmailAsync(user!, action);
+            
+            if (sent)
+            {
+                TempData["Info"] = $"Registration successful! A verification code has been sent to {vm.Email}. Please check your email to complete registration.";
+            }
+            else
+            {
+                TempData["Error"] = "Registration successful, but failed to send verification code. You can request a new code on the next page.";
+            }
+
+            return RedirectToAction("VerifyOtp", new { email = vm.Email, action = action, returnUrl = Url.Action("Login", "Account") });
         }
 
         return View(vm);
@@ -523,20 +541,39 @@ public class AccountController : Controller
             await db.SaveChangesAsync();
             
             // Send OTP email
-            string subject = "Your Verification Code";
-            string body = $@"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
-                <div style='background-color: #f8f9fa; padding: 20px; text-align: center;'>
-                    <h2 style='color: #343a40;'>Verification Required</h2>
+            string subject = "QuickBite - Complete Your Registration";
+            string body = $@"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;'>
+                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;'>
+                    <h1 style='margin: 0; font-size: 28px;'>Welcome to QuickBite!</h1>
+                    <p style='margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;'>Complete your registration</p>
                 </div>
-                <div style='padding: 20px; border: 1px solid #dee2e6; border-top: none;'>
-                    <p>Hello {user.Name},</p>
-                    <p>You've requested to {action}. Please use the following verification code to complete this action:</p>
-                    <div style='background-color: #e9ecef; padding: 15px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold; margin: 20px 0;'>
-                        {otp}
+                <div style='padding: 30px; border: 1px solid #dee2e6; border-top: none;'>
+                    <p style='font-size: 16px; color: #333; margin-bottom: 20px;'>Hello <strong>{user.Name}</strong>,</p>
+                    <p style='font-size: 16px; color: #333; margin-bottom: 25px;'>Thank you for registering with QuickBite! To complete your registration, please use the verification code below:</p>
+                    
+                    <div style='background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px dashed #6c757d; padding: 25px; text-align: center; margin: 25px 0; border-radius: 8px;'>
+                        <p style='margin: 0 0 10px 0; font-size: 14px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;'>Your Verification Code</p>
+                        <div style='font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #495057; font-family: monospace;'>
+                            {otp}
+                        </div>
                     </div>
-                    <p>This code will expire in 15 minutes.</p>
-                    <p>If you didn't request this action, please ignore this email or contact support if you have concerns.</p>
-                    <p>Thank you,<br>QuickBite Team</p>
+                    
+                    <div style='background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                        <p style='margin: 0; font-size: 14px; color: #856404;'>
+                            <strong>⏰ Important:</strong> This code will expire in 15 minutes for security reasons.
+                        </p>
+                    </div>
+                    
+                    <p style='font-size: 14px; color: #6c757d; margin-top: 25px;'>
+                        If you didn't create an account with QuickBite, please ignore this email or contact our support team.
+                    </p>
+                    
+                    <div style='border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 25px; text-align: center;'>
+                        <p style='margin: 0; font-size: 14px; color: #6c757d;'>
+                            Best regards,<br>
+                            <strong style='color: #495057;'>The QuickBite Team</strong>
+                        </p>
+                    </div>
                 </div>
             </div>";
             
@@ -552,6 +589,20 @@ public class AccountController : Controller
     // GET: Account/VerifyOtp
     public IActionResult VerifyOtp(string email, string action, string returnUrl)
     {
+        // Verify the user exists and has a pending OTP
+        var user = db.Users.FirstOrDefault(u => u.Email == email);
+        if (user == null)
+        {
+            TempData["Error"] = "User not found.";
+            return RedirectToAction("Register");
+        }
+
+        if (string.IsNullOrEmpty(user.OtpCode))
+        {
+            TempData["Error"] = "No verification code found. Please register again.";
+            return RedirectToAction("Register");
+        }
+
         var vm = new OtpVerificationVM
         {
             Email = email,
@@ -587,6 +638,13 @@ public class AccountController : Controller
         user.OtpCode = null;
         user.OtpExpiry = null;
         await db.SaveChangesAsync();
+        
+        // For registration verification, redirect to login with success message
+        if (vm.Action.Contains("registration"))
+        {
+            TempData["Info"] = "Account verified successfully! You can now login.";
+            return RedirectToAction("Login");
+        }
         
         // Redirect to the appropriate action based on the verification purpose
         if (!string.IsNullOrEmpty(vm.ReturnUrl) && Url.IsLocalUrl(vm.ReturnUrl))

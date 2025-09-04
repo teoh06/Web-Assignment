@@ -8,8 +8,18 @@
         <div class="col-md-6">
             <div class="card shadow">
                 <div class="card-body p-4">
-                    <h2 class="text-center mb-4">Verification Required</h2>
-                    <p class="text-center text-muted mb-4">We've sent a verification code to your email address. Please enter it below to continue.</p>
+                    <div class="text-center mb-4">
+                        <i class="fas fa-envelope-open-text text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h2 class="text-center mb-4">Check Your Email</h2>
+                    <p class="text-center text-muted mb-4">
+                        We've sent a 6-digit verification code to <strong>@Model.Email</strong>. 
+                        Please check your inbox (and spam folder) and enter the code below to complete your registration.
+                    </p>
+                    <div class="alert text-center">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Tip:</strong> The code will expire in <span id="otpTimer" class="fw-bold text-primary">15:00</span>. If you don't see the email, check your spam folder.
+                    </div>
                     
                     <form asp-action="VerifyOtp" method="post">
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
@@ -24,7 +34,19 @@
                         </div>
                         
                         <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg">Verify</button>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check-circle"></i> Verify & Complete Registration
+                            </button>
+                            <a class="btn btn-outline-secondary btn-lg" href="@Url.Action("RequestOtp", "Account", new { email = Model.Email, action = Model.Action, returnUrl = Model.ReturnUrl })">
+                                <i class="fas fa-redo"></i> Resend Code
+                            </a>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                Didn't receive the email? 
+                                <a href="@Url.Action("RequestOtp", "Account", new { email = Model.Email, action = Model.Action, returnUrl = Model.ReturnUrl })" class="text-decoration-none">Click here to resend</a>
+                            </small>
                         </div>
                     </form>
                 </div>
@@ -35,4 +57,67 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        // OTP Countdown Timer
+        let timeLeft = 15 * 60; // 15 minutes in seconds
+        const timerElement = document.getElementById('otpTimer');
+        const resendButtons = document.querySelectorAll('a[href*="RequestOtp"]');
+        
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            
+            if (timerElement) {
+                timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            if (timeLeft <= 0) {
+                // Disable resend buttons and show expired message
+                resendButtons.forEach(btn => {
+                    btn.classList.add('disabled');
+                    btn.style.pointerEvents = 'none';
+                    btn.style.opacity = '0.5';
+                });
+                
+                if (timerElement) {
+                    timerElement.innerHTML = '<span class="text-danger">Code Expired</span>';
+                }
+                
+                // Show alert
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-warning mt-3';
+                alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>Code Expired!</strong> Please request a new verification code.';
+                document.querySelector('.card-body').appendChild(alertDiv);
+                
+                return;
+            }
+            
+            timeLeft--;
+            setTimeout(updateTimer, 1000);
+        }
+        
+        // Start timer when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTimer();
+            
+            // Auto-focus on OTP input
+            const otpInput = document.querySelector('input[name="OtpCode"]');
+            if (otpInput) {
+                otpInput.focus();
+            }
+            
+            // Auto-submit when 6 digits are entered
+            if (otpInput) {
+                otpInput.addEventListener('input', function(e) {
+                    if (e.target.value.length === 6) {
+                        // Small delay to let user see the complete code
+                        setTimeout(() => {
+                            document.querySelector('form').submit();
+                        }, 500);
+                    }
+                });
+            }
+        });
+    </script>
 }
