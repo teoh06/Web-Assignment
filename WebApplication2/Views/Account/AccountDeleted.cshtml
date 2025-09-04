@@ -2,22 +2,55 @@
     ViewBag.Title = "Account Deleted";
 }
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-danger text-white">
-                    <h3 class="mb-0">Account Permanently Deleted</h3>
+<div class="auth-container">
+    <div class="auth-card" style="animation: fadeInUp 0.5s ease-out">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-user-slash"></i>
+            </div>
+            <h2 class="auth-title">Account Deleted</h2>
+            <p class="auth-subtitle">Your account has been permanently removed</p>
+        </div>
+        
+        <div class="auth-form" style="text-align: center">
+            <div class="form-info">
+                <i class="fas fa-info-circle"></i>
+                <div class="info-content">
+                    <p>What happens next?</p>
+                    <ul>
+                        <li>All your personal data has been permanently deleted</li>
+                        <li>Your order history has been anonymized</li>
+                        <li>You'll need to create a new account if you wish to return</li>
+                    </ul>
                 </div>
-                <div class="card-body">
-                    <p class="card-text">Your account has been permanently deleted from our system.</p>
-                    <p class="card-text">We're sorry to see you go. If you ever change your mind, you'll need to register a new account.</p>
-                    <hr>
-                    <p class="text-muted">You can now close this window or return to the home page.</p>
-                    <a href="/" class="btn btn-primary">Go to Home Page</a>
-                </div>
+            </div>
+            
+            <div class="form-actions" style="margin-top: 2rem">
+                <a href="/" class="btn-primary" style="text-decoration: none;">
+                    <i class="fas fa-home"></i>
+                    Return to Home
+                </a>
+            </div>
+        </div>
+        
+        <div class="auth-footer">
+            <div class="auth-links">
+                Want to create a new account? <a href="/Account/Register" class="auth-link">Register here</a>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
 

@@ -1,0 +1,228 @@
+@{
+    var routeData = Context.GetRouteData();
+    var controller = (routeData.Values["controller"]?.ToString() ?? "").ToLowerInvariant();
+    var action = (routeData.Values["action"]?.ToString() ?? "").ToLowerInvariant();
+    var isAdmin = User.IsInRole("Admin");
+    var isMember = User.IsInRole("Member");
+    var isGuest = !User.Identity!.IsAuthenticated;
+}
+
+<!-- Help Panel Overlay -->
+<div id="helpPanelOverlay" class="help-overlay" style="display: none;">
+    <div class="help-panel">
+        <div class="help-content">
+                @if (controller == "home" && action == "index")
+                {
+                    if (isGuest)
+                    {
+                        <text>
+                            New here? Browse the menu to see what we offer. Create a free account to save favorites and place orders.
+                        </text>
+                    }
+                    else if (isMember)
+                    {
+                        <text>
+                            Tip: Use Favorites to quickly reorder. Track orders from <a href="/Cart/Track">Track Order</a>.
+                        </text>
+                    }
+                    else if (isAdmin)
+                    {
+                        <text>
+                            Admin quick link: open the <a href="/Admin">Admin Panel</a> for sales and user management.
+                        </text>
+                    }
+                }
+                else if (controller == "account" && action == "register")
+                {
+                    <text>
+                        Use a valid email to receive receipts. Strong passwords work best: at least 8 characters with a mix of letters and numbers.
+                    </text>
+                }
+                else if (controller == "cart" && action == "payment")
+                {
+                    <text>
+                        Select Delivery or Pickup first. Choosing Pickup hides the address field. Card payments require cardholder name, number, expiry, and CVV.
+                    </text>
+                }
+                else if (controller == "admin" && action == "index")
+                {
+                    <text>
+                        View sales by category and top sellers at a glance. Use Manage Users to review accounts and Sales Summary for daily totals.
+                    </text>
+                }
+                else
+                {
+                    if (isGuest)
+                    {
+                        <text>
+                            You’re browsing as a guest. Login or register to add to cart, checkout, and save favorites.
+                        </text>
+                    }
+                    else if (isMember)
+                    {
+                        <text>
+                            Need help? Use the chat widget at the bottom-right, or visit <a href="/Cart/History">My Orders</a> to view receipts.
+                        </text>
+                    }
+                    else if (isAdmin)
+                    {
+                        <text>
+                            Admin tip: Use Order Maintenance to filter orders by status and update progress.
+                        </text>
+                    }
+                }
+        </div>
+        <div class="help-footer">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeHelpPanel()">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Help Button -->
+<button id="helpButton" class="help-button" onclick="toggleHelpPanel()" title="Get Help">
+    <i class="fas fa-question"></i>
+</button>
+
+<style>
+.help-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-panel {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 350px;
+    width: 90%;
+    max-height: 60vh;
+    overflow: hidden;
+    animation: fadeIn 0.15s ease-out;
+    border: 1px solid #dee2e6;
+}
+
+@@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.help-content {
+    padding: 16px;
+    max-height: 45vh;
+    overflow-y: auto;
+    line-height: 1.4;
+    font-size: 13px;
+    color: #495057;
+}
+
+.help-footer {
+    padding: 8px 16px;
+    border-top: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+    text-align: right;
+}
+
+.help-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #6c757d;
+    color: white;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.15s ease;
+    z-index: 1000;
+}
+
+.help-button:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.help-button:active {
+    transform: translateY(0);
+}
+
+/* Dark theme support */
+.dark-theme .help-panel {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+.dark-theme .help-content {
+    color: #e2e8f0;
+}
+
+.dark-theme .help-footer {
+    background-color: #1a202c;
+    border-color: #4a5568;
+}
+
+.dark-theme .help-button {
+    background: #4a5568;
+}
+
+.dark-theme .help-button:hover {
+    background: #2d3748;
+}
+</style>
+
+<script>
+function toggleHelpPanel() {
+    const overlay = document.getElementById('helpPanelOverlay');
+    if (overlay.style.display === 'none' || overlay.style.display === '') {
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    } else {
+        closeHelpPanel();
+    }
+}
+
+function closeHelpPanel() {
+    const overlay = document.getElementById('helpPanelOverlay');
+    overlay.style.display = 'none';
+    document.body.style.overflow = ''; // Restore scrolling
+}
+
+// Close on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeHelpPanel();
+    }
+});
+
+// Close on overlay click (but not on panel click)
+document.getElementById('helpPanelOverlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeHelpPanel();
+    }
+});
+
+// Simple initialization - no auto-show
+document.addEventListener('DOMContentLoaded', function() {
+    // Help panel is now purely on-demand
+});
+</script>
+
