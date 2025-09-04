@@ -100,10 +100,13 @@
                                 <div class="info-label">Delivery Option:</div>
                                 <div class="info-value fw-bold">@Model.DeliveryOption</div>
                             </div>
-                            <div class="info-row">
-                                <div class="info-label">Delivery Address:</div>
-                                <div class="info-value fw-bold">@Model.DeliveryAddress</div>
-                            </div>
+                            @if (!string.Equals(Model.DeliveryOption, "Pickup", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <div class="info-row">
+                                    <div class="info-label">Delivery Address:</div>
+                                    <div class="info-value fw-bold">@Model.DeliveryAddress</div>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>

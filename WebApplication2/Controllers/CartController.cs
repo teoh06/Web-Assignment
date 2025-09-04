@@ -276,9 +276,19 @@ namespace WebApplication2.Controllers
             vm.CartItems = cart;
 
             var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
-            if (string.IsNullOrWhiteSpace(vm.DeliveryAddress))
+            if (vm.DeliveryOption == "Pickup")
             {
-                vm.DeliveryAddress = member?.Address ?? "";
+                // For pickup, delivery address is not required and should not be stored
+                ModelState.Remove(nameof(vm.DeliveryAddress));
+                vm.DeliveryAddress = string.Empty; // keep non-null to satisfy DB constraint
+            }
+            else
+            {
+                // For delivery, ensure address is present; fallback to profile address
+                if (string.IsNullOrWhiteSpace(vm.DeliveryAddress))
+                {
+                    vm.DeliveryAddress = member?.Address ?? "";
+                }
             }
             if (vm.PaymentMethod == "Cash")
             {
@@ -307,7 +317,7 @@ namespace WebApplication2.Controllers
                 OrderDate = DateTime.Now,
                 Status = "Paid",
                 PaymentMethod = vm.PaymentMethod,
-                DeliveryAddress = vm.DeliveryAddress,
+                DeliveryAddress = vm.DeliveryOption == "Pickup" ? string.Empty : vm.DeliveryAddress,
                 DeliveryOption = vm.DeliveryOption
             };
             _db.Orders.Add(order);

@@ -643,6 +643,61 @@
             form.submit();
         }
 
+        async function deleteSelectedPhoto() {
+            if (!selectedPhotoElement) {
+                showFeedback('Please select a photo to delete.', 'error');
+                return;
+            }
+
+            const photoId = selectedPhotoElement.dataset.photoId;
+            if (!photoId) {
+                showFeedback('Invalid photo selection.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('@Url.Action("DeleteMemberPhoto", "Account")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                    },
+                    body: new URLSearchParams({
+                        id: photoId,
+                        __RequestVerificationToken: getAntiForgeryToken()
+                    })
+                });
+
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    const message = result && result.message ? result.message : 'Failed to delete photo.';
+                    showFeedback(message, 'error');
+                    return;
+                }
+
+                // Remove from UI
+                const toRemove = selectedPhotoElement;
+                clearSelections();
+                selectedPhotoElement = null;
+                if (toRemove && toRemove.parentElement) {
+                    toRemove.parentElement.removeChild(toRemove);
+                }
+
+                // If editor was showing this image, reset it
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                document.querySelector('.image-editor').style.display = 'none';
+                document.getElementById('dropArea').classList.remove('editing');
+                originalImageData = null;
+                hasProcessedImage = false;
+
+                showFeedback('Photo deleted successfully.');
+            } catch (e) {
+                showFeedback('An error occurred while deleting the photo.', 'error');
+            }
+        }
+
         function rotateCropper(degree) {
             if (cropper) {
                 currentRotation = (currentRotation + degree) % 360;

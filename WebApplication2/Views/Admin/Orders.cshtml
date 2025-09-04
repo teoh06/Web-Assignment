@@ -11,7 +11,9 @@
             <option value="" selected="@(string.IsNullOrEmpty(selectedStatus))">All</option>
             <option value="Pending" selected="@(selectedStatus == "Pending")">Pending</option>
             <option value="Preparing" selected="@(selectedStatus == "Preparing")">Preparing</option>
-            <option value="Served" selected="@(selectedStatus == "Served")">Served</option>
+            <option value="Ready for Pickup" selected="@(selectedStatus == "Ready for Pickup")">Ready for Pickup</option>
+            <option value="Out for Delivery" selected="@(selectedStatus == "Out for Delivery")">Out for Delivery</option>
+            <option value="Delivered" selected="@(selectedStatus == "Delivered")">Delivered</option>
             <option value="Cancelled" selected="@(selectedStatus == "Cancelled")">Cancelled</option>
             <option value="Refunded" selected="@(selectedStatus == "Refunded")">Refunded</option>
         </select>

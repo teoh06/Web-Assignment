@@ -28,9 +28,9 @@
                             <input asp-for="PhoneNumber" class="form-control" placeholder="Enter your phone number" required />
                             <span asp-validation-for="PhoneNumber" class="text-danger"></span>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3" id="address-block">
                             <label asp-for="DeliveryAddress" class="form-label"></label>
-                            <input asp-for="DeliveryAddress" class="form-control" placeholder="@(Model.DeliveryAddress ?? "Enter your address")" required />
+                            <input asp-for="DeliveryAddress" class="form-control" placeholder="@(Model.DeliveryAddress ?? "Enter your address")" />
                             <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
                         </div>
 
@@ -162,8 +162,11 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const paymentMethodSelect = document.querySelector('[name="PaymentMethod"]');
+            const deliveryOptionSelect = document.querySelector('[name="DeliveryOption"]');
             const cardFields = document.getElementById('card-fields');
             const cardInputs = cardFields.querySelectorAll('input, textarea');
+            const addressBlock = document.getElementById('address-block');
+            const addressInput = document.querySelector('[name="DeliveryAddress"]');
 
             function toggleCardFields() {
                 const isCard = paymentMethodSelect.value === 'Card';
@@ -177,7 +180,17 @@
                 });
             }
 
+            function toggleAddressByOption() {
+                const isPickup = deliveryOptionSelect && deliveryOptionSelect.value === 'Pickup';
+                if (addressBlock) addressBlock.style.display = isPickup ? 'none' : 'block';
+                if (addressInput) {
+                    addressInput.required = !isPickup;
+                    if (isPickup) addressInput.value = '';
+                }
+            }
+
             paymentMethodSelect.addEventListener('change', toggleCardFields);
+            if (deliveryOptionSelect) deliveryOptionSelect.addEventListener('change', toggleAddressByOption);
 
             // Format expiry date input
             const expiryInput = document.querySelector('[name="ExpiryDate"]');
@@ -198,6 +211,10 @@
                     e.target.value = e.target.value.replace(/\D/g, '');
                 });
             }
+
+            // initial state
+            toggleCardFields();
+            toggleAddressByOption();
         });
     </script>
 }
