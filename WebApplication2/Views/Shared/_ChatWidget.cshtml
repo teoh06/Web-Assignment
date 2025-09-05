@@ -3,6 +3,7 @@
     string displayName = "Guest";
     string userRole = "Guest";
     string userIdentifier = "";
+    var initialSuggestions = new List<string>();
     
     if (User.Identity.IsAuthenticated && User.IsInRole("Member"))
     {
@@ -434,6 +435,7 @@
     // User role and identifier from server-side
     const userRole = "@userRole";
     const userIdentifier = "@userIdentifier";
+    const serverSuggestions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialSuggestions));
     
     // --- Connection status feedback ---
     function setConnectionStatus(connected) {
@@ -503,8 +505,12 @@
                 addSupportMessage(`👋 Welcome to QuickBite support! I see you're logged in as a <strong>${userRole}</strong>. How can I help you today?`);
             }
             
-            // Show role-specific suggestions
-            showRoleBasedSuggestions();
+            // Show server-provided suggestions if any, else role-based
+            if (Array.isArray(serverSuggestions) && serverSuggestions.length > 0) {
+                showSuggestions(serverSuggestions);
+            } else {
+                showRoleBasedSuggestions();
+            }
         }
     }
     

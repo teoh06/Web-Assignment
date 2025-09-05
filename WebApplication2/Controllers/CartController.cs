@@ -93,6 +93,7 @@ namespace WebApplication2.Controllers
         // -------------------
         // Display cart page
         // -------------------
+        [Authorize(Roles = "Member")]
         public IActionResult Index()
         {
             RemoveInactiveItemsFromCart();
@@ -217,6 +218,7 @@ namespace WebApplication2.Controllers
         // -------------------
         // Clear cart
         // -------------------
+        [Authorize(Roles = "Member")]
         public IActionResult Clear()
         {
             HttpContext.Session.Remove(CartSessionKey);
@@ -663,6 +665,7 @@ namespace WebApplication2.Controllers
         // AJAX filter cart
         // -------------------
         [HttpGet]
+        [Authorize(Roles = "Member")]
         public IActionResult GetFilteredCartItems(string? search, decimal? minPrice, decimal? maxPrice)
         {
             RemoveInactiveItemsFromCart();
