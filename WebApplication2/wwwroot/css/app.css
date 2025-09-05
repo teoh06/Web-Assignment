@@ -3026,3 +3026,7 @@ label {
 .glowing {
     box-shadow: 0 2px 8px var(--text-primary);
 }
+
+.darknest {
+    background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+}

@@ -1,45 +1,150 @@
 @model IEnumerable<dynamic>
 @using System.Globalization
 
-@if (Model != null && Model.Any())
-{
-    <h3>Sales Summary</h3>
-
-    @foreach (var day in Model)
+<div class="sales-summary-container">
+    @if (Model != null && Model.Any())
     {
-        <h4>
-            @(((DateTime)day.Date).ToString("yyyy-MM-dd")) -
-            Total: @day.Total.ToString("C", new CultureInfo("en-MY"))
-        </h4>
+        var totalQuantity = 0;
+        foreach (var day in Model)
+        {
+            foreach (var item in day.Items)
+            {
+                totalQuantity += (int)item.Quantity;
+            }
+        }
 
-        <table class="table table-sm table-bordered">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in day.Items)
-                {
-                    <tr>
-                        <td>@item.Product</td>
-                        <td>@item.Quantity</td>
-                        <td>@item.Amount.ToString("C", new CultureInfo("en-MY"))</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="sales-header mb-4">
+            <h3 class="text-primary" style="margin-bottom: 15px; text-align: center;">Sales Summary</h3>
+            <div class="summary-cards row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white glowing">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2">Total Revenue</h6>
+                            <h4 class="card-title">@(((decimal)Model.Sum(x => (decimal)x.Total)).ToString("C", new CultureInfo("en-MY")))</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white glowing">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2">Total Orders</h6>
+                            <h4 class="card-title">@totalQuantity</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white glowing">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2">Date Range</h6>
+                            <h4 class="card-title">@Model.Count() Days</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sales-content">
+            @foreach (var day in Model)
+            {
+                <div class="day-section mb-4">
+                    <div class="day-header glowing d-flex justify-content-between align-items-center p-3 rounded darknest">
+                        <h4 class="m-0">@(((DateTime)day.Date).ToString("MMMM dd, yyyy"))</h4>
+                        <h5 class="m-0 text-success">@day.Total.ToString("C", new CultureInfo("en-MY"))</h5>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered glowing">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in day.Items)
+                                {
+                                    <tr>
+                                        <td>@item.Product</td>
+                                        <td class="text-center">@item.Quantity</td>
+                                        <td class="text-end">@item.Amount.ToString("C", new CultureInfo("en-MY"))</td>
+                                    </tr>
+                                }
+                                <tr class="table-secondary">
+                                    <td colspan="2" class="text-end fw-bold">Daily Total:</td>
+                                    <td class="text-end fw-bold">@day.Total.ToString("C", new CultureInfo("en-MY"))</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <a asp-action="SalesReport" class="btn btn-primary">
+                <i class="bi bi-download"></i> Download Sales Report (PDF)
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No sales data available for the selected period.
+        </div>
+    }
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
+<style>
+    .sales-summary-container {
+        max-width: 1200px;
+        margin: 0 auto;
     }
 
-    <div class="d-flex justify-content-start mb-3">
-        <a asp-action="SalesReport" class="btn btn-info">
-            Download Sales Report (PDF)
-        </a>
-    </div>
-}
-else
-{
-    <p>No sales data available.</p>
-}
+    .day-section {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .day-header {
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .summary-cards .card {
+        transition: transform 0.2s;
+    }
+
+    .summary-cards .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .table-responsive {
+        margin: 0;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+    }
+
+    .sales-content{
+        border-radius: 8px;
+    }
+</style>
+
+<style type="text/css">
+    @@media screen and (max-width: 768px) {
+        .day-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.5rem;
+        }
+    }
+</style>
