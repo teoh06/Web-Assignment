@@ -785,22 +785,13 @@ public class AccountController : Controller
 
         if (user != null)
         {
-            // IMPORTANT: Handle related data.
-            // The database schema shows that a Member has Orders. You cannot delete a member
-            // without first handling their orders due to the foreign key constraint.
+            // --- Preserve orders for admin sales tracking ---
             var memberOrders = await db.Orders.Where(o => o.MemberEmail == user.Email).ToListAsync();
-            if (memberOrders.Any())
+            foreach (var order in memberOrders)
             {
-                // First delete order items, then the orders
-                foreach (var order in memberOrders)
-                {
-                    var orderItems = await db.OrderItems.Where(oi => oi.OrderId == order.OrderId).ToListAsync();
-                    db.OrderItems.RemoveRange(orderItems);
-                }
-                db.Orders.RemoveRange(memberOrders);
+                order.Member = null; // Remove navigation, keep info fields
             }
-
-            // Finally, delete the user
+            // Remove the user
             db.Users.Remove(user);
             await db.SaveChangesAsync();
 

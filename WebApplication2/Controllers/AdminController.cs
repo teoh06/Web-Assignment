@@ -93,27 +93,70 @@ public class AdminController : Controller
             .OrderBy(x => x.Date)
             .ToList();
 
+        var totalRevenue = sales.Sum(s => s.Total);
+        var totalOrders = sales.Sum(s => s.Items.Sum(i => i.Quantity));
+
         var pdf = Document.Create(container =>
         {
             container.Page(page =>
             {
+                page.Size(PageSizes.A4);
                 page.Margin(20);
+                page.DefaultTextStyle(x => x.FontFamily("Arial"));
 
-                page.Header()
-                    .Text("Sales Report")
-                    .FontSize(20)
-                    .Bold()
-                    .AlignCenter();
+                // Header
+                page.Header().Element(header =>
+                {
+                    header.Row(row =>
+                    {
+                        row.RelativeItem().Column(column =>
+                        {
+                            column.Item().Text("Sales Report")
+                                .FontSize(24)
+                                .Bold()
+                                .FontColor("#1565C0");
 
+                            column.Item().Text($"Generated on {DateTime.Now:yyyy-MM-dd HH:mm}")
+                                .FontSize(10)
+                                .FontColor("#757575");
+                        });
+                    });
+                });
+
+                // Content
                 page.Content().Column(col =>
                 {
+                    // Summary section
+                    col.Item().PaddingVertical(10).Column(summary =>
+                    {
+                        summary.Item().Text("Summary").FontSize(16).Bold();
+                        summary.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                            });
+
+                            table.Cell().Text("Total Revenue:");
+                            table.Cell().Text(totalRevenue.ToString("C", new CultureInfo("en-MY"))).Bold();
+                            table.Cell().Text("Total Orders:");
+                            table.Cell().Text(totalOrders.ToString()).Bold();
+                            table.Cell().Text("Period:");
+                            table.Cell().Text($"{sales.First().Date:yyyy-MM-dd} to {sales.Last().Date:yyyy-MM-dd}").Bold();
+                        });
+                    });
+
+                    // Daily sales details
                     foreach (var day in sales)
                     {
-                        // Day header
-                        col.Item().Text($"{day.Date:yyyy-MM-dd} - Total: {day.Total.ToString("C", new CultureInfo("en-MY"))}")
+                        col.Item().BorderBottom(1).BorderColor("#E0E0E0").PaddingVertical(5)
+                            .Text($"Date: {day.Date:yyyy-MM-dd}")
                             .Bold()
-                            .FontSize(14)
-                            .Underline();
+                            .FontSize(14);
+
+                        col.Item().Text($"Daily Total: {day.Total.ToString("C", new CultureInfo("en-MY"))}")
+                            .FontColor("#2E7D32");
 
                         // Table of products
                         col.Item().Table(table =>
@@ -125,27 +168,45 @@ public class AdminController : Controller
                                 columns.RelativeColumn(2); // Amount
                             });
 
-                            // Header
+                            // Styled header
                             table.Header(header =>
                             {
-                                header.Cell().Text("Product").Bold();
-                                header.Cell().Text("Quantity").Bold();
-                                header.Cell().Text("Amount").Bold();
+                                header.Cell().Background("#F5F5F5")
+                                    .Padding(5).Text("Product").Bold();
+                                header.Cell().Background("#F5F5F5")
+                                    .Padding(5).Text("Quantity").Bold();
+                                header.Cell().Background("#F5F5F5")
+                                    .Padding(5).Text("Amount").Bold();
                             });
 
-                            // Rows
+                            // Alternating row colors
+                            bool alternate = false;
                             foreach (var item in day.Items)
                             {
-                                table.Cell().Text(item.Product);
-                                table.Cell().Text(item.Quantity.ToString());
-                                table.Cell().Text(item.Amount.ToString("C", new CultureInfo("en-MY")));
+                                var background = alternate ? "#FFFFFF" : "#FAFAFA";
+                                table.Cell().Background(background).Padding(5).Text(item.Product);
+                                table.Cell().Background(background).Padding(5).Text(item.Quantity.ToString());
+                                table.Cell().Background(background).Padding(5)
+                                    .Text(item.Amount.ToString("C", new CultureInfo("en-MY")));
+                                alternate = !alternate;
                             }
                         });
 
-                        // Spacer between days
-                        col.Item().Text("");
+                        // Add spacing between days
+                        col.Item().Height(10);
                     }
                 });
+
+                // Footer
+                page.Footer()
+                    .AlignCenter()
+                    .Text(x =>
+                    {
+                        x.Span("Page ");
+                        x.CurrentPageNumber();
+                        x.Span(" of ");
+                        x.TotalPages();
+                    });
             });
         });
 
@@ -153,7 +214,7 @@ public class AdminController : Controller
         pdf.GeneratePdf(stream);
         stream.Position = 0;
 
-        return File(stream.ToArray(), "application/pdf", "SalesReport.pdf");
+        return File(stream.ToArray(), "application/pdf", $"SalesReport_{DateTime.Now:yyyyMMdd}.pdf");
     }
 
     [HttpGet]

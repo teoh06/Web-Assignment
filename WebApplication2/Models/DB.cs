@@ -163,6 +163,12 @@ public class Order
     [MaxLength(200)]
     public string DeliveryAddress { get; set; }
     public string DeliveryOption { get; set; } // Add delivery option
+
+    // --- Persistent member info for sales tracking ---
+    [MaxLength(100)]
+    public string MemberName { get; set; } // Store member name at time of order
+    [MaxLength(15)]
+    public string MemberPhone { get; set; } // Store member phone at time of order
 }
 
 public class OrderItem

@@ -313,9 +313,12 @@ namespace WebApplication2.Controllers
                 return View(vm);
             }
 
+            // When creating a new order, copy member info
             var order = new Order
             {
-                MemberEmail = User.Identity.Name,
+                MemberEmail = member.Email,
+                MemberName = member.Name,
+                MemberPhone = member.PhoneNumber,
                 OrderDate = DateTime.Now,
                 Status = "Paid",
                 PaymentMethod = vm.PaymentMethod,
