@@ -2,88 +2,287 @@
     var routeData = Context.GetRouteData();
     var controller = (routeData.Values["controller"]?.ToString() ?? "").ToLowerInvariant();
     var action = (routeData.Values["action"]?.ToString() ?? "").ToLowerInvariant();
-    var isAdmin = User.IsInRole("Admin");
     var isMember = User.IsInRole("Member");
     var isGuest = !User.Identity!.IsAuthenticated;
+    var hour = DateTime.Now.Hour;
+    string timePrompt = "";
+    string timeButtonText = "";
+    string timeButtonIcon = "";
+    string timeButtonUrl = "";
+    if (hour >= 6 && hour < 11) {
+        timePrompt = "Good morning! Start your day with a hearty breakfast.";
+        timeButtonText = "See Breakfast Specials";
+        timeButtonIcon = "fa-coffee";
+        timeButtonUrl = "/MenuItem?meal=breakfast";
+    } else if (hour >= 11 && hour < 15) {
+        timePrompt = "It's lunchtime! Check out our caesar salad.";
+        timeButtonText = "Order Lunch";
+        timeButtonIcon = "fa-hamburger";
+        timeButtonUrl = "/MenuItem?meal=lunch";
+    } else if (hour >= 15 && hour < 18) {
+        timePrompt = "Snack time! Grab a quick bite or dessert.";
+        timeButtonText = "Snacks & Desserts";
+        timeButtonIcon = "fa-ice-cream";
+        timeButtonUrl = "/MenuItem?meal=snack";
+    } else if (hour >= 18 && hour < 22) {
+        timePrompt = "Dinner is served! Explore our chef's dinner picks.";
+        timeButtonText = "Dinner Menu";
+        timeButtonIcon = "fa-drumstick-bite";
+        timeButtonUrl = "/MenuItem?meal=dinner";
+    } else {
+        timePrompt = "Late night cravings? Try our midnight snacks!";
+        timeButtonText = "Midnight Snacks";
+        timeButtonIcon = "fa-moon";
+        timeButtonUrl = "/MenuItem?meal=midnight";
+    }
 }
 
-<!-- Help Panel Overlay -->
-<div id="helpPanelOverlay" class="help-overlay" style="display: none;">
+<!-- Help Panel Overlay (Guests & Members only) -->
+<div id="helpPanelOverlay" class="help-overlay" style="display: none;" data-current="@controller">
     <div class="help-panel">
-        <div class="help-content">
-                @if (controller == "home" && action == "index")
-                {
-                    if (isGuest)
-                    {
-                        <text>
-                            New here? Browse the menu to see what we offer. Create a free account to save favorites and place orders.
-                        </text>
-                    }
-                    else if (isMember)
-                    {
-                        <text>
-                            Tip: Use Favorites to quickly reorder. Track orders from <a href="/Cart/Track">Track Order</a>.
-                        </text>
-                    }
-                    else if (isAdmin)
-                    {
-                        <text>
-                            Admin quick link: open the <a href="/Admin">Admin Panel</a> for sales and user management.
-                        </text>
-                    }
-                }
-                else if (controller == "account" && action == "register")
-                {
-                    <text>
-                        Use a valid email to receive receipts. Strong passwords work best: at least 8 characters with a mix of letters and numbers.
-                    </text>
-                }
-                else if (controller == "cart" && action == "payment")
-                {
-                    <text>
-                        Select Delivery or Pickup first. Choosing Pickup hides the address field. Card payments require cardholder name, number, expiry, and CVV.
-                    </text>
-                }
-                else if (controller == "admin" && action == "index")
-                {
-                    <text>
-                        View sales by category and top sellers at a glance. Use Manage Users to review accounts and Sales Summary for daily totals.
-                    </text>
-                }
-                else
-                {
-                    if (isGuest)
-                    {
-                        <text>
-                            You’re browsing as a guest. Login or register to add to cart, checkout, and save favorites.
-                        </text>
-                    }
-                    else if (isMember)
-                    {
-                        <text>
-                            Need help? Use the chat widget at the bottom-right, or visit <a href="/Cart/History">My Orders</a> to view receipts.
-                        </text>
-                    }
-                    else if (isAdmin)
-                    {
-                        <text>
-                            Admin tip: Use Order Maintenance to filter orders by status and update progress.
-                        </text>
-                    }
-                }
-        </div>
-        <div class="help-footer">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeHelpPanel()">
-                <i class="fas fa-times"></i> Close
+        <div class="help-header">
+            <i class="fas fa-lightbulb"></i>
+            <span>Quick Tips & Help</span>
+            <button type="button" class="help-close-btn" onclick="closeHelpPanel()">
+                <i class="fas fa-times"></i>
             </button>
+        </div>
+        <div class="help-content">
+
+            <!-- Time-based lively prompt -->
+            <div class="help-section" data-section="general">
+                <h3><i class="fas @(timeButtonIcon) pulse"></i> @timePrompt</h3>
+                <div class="help-actions">
+                    <button class="help-action-btn help-action-btn--primary" onclick="window.location.href='@timeButtonUrl'">
+                        <i class="fas @(timeButtonIcon)"></i> @timeButtonText
+                    </button>
+                    <a href="/MenuItem" class="help-action-btn"><i class="fas fa-utensils"></i> Start New Order</a>
+                    <a href="/Account/UpdateProfile" class="help-action-btn"><i class="fas fa-star"></i> Quick Favorites</a>
+                </div>
+            </div>
+
+            
+
+            <!-- Context-based help: only Guests & Members -->
+            @if (controller == "home" && action == "index")
+            {
+                if (isGuest)
+                {
+                    <div class="help-section mt-3" data-section="home">
+                        <h3><i class="fas fa-star"></i> Welcome to QuickBite!</h3>
+                        <p>New here? Browse our menu, then create a free account to save favorites and track orders in real-time.</p>
+                        <div class="help-actions">
+                            <a href="/MenuItem" class="help-action-btn"><i class="fas fa-utensils"></i> Browse Menu</a>
+                            <a href="/Account/Register" class="help-action-btn"><i class="fas fa-user-plus"></i> Create Account</a>
+                            <a href="/Account/Login" class="help-action-btn"><i class="fas fa-user-plus"></i> Login Account</a>
+                        </div>
+                    </div>
+                }
+                else if (isMember)
+                {
+                    <div class="help-section mt-3" data-section="home">
+                        <h3><i class="fas fa-heart"></i> Quick Access</h3>
+                        <p>Use Favorites for one-tap reorders, and track current orders live.</p>
+                        <div class="help-actions">
+                            <a href="/Cart/Track" class="help-action-btn"><i class="fas fa-truck"></i> Track Orders</a>
+                            <a href="/MenuItem" class="help-action-btn"><i class="fas fa-utensils"></i> Order Now</a>
+                            <a href="/Account/UpdateProfile" class="help-action-btn"><i class="fas fa-star"></i> Favorites</a>
+                        </div>
+                    </div>
+                }
+            }
+            else if (controller == "account" && action == "register")
+            {
+                <div class="help-section mt-3" data-section="account">
+                    <h3><i class="fas fa-shield-alt"></i> Registration Tips</h3>
+                    <p>Use a valid email for receipts. Strong passwords work best: 8+ characters with a mix of letters, numbers, and symbols.</p>
+                    <div class="help-tips">
+                        <div class="help-tip"><i class="fas fa-check"></i> Use a real email for order confirmations</div>
+                        <div class="help-tip"><i class="fas fa-check"></i> Create a strong password (8+ chars)</div>
+                        <div class="help-tip"><i class="fas fa-check"></i> Mix letters, numbers & symbols</div>
+                    </div>
+                    <div class="help-actions">
+                        <a href="/Account/Login" class="help-action-btn"><i class="fas fa-sign-in-alt"></i> Already have an account?</a>
+                    </div>
+                </div>
+            }
+            else if (controller == "cart" && action == "payment")
+            {
+                <div class="help-section mt-3" data-section="cart">
+                    <h3><i class="fas fa-credit-card"></i> Payment Guide</h3>
+                    <p>Select Delivery or Pickup first. For cards, enter the cardholder name, number, expiry, and CVV accurately.</p>
+                    <div class="help-tips">
+                        <div class="help-tip"><i class="fas fa-check"></i> Choose delivery method first</div>
+                        <div class="help-tip"><i class="fas fa-check"></i> Fill in all card details</div>
+                        <div class="help-tip"><i class="fas fa-check"></i> Double-check your address</div>
+                    </div>
+                    <div class="help-actions">
+                        <a href="/Cart" class="help-action-btn"><i class="fas fa-cart-arrow-down"></i> Review Cart</a>
+                        <a href="/Cart/Track" class="help-action-btn"><i class="fas fa-truck"></i> Track Order</a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                if (isGuest)
+                {
+                    <div class="help-section mt-3" data-section="general">
+                        <h3><i class="fas fa-info-circle"></i> Guest Access</h3>
+                        <p>You're browsing as a guest. Login or register to add to cart, checkout, and save favorites.</p>
+                        <div class="help-actions">
+                            <a href="/Account/Login" class="help-action-btn"><i class="fas fa-sign-in-alt"></i> Login</a>
+                            <a href="/Account/Register" class="help-action-btn"><i class="fas fa-user-plus"></i> Register</a>
+                            <a href="/MenuItem" class="help-action-btn"><i class="fas fa-utensils"></i> Explore Menu</a>
+                        </div>
+                    </div>
+
+                    <!-- Guest: Home fallback -->
+                    <div class="help-section mt-3" data-section="home">
+                        <h3><i class="fas fa-home"></i> Explore Our Menu</h3>
+                        <p>Browse categories and dishes. Create an account to save favorites and faster checkout later.</p>
+                        <div class="help-actions">
+                            <a href="/Category" class="help-action-btn"><i class="fas fa-list"></i> Browse Categories</a>
+                            <a href="/MenuItem" class="help-action-btn"><i class="fas fa-utensils"></i> View Menu</a>
+                            <a href="/Account/Register" class="help-action-btn"><i class="fas fa-user-plus"></i> Create Account</a>
+                        </div>
+                    </div>
+
+                    <!-- Guest: Cart fallback -->
+                    <div class="help-section mt-3" data-section="cart">
+                        <h3><i class="fas fa-shopping-cart"></i> Add Items & Checkout</h3>
+                        <p>Add items to your cart from the menu. You will be asked to login or register at checkout.</p>
+                        <div class="help-actions">
+                            <a href="/MenuItem" class="help-action-btn"><i class="fas fa-plus"></i> Add Items</a>
+                            <a href="/Account/Login" class="help-action-btn"><i class="fas fa-lock"></i> Login to Checkout</a>
+                            <a href="/Account/Register" class="help-action-btn"><i class="fas fa-user-plus"></i> Register to Checkout</a>
+                        </div>
+                        <div class="help-tips">
+                            <div class="help-tip"><i class="fas fa-lightbulb"></i> Tip: Use categories to quickly find what you crave.</div>
+                        </div>
+                    </div>
+
+                    <!-- Guest: Account fallback -->
+                    <div class="help-section mt-3" data-section="account">
+                        <h3><i class="fas fa-user"></i> Create Your Account</h3>
+                        <p>Save favorites, track orders, and checkout faster every time.</p>
+                        <div class="help-actions">
+                            <a href="/Account/Register" class="help-action-btn"><i class="fas fa-user-plus"></i> Register Now</a>
+                            <a href="/Account/Login" class="help-action-btn"><i class="fas fa-sign-in-alt"></i> Login</a>
+                        </div>
+                    </div>
+                }
+                else if (isMember)
+                {
+                    <div class="help-section mt-3" data-section="general">
+                        <h3><i class="fas fa-question-circle"></i> Need Help?</h3>
+                        <p>Use chat for quick assistance, or review your order history. You can reorder any past purchase in a tap.</p>
+                        <div class="help-actions">
+                            <a href="/Cart/History" class="help-action-btn"><i class="fas fa-history"></i> Order History</a>
+                            <button onclick="toggleChat()" class="help-action-btn"><i class="fas fa-comments"></i> Open Chat</button>
+                            <a href="/MenuItem" class="help-action-btn"><i class="fas fa-bolt"></i> Reorder Now</a>
+                        </div>
+                    </div>
+
+                    <!-- Member: Home fallback -->
+                    <div class="help-section mt-3" data-section="home">
+                        <h3><i class="fas fa-shopping-basket"></i> How to Order & Manage Your Experience</h3>
+                        <ol style="margin-left: 1em;">
+                            <li>Browse the <a href="/MenuItem">menu</a> and select your favorite dishes.</li>
+                            <li>Click <b>Add to Cart</b> for each item you want. You can also <b>rate</b> and <b>favorite</b> menu items for quick access later.</li>
+                            <li>Go to your <a href="/Cart">cart</a> to review, filter, or update your order.</li>
+                            
+                            <li>Proceed to <a href="/Cart/Payment">checkout</a> and complete your payment.</li>
+                            <li>Track your order status in <a href="/Cart/Track">real time</a> or use <b>Live Tracking</b> in chat.</li>
+                            <li>Reorder previous orders easily from your <a href="/Cart/History">order history</a> or via chat.</li>
+                        </ol>
+                        <div class="help-actions" style="margin-top:10px;">
+                            <a href="/MenuItem" class="help-action-btn"><i class="fas fa-utensils"></i> Browse Menu</a>
+                            <a href="/Account/UpdateProfile" class="help-action-btn"><i class="fas fa-star"></i> View Favorites</a>
+                            <a href="/Cart" class="help-action-btn"><i class="fas fa-cart-plus"></i> Go to Cart</a>
+                            <a href="/Cart/Track" class="help-action-btn"><i class="fas fa-truck"></i> Track Orders</a>
+                            <a href="/Cart/History" class="help-action-btn"><i class="fas fa-history"></i> Order History</a>
+                            <a href="/Account/UpdateProfile" class="help-action-btn"><i class="fas fa-user-edit"></i> Update Profile</a>
+                            <button class="help-action-btn" onclick="toggleChat()"><i class="fas fa-comments"></i> Chat: Reorder/Track Live</button>
+                        </div>
+                        <div class="help-tips">
+                            <div class="help-tip"><i class="fas fa-lightbulb"></i> Tip: Use cart filters to quickly find items.</div>
+                            <div class="help-tip"><i class="fas fa-gift"></i> Tip: Rate and favorite items for faster reordering next time.</div>
+                            <div class="help-tip"><i class="fas fa-smile"></i> Need help? Use the chat or contact support anytime!</div>
+                        </div>
+                    </div>
+
+                    <!-- Menu Section -->
+                    <div class="help-section mt-3" data-section="home">
+                        <h3><i class="fas fa-utensils"></i> Menu & Favorites</h3>
+                        <p>Browse our menu and discover new dishes. Click the heart icon to add items to your favorites for quick access next time.</p>
+                        <div class="help-actions">
+                            <a href="/MenuItem" class="help-action-btn"><i class="fas fa-utensils"></i> Browse Menu</a>
+                            <a href="/Account/UpdateProfile" class="help-action-btn"><i class="fas fa-star"></i> View Favorites</a>
+                            <a href="/Category" class="help-action-btn"><i class="fas fa-list"></i> Browse Categories</a>
+                        </div>
+                        <div class="help-tips">
+                            <div class="help-tip"><i class="fas fa-lightbulb"></i> Tip: Use favorites to quickly reorder your preferred dishes!</div>
+                        </div>
+                    </div>
+
+                    <!-- Cart Section -->
+                    <div class="help-section mt-3" data-section="cart">
+                        <h3><i class="fas fa-shopping-cart"></i> Cart Management</h3>
+                        <p>Review your cart, update quantities, and use filters to find items.</p>
+                        <div class="help-actions">
+                            <a href="/Cart" class="help-action-btn"><i class="fas fa-cart-plus"></i> Go to Cart</a>
+                            <a href="/Cart/Payment" class="help-action-btn"><i class="fas fa-credit-card"></i> Proceed to Checkout</a>
+                        </div>
+                        
+                    </div>
+
+                    <!-- Payment Section -->
+                    <div class="help-section mt-3" data-section="cart">
+                        <h3><i class="fas fa-credit-card"></i> Payment & Checkout</h3>
+                        <p>Choose delivery or pickup, fill in your details, and complete payment securely. Double-check your address and order before confirming.</p>
+                        <div class="help-actions">
+                            <a href="/Cart/Payment" class="help-action-btn"><i class="fas fa-credit-card"></i> Proceed to Payment</a>
+                            <a href="/Cart/Track" class="help-action-btn"><i class="fas fa-truck"></i> Track After Payment</a>
+                        </div>
+                    </div>
+
+                    <!-- Order Tracking Section -->
+                    <div class="help-section mt-3" data-section="cart">
+                        <h3><i class="fas fa-truck"></i> Track Your Order</h3>
+                        <p>Track your order status in real time or use the chat for live tracking updates.</p>
+                        <div class="help-actions">
+                            <a href="/Cart/Track" class="help-action-btn"><i class="fas fa-truck"></i> Track Orders</a>
+                            <button class="help-action-btn" onclick="toggleChat()"><i class="fas fa-comments"></i> Chat: Live Tracking</button>
+                        </div>
+                    </div>
+
+                    <!-- Order History Section -->
+                    <div class="help-section mt-3" data-section="cart">
+                        <h3><i class="fas fa-history"></i> Order History & Reorder</h3>
+                        <p>View your past orders and reorder your favorites with one click or via chat.</p>
+                        <div class="help-actions">
+                            <a href="/Cart/History" class="help-action-btn"><i class="fas fa-history"></i> Order History</a>
+                            <button class="help-action-btn" onclick="toggleChat()"><i class="fas fa-redo"></i> Chat: Reorder Previous</button>
+                        </div>
+                    </div>
+
+                    
+
+                    <!-- Profile Section -->
+                    <div class="help-section mt-3" data-section="account">
+                        <h3><i class="fas fa-user-edit"></i> Profile Management</h3>
+                        <p>Update your profile information and address for faster checkout and delivery.</p>
+                        <div class="help-actions">
+                            <a href="/Account/UpdateProfile" class="help-action-btn"><i class="fas fa-user-edit"></i> Update Profile</a>
+                            <a href="/Account/UpdatePassword" class="help-action-btn"><i class="fas fa-key"></i> Update Password</a>
+                            <a href="/Account/ResetPassword" class="help-action-btn"><i class="fas fa-unlock"></i> Reset Password</a>
+                        </div>
+                    </div>
+                }
+            }
         </div>
     </div>
 </div>
-
-<!-- Help Button -->
-<button id="helpButton" class="help-button" onclick="toggleHelpPanel()" title="Get Help">
-    <i class="fas fa-question"></i>
-</button>
 
 <style>
 .help-overlay {
@@ -92,29 +291,168 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.3);
     z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(3px);
 }
 
 .help-panel {
-    background: white;
-    border-radius: 6px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    max-width: 350px;
-    width: 90%;
-    max-height: 60vh;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    max-width: 420px;
+    width: 92%;
+    max-height: 80vh;
     overflow: hidden;
-    animation: fadeIn 0.15s ease-out;
-    border: 1px solid #dee2e6;
+    animation: helpPanelFadeIn 0.3s ease-out;
+    border: 1px solid var(--border-light);
 }
 
-@@keyframes fadeIn {
+.help-header {
+    background: var(--gradient-warm);
+    color: var(--text-light);
+    padding: 16px 20px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.help-header i {
+    font-size: 1.2rem;
+}
+
+.help-close-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.help-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.help-content {
+    padding: 20px;
+    max-height: calc(80vh - 60px);
+    overflow-y: auto;
+}
+
+/* Filter toolbar removed */
+
+.help-section {
+    color: var(--text-primary);
+}
+
+.help-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary-brand);
+}
+
+.help-section {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: helpSectionIn 320ms ease forwards;
+}
+
+.help-section:nth-of-type(1) { animation-delay: 40ms; }
+.help-section:nth-of-type(2) { animation-delay: 80ms; }
+.help-section:nth-of-type(3) { animation-delay: 120ms; }
+.help-section:nth-of-type(4) { animation-delay: 160ms; }
+.help-section:nth-of-type(5) { animation-delay: 200ms; }
+.help-section:nth-of-type(6) { animation-delay: 240ms; }
+
+.pulse {
+    animation: pulse 1.4s ease-in-out infinite;
+}
+
+.help-section p {
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.help-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.help-action-btn {
+    background: var(--bg-accent);
+    color: var(--text-primary);
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border-light);
+}
+
+.help-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.help-tips {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+}
+
+.help-tip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.help-tip i {
+    color: var(--accent-green);
+}
+
+.help-tip:last-child {
+    margin-bottom: 0;
+}
+
+/* Utility */
+.is-hidden {
+    display: none !important;
+}
+
+@@keyframes helpPanelFadeIn {
     from {
         opacity: 0;
-        transform: scale(0.98);
+        transform: scale(0.95);
     }
     to {
         opacity: 1;
@@ -122,70 +460,108 @@
     }
 }
 
-.help-content {
-    padding: 16px;
-    max-height: 45vh;
-    overflow-y: auto;
-    line-height: 1.4;
-    font-size: 13px;
-    color: #495057;
+@@keyframes helpSectionIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.help-footer {
-    padding: 8px 16px;
-    border-top: 1px solid #e9ecef;
-    background-color: #f8f9fa;
-    text-align: right;
+@@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.08);
+        opacity: 0.85;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
-.help-button {
+/* Dark theme support */
+.dark-theme .help-panel {
+    background: var(--bg-primary);
+    border-color: var(--border-medium);
+}
+
+.dark-theme .help-section h3 {
+    color: var(--primary-brand);
+}
+
+.dark-theme .help-action-btn {
+    background: var(--bg-secondary);
+    border-color: var(--border-medium);
+}
+
+.dark-theme .help-action-btn:hover {
+    background: var(--bg-accent);
+}
+
+.dark-theme .help-tips {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-medium);
+}
+
+/* Support Buttons Container */
+.support-buttons-container {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #6c757d;
-    color: white;
-    border: none;
-    font-size: 12px;
-    cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.15s ease;
+    display: flex;
+    gap: 12px;
     z-index: 1000;
 }
 
+.help-button {
+    position: static;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gradient-warm);
+    color: var(--text-light);
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .help-button:hover {
-    background: #5a6268;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .help-button:active {
     transform: translateY(0);
 }
 
-/* Dark theme support */
-.dark-theme .help-panel {
-    background: #2d3748;
-    border-color: #4a5568;
-}
+/* Media queries for responsiveness */
+@@media (max-width: 768px) {
+    .help-panel {
+        width: 95%;
+        max-height: 90vh;
+        margin: 20px;
+    }
 
-.dark-theme .help-content {
-    color: #e2e8f0;
-}
+    .help-actions {
+        flex-direction: column;
+    }
 
-.dark-theme .help-footer {
-    background-color: #1a202c;
-    border-color: #4a5568;
-}
-
-.dark-theme .help-button {
-    background: #4a5568;
-}
-
-.dark-theme .help-button:hover {
-    background: #2d3748;
+    .help-action-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 </style>
 
@@ -194,7 +570,8 @@ function toggleHelpPanel() {
     const overlay = document.getElementById('helpPanelOverlay');
     if (overlay.style.display === 'none' || overlay.style.display === '') {
         overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
+        
     } else {
         closeHelpPanel();
     }
@@ -203,7 +580,16 @@ function toggleHelpPanel() {
 function closeHelpPanel() {
     const overlay = document.getElementById('helpPanelOverlay');
     overlay.style.display = 'none';
-    document.body.style.overflow = ''; // Restore scrolling
+    document.body.style.overflow = '';
+}
+
+function toggleChat() {
+    const chatWidget = document.getElementById('chatWidget');
+    const chatBody = document.getElementById('chatBody');
+    if (chatWidget && chatBody) {
+        chatBody.style.display = chatBody.style.display === 'none' ? 'flex' : 'none';
+        closeHelpPanel();
+    }
 }
 
 // Close on escape key
@@ -214,15 +600,14 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Close on overlay click (but not on panel click)
-document.getElementById('helpPanelOverlay').addEventListener('click', function(e) {
-    if (e.target === this) {
+document.addEventListener('click', function(e) {
+    const overlay = document.getElementById('helpPanelOverlay');
+    if (!overlay) return;
+    if (e.target === overlay) {
         closeHelpPanel();
     }
 });
 
-// Simple initialization - no auto-show
-document.addEventListener('DOMContentLoaded', function() {
-    // Help panel is now purely on-demand
-});
+// Filter logic removed
 </script>
 

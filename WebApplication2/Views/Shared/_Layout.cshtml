@@ -1,9 +1,11 @@
+@using WebApplication2.Models
+@using Microsoft.EntityFrameworkCore
 @inject DB db
 @{
     WebApplication2.Models.Member member = null;
-    if (User.IsInRole("Member"))
+    if (User.Identity?.IsAuthenticated == true && User.IsInRole("Member"))
     {
-        member = db.Members.Find(User.Identity!.Name);
+        member = db.Members.FirstOrDefault(m => m.Email == User.Identity.Name);
     }
 }
 
@@ -38,12 +40,34 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="/css/app.css" asp-append-version="true">
-    @RenderSection("head", false)
+    
+    <style>
+        .support-buttons-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            gap: 16px;
+            z-index: 1000;
+        }
+        .support-buttons-container .help-button {
+            position: static;
+            margin-bottom: 0;
+            z-index: 1001;
+        }
+        .support-buttons-container .chat-widget {
+            position: static;
+            margin-bottom: 0;
+            z-index: 1002;
+        }
+    </style>
 
+    @RenderSection("head", false)
 </head>
 
 <body>
-
     <div class="info">@Html.Raw(TempData["Info"])</div>
 
     <header>
@@ -51,7 +75,6 @@
         <h1 style="font-family: 'Brush Script MT', cursive; font-style: italic;">
             <a href="/" style="text-decoration: none; color: inherit; margin-left: 8px;">QuickBite</a>
         </h1>
-
 
         @* User name and role *@
         @if (User.Identity!.IsAuthenticated)
@@ -132,6 +155,16 @@
             <a href="/Home/Privacy" style="text-decoration: none; color: var(--text-primary);">Privacy Policy</a>
         </div>
     </footer>
+
+    <div class="support-buttons-container">
+        @if (!User.IsInRole("Admin"))
+        {
+        <button id="helpButton" class="help-button" onclick="toggleHelpPanel()" title="Get Help">
+            <i class="fas fa-question"></i>
+        </button>
+        }
+        @await Html.PartialAsync("_ChatWidget")
+    </div>
 
     <script src="/js/jquery.min.js"></script>
     <script src="/js/jquery.unobtrusive-ajax.min.js"></script>
@@ -218,6 +251,5 @@
 
     @RenderSection("foot", false)
     @RenderSection("Scripts", required: false)
-    @await Html.PartialAsync("_ChatWidget")
 </body>
 </html>
