@@ -2,15 +2,210 @@
 @{
     ViewBag.Title = "Delete Menu Item";
 }
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <h4>@Model.Name</h4>
-    <form asp-action="Delete" method="post">
-        <input type="hidden" asp-for="MenuItemId" />
-        <button type="submit" class="btn btn-danger">Delete</button>
-        <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
-    </form>
+
+<style>
+    .delete-card {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        box-shadow: var(--shadow-lg);
+        border: 2px solid var(--danger-color);
+        animation: fadeInDown 0.7s cubic-bezier(.39,.58,.57,1) both;
+        margin-bottom: 2rem;
+    }
+    @@keyframes fadeInDown {
+        0% {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .delete-card-header {
+        background: var(--danger-color);
+        color: var(--text-light);
+        border-top-left-radius: 1rem;
+        border-top-right-radius: 1rem;
+        padding: 1.2rem 1.5rem;
+        box-shadow: 0 2px 8px var(--danger-color);
+    }
+
+    .delete-image {
+        margin: 10px;
+        padding: 10px;
+        border: 3px solid var(--danger-color);
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 12px var(--danger-color);
+        background: var(--bg-secondary);
+        transition: transform 0.2s;
+    }
+
+        .delete-image:hover {
+            transform: scale(1.04);
+        }
+
+    .no-image-placeholder {
+        border: 2px dashed var(--danger-color);
+        background: var(--bg-accent);
+        color: var(--danger-color);
+        font-size: 1.2em;
+    }
+
+    .delete-warning {
+        font-size: 1.1em;
+        font-weight: 500;
+        color: var(--danger-color);
+        background: var(--bg-accent);
+        border-left: 4px solid var(--danger-color);
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.2rem;
+        box-shadow: 0 1px 4px var(--danger-color);
+    }
+
+    .delete-btn {
+        background: var(--danger-color);
+        color: var(--text-light);
+        border: none;
+        font-weight: 600;
+        border-radius: 8px;
+        box-shadow: var(--shadow-md);
+        padding: 12px 24px;
+        transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+
+        .delete-btn:hover {
+            background: var(--danger-hover);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px) scale(1.03);
+        }
+
+    .cancel-btn {
+        border: 2px solid var(--border-color);
+        color: var(--text-primary);
+        background: var(--bg-secondary);
+        font-weight: 500;
+        border-radius: 8px;
+        padding: 12px 24px;
+        transition: background 0.2s, color 0.2s, border 0.2s;
+    }
+
+        .cancel-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border-strong);
+        }
+
+    .delete-details dt {
+        color: var(--danger-color);
+        font-weight: 600;
+    }
+
+    .delete-details dd {
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .badge {
+        background: var(--danger-color);
+        color: var(--text-light);
+        border-radius: 20px;
+        padding: 5px 12px;
+        font-size: 0.9em;
+        font-weight: 600;
+        box-shadow: var(--shadow-sm);
+    }
+
+        .badge.bg-success {
+            background: var(--success-color);
+            color: var(--text-light);
+        }
+
+        .badge.bg-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+    @@media (max-width: 768px) {
+        .delete-card
+
+    {
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+    }
+
+    .delete-card-header {
+        border-radius: 0.5rem 0.5rem 0 0;
+        padding: 1rem;
+    }
+
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="delete-card">
+        <div class="delete-card-header">
+            <h3 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion</h3>
+        </div>
+        <div class="card-body" style="background: var(--card-bg); color: var(--text-primary);">
+            <div class="row">
+                <div class="col-md-4">
+                    @if (!string.IsNullOrEmpty(Model.PhotoURL))
+                    {
+                        <img src="~/Images/@Model.PhotoURL" alt="@Model.Name" class="img-fluid delete-image mb-3" />
+                    }
+                    else
+                    {
+                        <div class="no-image-placeholder rounded mb-3 d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <i class="fas fa-image fa-3x"></i>
+                        </div>
+                    }
+                </div>
+                <div class="col-md-8">
+                    <h4 class="card-title" style="color: var(--danger-color); margin: 1.5rem;">Delete "@Model.Name"?</h4>
+                    <div class="delete-warning">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Are you sure you want to permanently delete this menu item? <strong>This action cannot be undone.</strong>
+                    </div>
+                    <dl class="row delete-details">
+                        <dt class="col-sm-3">Category</dt>
+                        <dd class="col-sm-9">@Model.Category?.Name</dd>
+                        <dt class="col-sm-3">Description</dt>
+                        <dd class="col-sm-9">@Model.Description</dd>
+                        <dt class="col-sm-3">Price</dt>
+                        <dd class="col-sm-9">@Model.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</dd>
+                        <dt class="col-sm-3">Stock</dt>
+                        <dd class="col-sm-9">@Model.StockQuantity items</dd>
+                        <dt class="col-sm-3">Status</dt>
+                        <dd class="col-sm-9">
+                            @if (Model.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </dd>
+                    </dl>
+                    <form asp-action="Delete" method="post" class="mt-4">
+                        <input type="hidden" asp-for="MenuItemId" />
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="delete-btn mb-3">
+                                <i class="fas fa-trash-alt me-2"></i>Delete Item
+                            </button>
+                            <a href="@Url.Action("Index")" class="cancel-btn mb-3" style="text-decoration: none;">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
 @section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
 }
