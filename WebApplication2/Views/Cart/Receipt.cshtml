@@ -6,9 +6,230 @@
     bool isEmailReceipt = ViewData["IsEmailReceipt"] != null && (bool)ViewData["IsEmailReceipt"];
 }
 
-@if (isEmailReceipt)
+@if (!isEmailReceipt)
 {
-    <link rel="stylesheet" href="/css/email-receipt.css" />
+    <style>
+        .receipt-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+            border-radius: 18px;
+            box-shadow: 0 4px 24px var(--shadow-color);
+            padding: 32px;
+            color: var(--text-primary);
+        }
+
+        .receipt-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .receipt-header {
+            background: linear-gradient(135deg, var(--primary-brand), var(--secondary-brand));
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .receipt-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .receipt-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-family: "Victor Mono", monospace;
+            position: relative;
+            z-index: 1;
+        }
+
+        .receipt-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .receipt-body {
+            padding: 2rem;
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        .info-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .section-title {
+            color: var(--primary-brand);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-lighter);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-table {
+            display: grid;
+            gap: 0.8rem;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 1rem;
+            align-items: baseline;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background: var(--accent-green);
+            color: var(--text-light);
+        }
+
+        .receipt-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 1rem;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-lighter);
+            background: var(--card-bg);
+        }
+
+        .receipt-table th {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-weight: 600;
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 2px solid var(--border-lighter);
+        }
+
+        .receipt-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-lighter);
+            color: var(--text-primary);
+        }
+
+        .receipt-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .personalizations-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .personalizations-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .receipt-footer {
+            text-align: center;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border-lighter);
+        }
+
+        .total-row {
+            background: var(--bg-secondary);
+            font-weight: 700;
+        }
+
+        .total-amount {
+            color: var(--primary-brand);
+            font-size: 1.1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .action-buttons .btn {
+            min-width: 140px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            border-radius: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        @@media print {
+            .receipt-container {
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                background: white;
+            }
+
+            .receipt-card {
+                box-shadow: none;
+                border: none;
+            }
+
+            .receipt-header {
+                color: black;
+                background: white;
+                border-bottom: 2px solid #eee;
+            }
+
+            .action-buttons {
+                display: none;
+            }
+        }
+    </style>
+}
+else
+{
     <style>
         /* Inline critical styles for email clients */
         body {
@@ -71,13 +292,13 @@
     </style>
 }
 
-<div class="@(isEmailReceipt ? "email-receipt-container" : "container py-4 receipt-container")">
-    <div class="@(isEmailReceipt ? "email-section" : "card receipt-card")">
-        <div class="@(isEmailReceipt ? "email-receipt-header" : "card-header receipt-header text-center py-3")">
-            <h2 class="mb-0">Order Receipt</h2>
-            <p class="receipt-subtitle mb-0">Thank you for your purchase!</p>
+<div class="@(isEmailReceipt ? "email-receipt-container" : "receipt-container")">
+    <div class="@(isEmailReceipt ? "email-section" : "receipt-card")">
+        <div class="@(isEmailReceipt ? "email-receipt-header" : "receipt-header")">
+            <h2 class="receipt-title">Order Receipt</h2>
+            <p class="receipt-subtitle">Thank you for your purchase!</p>
         </div>
-        <div class="@(isEmailReceipt ? "email-receipt-body" : "card-body receipt-body")" style="@(isEmailReceipt ? "padding: 20px;" : "")">
+        <div class="@(isEmailReceipt ? "email-receipt-body" : "receipt-body")" style="@(isEmailReceipt ? "padding: 20px;" : "")">
             <!-- Order Information -->
             <div class="row g-4">
                 <div class="col-md-6">
@@ -217,13 +438,13 @@
                 </div>
             }
 
-            <!-- Receipt Footer -->
-            <div class="@(isEmailReceipt ? "email-receipt-footer" : "receipt-footer text-center mt-4 pt-4 border-top")" style="@(isEmailReceipt ? "text-align: center; padding-top: 20px; margin-top: 20px; border-top: 1px solid #dee2e6; color: #6c757d; font-size: 14px;" : "")">
-                <p class="footer-text mb-2">For any questions about your order, please contact our customer service.</p>
+            <!-- Footer -->
+            <div class="@(isEmailReceipt ? "email-receipt-footer" : "receipt-footer")">
+                <p>For any questions about your order, please contact our customer service.</p>
                 @if (!isEmailReceipt)
                 {
-                    <div class="mt-4">
-                        <a href="@Url.Action("Index", "MenuItem")" class="btn btn-primary me-2">Continue Shopping</a>
+                    <div class="action-buttons">
+                        <a href="@Url.Action("Index", "MenuItem")" class="btn btn-primary">Continue Shopping</a>
                         <button onclick="window.print()" class="btn btn-outline-secondary">Print Receipt</button>
                     </div>
                 }
@@ -418,6 +639,10 @@
         
         .total-row {
             background-color: #f8f9fa !important;
+        }
+
+        .chart-header {
+            background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary)) !important;
         }
     }
     
