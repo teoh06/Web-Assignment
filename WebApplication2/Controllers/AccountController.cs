@@ -510,13 +510,45 @@ public class AccountController : Controller
             u!.Hash = hp.HashPassword(password);
             db.SaveChanges();
 
-            // TODO: Send reset password email - Nwxt practical (Practical 8)
+            // Send reset password email
+            string subject = "QuickBite - Password Reset Request";
+            string body = $@"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;'>
+                <div style='background: linear-gradient(135deg, #2A1810, #1A202C); padding: 30px; text-align: center; color: white;'>
+                    <h1 style='margin: 0; font-size: 28px;'>Password Reset</h1>
+                    <p style='margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;'>Your QuickBite account password has been reset</p>
+                </div>
+                <div style='padding: 30px; border: 1px solid #dee2e6; border-top: none;'>
+                    <p style='font-size: 16px; color: #333; margin-bottom: 20px;'>Hello <strong>{u.Name}</strong>,</p>
+                    <p style='font-size: 16px; color: #333; margin-bottom: 25px;'>A password reset was requested for your account. Please use the temporary password below to log in. For security, change your password after logging in.</p>
+                    <div style='background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px dashed #6c757d; padding: 25px; text-align: center; margin: 25px 0; border-radius: 8px;'>
+                        <p style='margin: 0 0 10px 0; font-size: 14px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;'>Temporary Password</p>
+                        <div style='font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #495057; font-family: monospace;'>
+                            {password}
+                        </div>
+                    </div>
+                    <div style='background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                        <p style='margin: 0; font-size: 14px; color: #856404;'>
+                            <strong>⏰ Important:</strong> Change your password after logging in for maximum security.
+                        </p>
+                    </div>
+                    <p style='font-size: 14px; color: #6c757d; margin-top: 25px;'>
+                        If you did not request this reset, please contact our support team immediately.
+                    </p>
+                    <div style='border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 25px; text-align: center;'>
+                        <p style='margin: 0; font-size: 14px; color: #6c757d;'>
+                            Best regards,<br>
+                            <strong style='color: #495057;'>The QuickBite Team</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>";
+        _emailService.SendEmailAsync(u.Email, subject, body);
 
-            TempData["Info"] = $"Password reset to <b>{password}</b>.";
-            return RedirectToAction();
-        }
+        TempData["Info"] = "A password reset email has been sent to your registered email address. Please check your inbox.";
+        return RedirectToAction();
+    }
 
-        return View();
+    return View();
     }
 
     // Add these methods to your AccountController
@@ -543,7 +575,7 @@ public class AccountController : Controller
             // Send OTP email
             string subject = "QuickBite - Complete Your Registration";
             string body = $@"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;'>
-                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;'>
+                <div style='background: linear-gradient(135deg, #2A1810, #1A202C); padding: 30px; text-align: center; color: white;'>
                     <h1 style='margin: 0; font-size: 28px;'>Welcome to QuickBite!</h1>
                     <p style='margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;'>Complete your registration</p>
                 </div>
@@ -720,16 +752,28 @@ public class AccountController : Controller
 
             string emailSubject = "Account Modification Request";
             string emailBody = $@"
-            <div style='font-family: Georgia, serif; font-size: 16px; color: #000; line-height: 1.8;'>
-                <p>We have received a request to delete your account.</p>
-                <p>If you did not make this request, please ignore this email.</p>
-                <p>Your account will be permanently deleted in 7 days. If you change your mind, you can restore your account by clicking the link below:</p>
-                <a href='{recoveryLink}' style='color: #0066cc; font-weight: bold; text-decoration: underline;'>Restore My Account</a>
-                <br><br>
-                <p>If you are certain you want to delete your account immediately, click the link below:</p>
-                <a href='{permanentDeleteLink}' style='color: #cc0000; font-weight: bold; text-decoration: underline;'>Delete My Account Permanently</a>
-            </div>";
-
+            <div style='font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0002;overflow:hidden;'>
+                <div style='background:linear-gradient(90deg,#48BB78 60%,#38A169 100%);color:#fff;padding:32px 24px;text-align:center;'>
+                    <span style='font-size:2.5rem;display:inline-block;margin-bottom:12px;'>✔️</span>
+                    <h2 style='margin:0;font-size:1.7rem;font-weight:700;'>Account Modification Request</h2>
+                </div>
+                <div style='padding:32px 24px;'>
+                    <p style='font-size:1.1rem;color:#2D3748;margin-bottom:18px;'>We have received a request to delete your account.</p>
+                    <p style='color:#718096;margin-bottom:18px;'>If you did not make this request, please ignore this email.</p>
+                    <div style='background:linear-gradient(90deg,#FFF5F2 60%,#F8F9FA 100%);border-radius:8px;padding:18px 16px;margin-bottom:18px;'>
+                        <span style='font-size:1.2rem;color:#E53E3E;font-weight:600;'>Your account will be permanently deleted in 7 days.</span>
+                        <p style='margin:10px 0 0 0;color:#2D3748;'>If you change your mind, you can restore your account by clicking the button below:</p>
+                        <a href='{recoveryLink}' style='display:inline-block;margin:16px 0 0 0;padding:12px 28px;background:#48BB78;color:#fff;font-weight:600;border-radius:8px;text-decoration:none;font-size:1.1rem;box-shadow:0 2px 8px #48BB78;'>Restore My Account</a>
+                    </div>
+                    <div style='background:linear-gradient(90deg,#FFF5F2 60%,#F8F9FA 100%);border-radius:8px;padding:18px 16px;margin-bottom:18px;'>
+                        <span style='font-size:1.2rem;color:#E53E3E;font-weight:600;'>Delete Immediately</span>
+                        <p style='margin:10px 0 0 0;color:#2D3748;'>If you are certain you want to delete your account immediately, click the button below:</p>
+                        <a href='{permanentDeleteLink}' style='display:inline-block;margin:16px 0 0 0;padding:12px 28px;background:#E53E3E;color:#fff;font-weight:600;border-radius:8px;text-decoration:none;font-size:1.1rem;box-shadow:0 2px 8px #E53E3E;'>Delete My Account Permanently</a>
+                    </div>
+                    <p style='color:#718096;font-size:0.95rem;margin-top:24px;'>If you have any questions, please contact our support team.</p>
+                </div>
+            </div>
+            ";
             await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody); // Use _emailService
         }
         catch (Exception ex)

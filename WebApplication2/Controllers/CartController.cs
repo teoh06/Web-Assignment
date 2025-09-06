@@ -318,7 +318,7 @@ namespace WebApplication2.Controllers
             {
                 MemberEmail = member.Email,
                 MemberName = member.Name,
-                MemberPhone = member.PhoneNumber,
+                MemberPhone = !string.IsNullOrWhiteSpace(vm.PhoneNumber) ? vm.PhoneNumber : (member?.PhoneNumber ?? ""),
                 OrderDate = DateTime.Now,
                 Status = "Paid",
                 PaymentMethod = vm.PaymentMethod,

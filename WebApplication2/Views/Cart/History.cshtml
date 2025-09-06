@@ -176,6 +176,12 @@
                 }
             });
             
+            // Clear search functionality
+            $('#clearSearchBtn').on('click', function() {
+                $('#searchInput').val('');
+                performSearch(); // This will show all orders
+            });
+            
             // --- Sorting Functionality ---
             $('#sortOptions').on('change', function() {
                 const sortOption = $(this).val();
@@ -405,16 +411,61 @@
             // Hide all orders initially
             $('.order-card').hide();
             
+            // Split search term into individual words for better matching
+            const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
+            
             // Show orders that match the search term
             $('.order-card').each(function() {
                 const orderCard = $(this);
                 const orderId = orderCard.find('.order-id').text().toLowerCase();
                 const orderDate = orderCard.find('.order-date').text().toLowerCase();
-                const orderItems = orderCard.find('.order-item-name').text().toLowerCase();
+                const orderTotal = orderCard.find('.order-total').text().toLowerCase();
+                const orderStatus = orderCard.find('.badge').text().toLowerCase();
                 
-                if (orderId.includes(searchTerm) || 
-                    orderDate.includes(searchTerm) || 
-                    orderItems.includes(searchTerm)) {
+                // Search in order items (product names) with word matching
+                let orderItemsMatch = false;
+                orderCard.find('.order-item-name').each(function() {
+                    const itemName = $(this).text().toLowerCase();
+                    
+                    // Check if any search word matches the item name
+                    for (let word of searchWords) {
+                        if (itemName.includes(word)) {
+                            orderItemsMatch = true;
+                            break;
+                        }
+                    }
+                    
+                    if (orderItemsMatch) {
+                        return false; // Break out of each loop
+                    }
+                });
+                
+                // Also search in the order card data attributes for product names
+                const orderData = orderCard.data('order-items') || '';
+                const orderItemsData = orderData.toLowerCase();
+                
+                // Check if any search word matches the order data
+                let orderDataMatch = false;
+                for (let word of searchWords) {
+                    if (orderItemsData.includes(word)) {
+                        orderDataMatch = true;
+                        break;
+                    }
+                }
+                
+                // Check basic fields
+                let basicMatch = false;
+                for (let word of searchWords) {
+                    if (orderId.includes(word) || 
+                        orderDate.includes(word) || 
+                        orderTotal.includes(word) ||
+                        orderStatus.includes(word)) {
+                        basicMatch = true;
+                        break;
+                    }
+                }
+                
+                if (basicMatch || orderItemsMatch || orderDataMatch) {
                     orderCard.show();
                 }
             });
@@ -423,7 +474,11 @@
             if ($('.order-card:visible').length === 0) {
                 if ($('#no-results-message').length === 0) {
                     $('.order-history-container').append(
-                        '<div id="no-results-message" class="alert alert-info mt-3">No orders found matching your search.</div>'
+                        '<div id="no-results-message" class="alert alert-info mt-3">' +
+                        '<i class="fas fa-search me-2"></i>No orders found matching your search for "' + searchTerm + '".' +
+                        '<br><small class="text-muted">Try searching by order ID, date, product name, or order status.</small>' +
+                        '<br><small class="text-muted"><strong>Examples:</strong> "cola", "pizza", "burger", "drink", "food"</small>' +
+                        '</div>'
                     );
                 }
             } else {
@@ -544,26 +599,457 @@
                         }
                     }
                 }
-            });
+                });
         }
     </script>
     <style>
         /* Main Container Styling */
         .order-history-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 0 15px;
         }
         
-        /* Order Card Styling */
-        .order-card .card {
-            transition: box-shadow 0.3s, transform 0.2s;
-            border-radius: 12px;
+        /* Enhanced Header Styling */
+        .order-history-header {
+            background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .header-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .page-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+        
+        .admin-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .admin-btn:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
+        }
+        
+        .stats-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .stats-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .stats-item i {
+            font-size: 2rem;
+        }
+        
+        .stats-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        
+        .stats-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        /* Search and Filter Section */
+        .search-filter-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .search-group {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
             overflow: hidden;
         }
-        .order-card .card:hover {
-            box-shadow: 0 0 0 4px #4caf5040, 0 8px 24px rgba(0,0,0,0.12);
-            transform: translateY(-5px);
+        
+        .search-group .input-group-text {
+            border: none;
+            color: #6c757d;
+        }
+        
+        .search-group .form-control {
+            border: none;
+            font-size: 1rem;
+            padding: 0.75rem 1rem;
+        }
+        
+        .search-group .form-control:focus {
+            box-shadow: none;
+        }
+        
+        .filter-select {
+            background: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+        }
+        
+        .filter-select:focus {
+            box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+        }
+        
+        /* Modern Order Card Styling */
+        .order-card-modern {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .order-card-modern:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+        }
+        
+        .order-header {
+            background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .order-info {
+            margin-bottom: 1rem;
+        }
+        
+        .order-id-section {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .order-id {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .order-date-section {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6c757d;
+        }
+        
+        .order-date {
+            font-weight: 500;
+        }
+        
+        .order-time {
+            background: rgba(108, 117, 125, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        
+        .order-status {
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .status-pending {
+            background: linear-gradient(135deg, #ffc107, #ffb300);
+            color: white;
+        }
+        
+        .status-served {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .status-cancelled {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+        
+        .status-refunded {
+            background: linear-gradient(135deg, #fd7e14, #e83e8c);
+            color: white;
+        }
+        
+        .status-other {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+        }
+        
+        .order-body {
+            background: var(--card-bg);
+            padding: 1.5rem;
+        }
+        
+        .order-items-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f8f9fa;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-right: 0.5rem;
+        }
+        
+        .item-count {
+            background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .items-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .order-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            background: var(--card-bg);
+        }
+        
+        .order-item:hover {
+            background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+            transform: translateX(5px);
+        }
+        
+        .item-image {
+            width: 50px;
+            height: 50px;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .item-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+        }
+        
+        .item-placeholder {
+            width: 100%;
+            height: 100%;
+            background: #e9ecef;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+        }
+        
+        .item-details {
+            flex: 1;
+            margin-right: 1rem;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+        
+        .item-quantity {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+        
+        .item-personalization {
+            font-size: 0.8rem;
+            color: #495057;
+            background: rgba(108, 117, 125, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        
+        .item-price {
+            font-weight: 700;
+            color: #28a745;
+            font-size: 1.1rem;
+        }
+        
+        .order-details-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .detail-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+            margin-right: 0.5rem;
+            min-width: 80px;
+        }
+        
+        .detail-value {
+            color: #6c757d;
+        }
+        
+        .order-footer {
+            border-top: 2px solid #f8f9fa;
+            padding-top: 1.5rem;
+        }
+        
+        .total-section {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+        }
+        
+        .total-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+        
+        .total-amount {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #28a745;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .btn-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .action-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.75rem 0.5rem;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .action-btn i {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .action-btn.btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+        
+        .action-btn.btn-info {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+        }
+        
+        .action-btn.btn-success {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+        }
+        
+        .action-btn.btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+        }
+        
+        .action-btn.btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+        
+        .action-btn.btn-warning {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
         }
         .order-card .card-header {
             font-size: 1.1rem;
@@ -704,6 +1190,81 @@
             transition: all 0.3s ease;
         }
         
+        /* Enhanced Search Bar Styling */
+        .input-group .form-control {
+            border-radius: 0.375rem 0 0 0.375rem;
+            border-right: none;
+            height: 45px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .input-group .form-control:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .input-group .input-group-text {
+            border-radius: 0.375rem 0 0 0.375rem;
+            border-right: none;
+            background-color: #f8f9fa;
+            border-color: #e9ecef;
+        }
+        
+        .input-group .btn {
+            height: 45px;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .input-group .btn:last-child {
+            border-radius: 0 0.375rem 0.375rem 0;
+            padding: 0.5rem 1.5rem;
+        }
+        
+        .input-group .btn:not(:last-child) {
+            border-radius: 0;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .input-group .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .input-group .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+        
+        /* Filter and Sort Controls */
+        .form-select {
+            height: 45px;
+            border-radius: 0.375rem;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .form-select:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        
+        /* Search Results Styling */
+        #no-results-message {
+            border-radius: 0.5rem;
+            border: none;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        #no-results-message .fas {
+            color: #6c757d;
+        }
+        
         /* Pagination Styling */
         .pagination .page-item .page-link {
             border-radius: 50px;
@@ -725,19 +1286,59 @@
             color: white;
         }
         
-        /* Chart Containers */
-        .chart-container {
-            height: 350px;
-            background-color: #fff;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        /* Enhanced Chart Styling */
+        .charts-section {
+            margin-bottom: 3rem;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.05);
             transition: all 0.3s ease;
         }
         
-        .chart-container:hover {
-             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-         }
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+        }
+        
+        .chart-header {
+            background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .chart-subtitle {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .chart-body {
+            background: var(--card-bg);
+            padding: 1.5rem;
+        }
+        
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        
+        .chart-container canvas {
+            max-height: 100%;
+            max-width: 100%;
+        }
          
          /* Button Ripple Effect */
          .btn-ripple {
@@ -878,57 +1479,112 @@
         </div>
     }
 
-    <!-- Order History Header with Filters -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>My Order History</h2>
-        @if (User.IsInRole("Admin"))
-        {
-            <a href="@Url.Action("Orders", "Admin")" class="btn btn-primary">Manage All Orders</a>
-        }
-    </div>
-        <div class="d-flex gap-2">
-            <div class="input-group">
-                <input type="text" id="searchInput" class="form-control" placeholder="Search orders..." aria-label="Search orders">
-                <button class="btn btn-outline-secondary" type="button" id="searchButton">
-                    <i class="fas fa-search"></i>
-                </button>
+        <!-- Enhanced Order History Header -->
+    <div class="order-history-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="header-icon me-3">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-title mb-1">Order History</h1>
+                        <p class="page-subtitle text-muted">Track and manage your past orders</p>
+                    </div>
+                </div>
+                @if (User.IsInRole("Admin"))
+                {
+                    <a href="@Url.Action("Orders", "Admin")" class="btn btn-outline-primary admin-btn">
+                        <i class="fas fa-cog me-2"></i>Manage All Orders
+                    </a>
+                }
             </div>
-            <select id="statusFilter" class="form-select">
-                <option value="" selected="@(string.IsNullOrEmpty(selectedStatus))">All Statuses</option>
-                <option value="Pending" selected="@(selectedStatus == "Pending")">Pending</option>
-                <option value="Preparing" selected="@(selectedStatus == "Preparing")">Preparing</option>
-                <option value="Served" selected="@(selectedStatus == "Served")">Served</option>
-                <option value="Cancelled" selected="@(selectedStatus == "Cancelled")">Cancelled</option>
-                <option value="Refunded" selected="@(selectedStatus == "Refunded")">Refunded</option>
-            </select>
-            <select id="sortOrder" class="form-select">
-                <option value="date_desc">Newest First</option>
-                <option value="date_asc">Oldest First</option>
-                <option value="total_desc">Highest Amount</option>
-                <option value="total_asc">Lowest Amount</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- Purchase Summary Charts -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Monthly Spending</div>
-                <div class="card-body">
-                    <div style="height: 350px; width: 350px; margin: 0 auto;">
-                        <canvas id="monthlySpendingChart"></canvas>
+            <div class="col-lg-4">
+                <div class="stats-card">
+                    <div class="stats-item">
+                        <i class="fas fa-shopping-bag text-primary"></i>
+                        <div>
+                            <span class="stats-number">@Model.Orders.Count</span>
+                            <span class="stats-label">Total Orders</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Order Categories</div>
-                <div class="card-body">
-                    <div style="height: 350px; width: 350px; margin: 0 auto;">
-                        <canvas id="orderCategoriesChart"></canvas>
+        
+        <!-- Enhanced Search and Filter Section -->
+        <div class="search-filter-section mt-4">
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="input-group search-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search orders by ID, date, product name, or related items..." aria-label="Search orders">
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn" title="Clear search">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button class="btn btn-primary" type="button" id="searchBtn">
+                            <i class="fas fa-search me-1"></i> Search
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <select id="statusFilter" class="form-select filter-select">
+                        <option value="" selected="@(string.IsNullOrEmpty(selectedStatus))">
+                            <i class="fas fa-filter me-2"></i>All Statuses
+                        </option>
+                        <option value="Pending" selected="@(selectedStatus == "Pending")">🟡 Pending</option>
+                        <option value="Preparing" selected="@(selectedStatus == "Preparing")">🔵 Preparing</option>
+                        <option value="Served" selected="@(selectedStatus == "Served")">🟢 Served</option>
+                        <option value="Cancelled" selected="@(selectedStatus == "Cancelled")">🔴 Cancelled</option>
+                        <option value="Refunded" selected="@(selectedStatus == "Refunded")">🟠 Refunded</option>
+                    </select>
+                </div>
+                <div class="col-lg-3">
+                    <select id="sortOptions" class="form-select filter-select">
+                        <option value="date-newest">📅 Newest First</option>
+                        <option value="date-oldest">📅 Oldest First</option>
+                        <option value="price-highest">💰 Highest Amount</option>
+                        <option value="price-lowest">💰 Lowest Amount</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Purchase Summary Charts -->
+    <div class="charts-section mb-5">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <i class="fas fa-chart-line text-primary me-2"></i>
+                            Monthly Spending
+                        </div>
+                        <div class="chart-subtitle">Your spending trends over time</div>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-container">
+                            <canvas id="monthlySpendingChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <i class="fas fa-chart-pie text-success me-2"></i>
+                            Order Categories
+                        </div>
+                        <div class="chart-subtitle">Distribution of your purchases</div>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-container">
+                            <canvas id="orderCategoriesChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -956,85 +1612,155 @@
             <div class="row" id="ordersList">
                 @foreach (var order in Model.Orders)
                 {
-                    <div class="col-md-6 mb-4 order-card" data-order-id="@order.OrderId" data-order-date="@order.OrderDate.ToString("yyyy-MM-ddTHH:mm:ss")" data-order-total="@order.Total" data-order-status="@order.Status">
-                        <div class="card h-100">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>Order #@order.OrderId</strong> - @order.OrderDate.ToString("yyyy-MM-dd HH:mm")
+                    <div class="col-lg-6 col-xl-4 mb-4 order-card" data-order-id="@order.OrderId" data-order-date="@order.OrderDate.ToString("yyyy-MM-ddTHH:mm:ss")" data-order-total="@order.Total" data-order-status="@order.Status" data-order-items="@string.Join(",", order.Items.Select(i => i.MenuItemName))">
+                        <div class="order-card-modern">
+                            <div class="order-header">
+                                <div class="order-info">
+                                    <div class="order-id-section">
+                                        <i class="fas fa-receipt text-primary me-2"></i>
+                                        <span class="order-id">Order #@order.OrderId</span>
+                                    </div>
+                                    <div class="order-date-section">
+                                        <i class="fas fa-calendar-alt text-muted me-2"></i>
+                                        <span class="order-date">@order.OrderDate.ToString("MMM dd, yyyy")</span>
+                                        <span class="order-time">@order.OrderDate.ToString("HH:mm")</span>
+                                    </div>
                                 </div>
-                                @if (order.Status == "Pending" || order.Status == "Preparing")
-                                {
-                                    <span class="badge bg-primary">@order.Status</span>
-                                }
-                                else if (order.Status == "Served")
-                                {
-                                    <span class="badge bg-success">@order.Status</span>
-                                }
-                                else if (order.Status == "Cancelled")
-                                {
-                                    <span class="badge bg-danger">@order.Status</span>
-                                }
-                                else if (order.Status == "Refunded")
-                                {
-                                    <span class="badge bg-warning text-dark">@order.Status</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-info">@order.Status</span>
-                                }
-                            </div>
-                            <div class="card-body d-flex flex-column">
-                                <h5 class="card-title">Items:</h5>
-                                <ul class="list-group list-group-flush mb-3">
-                                    @foreach (var item in order.Items)
+                                <div class="order-status">
+                                    @if (order.Status == "Pending" || order.Status == "Preparing")
                                     {
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            <div>
-                                                @if (!string.IsNullOrEmpty(item.PhotoURL))
-                                                {
-                                                    <img src="/Images/@item.PhotoURL" alt="@item.MenuItemName" style="width:50px; height:50px; object-fit:cover; margin-right:10px;">
-                                                }
-                                                @item.MenuItemName x @item.Quantity
-                                            </div>
-                                            <span>@((item.UnitPrice * item.Quantity).ToString("C", new CultureInfo("en-MY")))</span>
-                                        </li>
+                                        <span class="status-badge status-pending">
+                                            <i class="fas fa-clock me-1"></i>@order.Status
+                                        </span>
                                     }
-                                </ul>
-                                <div class="mt-2">
-                                    <strong>Delivery Address:</strong> @order.DeliveryAddress
-                                    <br>
-                                    <strong>Delivery Option:</strong> @order.DeliveryOption
+                                    else if (order.Status == "Served")
+                                    {
+                                        <span class="status-badge status-served">
+                                            <i class="fas fa-check-circle me-1"></i>@order.Status
+                                        </span>
+                                    }
+                                    else if (order.Status == "Cancelled")
+                                    {
+                                        <span class="status-badge status-cancelled">
+                                            <i class="fas fa-times-circle me-1"></i>@order.Status
+                                        </span>
+                                    }
+                                    else if (order.Status == "Refunded")
+                                    {
+                                        <span class="status-badge status-refunded">
+                                            <i class="fas fa-undo me-1"></i>@order.Status
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge status-other">
+                                            <i class="fas fa-info-circle me-1"></i>@order.Status
+                                        </span>
+                                    }
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center mt-auto pt-3">
-                                    <h4 class="mb-0">Total: @order.Total.ToString("C", new CultureInfo("en-MY"))</h4>
-                                    <div class="btn-group">
-                                        <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-receipt me-1"></i> View Receipt
-                                        </a>
-                                        <a asp-action="Track" asp-controller="Cart" asp-route-orderNumber="@order.OrderId" class="btn btn-sm btn-outline-info track-order-btn" data-order-id="@order.OrderId">
-                                            <i class="fas fa-truck me-1"></i> Track Order
-                                        </a>
-                                        <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" style="display:inline-block;" class="email-form">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-success email-button">
-                                                <i class="fas fa-envelope me-1"></i> Email
-                                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            </div>
+                            <div class="order-body">
+                                <div class="order-items-section">
+                                    <div class="section-header">
+                                        <i class="fas fa-shopping-basket text-primary me-2"></i>
+                                        <span class="section-title">Order Items</span>
+                                        <span class="item-count">(@order.Items.Count items)</span>
+                                    </div>
+                                    <div class="items-list">
+                                        @foreach (var item in order.Items)
+                                        {
+                                            <div class="order-item">
+                                                <div class="item-image">
+                                                    @if (!string.IsNullOrEmpty(item.PhotoURL))
+                                                    {
+                                                        <img src="/Images/@item.PhotoURL" alt="@item.MenuItemName" class="item-img">
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="item-placeholder">
+                                                            <i class="fas fa-image"></i>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                <div class="item-details">
+                                                    <div class="item-name order-item-name">@item.MenuItemName</div>
+                                                    <div class="item-quantity">Qty: @item.Quantity</div>
+                                                    @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
+                                                    {
+                                                        <div class="item-personalization">
+                                                            <i class="fas fa-cog me-1"></i>@item.SelectedPersonalizations
+                                                        </div>
+                                                    }
+                                                </div>
+                                                <div class="item-price">@((item.UnitPrice * item.Quantity).ToString("C", new CultureInfo("en-MY")))</div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                
+                                <div class="order-details-section">
+                                    <div class="detail-row">
+                                        <i class="fas fa-map-marker-alt text-info me-2"></i>
+                                        <span class="detail-label">Delivery:</span>
+                                        <span class="detail-value">@order.DeliveryOption</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(order.DeliveryAddress))
+                                    {
+                                        <div class="detail-row">
+                                            <i class="fas fa-home text-secondary me-2"></i>
+                                            <span class="detail-label">Address:</span>
+                                            <span class="detail-value">@order.DeliveryAddress</span>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                <div class="order-footer">
+                                    <div class="total-section">
+                                        <div class="total-label">Total Amount</div>
+                                        <div class="total-amount order-total">@order.Total.ToString("C", new CultureInfo("en-MY"))</div>
+                                    </div>
+                                    <div class="action-buttons">
+                                        <div class="btn-row">
+                                            <a asp-action="Receipt" asp-controller="Cart" asp-route-id="@order.OrderId" class="action-btn btn-primary">
+                                                <i class="fas fa-receipt"></i>
+                                                <span>Receipt</span>
+                                            </a>
+                                            <a asp-action="Track" asp-controller="Cart" asp-route-orderNumber="@order.OrderId" class="action-btn btn-info track-order-btn" data-order-id="@order.OrderId">
+                                                <i class="fas fa-truck"></i>
+                                                <span>Track</span>
+                                            </a>
+                                        </div>
+                                        <div class="btn-row">
+                                            <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" class="email-form" style="flex:1;">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="action-btn btn-success email-button w-100" style="min-width:180px;max-width:280px;height:48px;display:flex;align-items:center;justify-content:center;">
+                                                    <i class="fas fa-envelope"></i>
+                                                    <span>Email</span>
+                                                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                                </button>
+                                            </form>
+                                            <button type="button" class="action-btn btn-secondary reorder-btn" data-order-id="@order.OrderId">
+                                                <i class="fas fa-redo"></i>
+                                                <span>Reorder</span>
                                             </button>
-                                        </form>
-                                        <button type="button" class="btn btn-sm btn-secondary reorder-btn" data-order-id="@order.OrderId">
-                                            <i class="fas fa-redo me-1"></i> Reorder
-                                        </button>
+                                        </div>
                                         @if (order.Status == "Pending" || order.Status == "Preparing")
                                         {
-                                            <button type="button" class="btn btn-sm btn-danger cancel-order-btn" data-order-id="@order.OrderId">
-                                                <i class="fas fa-times me-1"></i> Cancel
-                                            </button>
+                                            <div class="btn-row">
+                                                <button type="button" class="action-btn btn-danger cancel-order-btn" data-order-id="@order.OrderId">
+                                                    <i class="fas fa-times"></i>
+                                                    <span>Cancel</span>
+                                                </button>
+                                            </div>
                                         }
                                         else if (order.Status == "Served")
                                         {
-                                            <a asp-action="Refund" asp-controller="Cart" asp-route-id="@order.OrderId" class="btn btn-sm btn-warning">
-                                                <i class="fas fa-undo me-1"></i> Refund
-                                            </a>
+                                            <div class="btn-row">
+                                                <a asp-action="Refund" asp-controller="Cart" asp-route-id="@order.OrderId" class="action-btn btn-warning">
+                                                    <i class="fas fa-undo"></i>
+                                                    <span>Refund</span>
+                                                </a>
+                                            </div>
                                         }
                                     </div>
                                 </div>
@@ -1086,4 +1812,4 @@
             </div>
         </div>
     </div>
-</div>
+</div></div>

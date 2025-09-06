@@ -2,27 +2,153 @@
     ViewBag.Title = "Account Restored";
 }
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h3 class="mb-0">Account Successfully Restored</h3>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">Your account has been successfully restored. You can now log in.</p>
-                    <a href="@Url.Action("Login", "Account")" class="btn btn-primary">Go to Login Page</a>
-                </div>
-            </div>
+<style>
+    .restore-container {
+        max-width: 600px;
+        margin: 3rem auto;
+        animation: slideUp 0.7s cubic-bezier(.39,.58,.57,1) both;
+    }
+
+    @@keyframes slideUp {
+        0% { 
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        100% { 
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .restore-card {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        box-shadow: var(--shadow-lg);
+        border: 2px solid var(--success-color);
+        overflow: hidden;
+    }
+
+    .restore-header {
+        background: var(--success-color);
+        color: var(--text-light);
+        padding: 1.5rem;
+        text-align: center;
+        position: relative;
+    }
+
+    .restore-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+        pointer-events: none;
+    }
+
+    .restore-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .restore-body {
+        padding: 2rem;
+        text-align: center;
+        background: var(--card-bg);
+        color: var(--text-primary);
+    }
+
+    .success-icon {
+        font-size: 3rem;
+        color: var(--success-color);
+        margin-bottom: 1rem;
+        animation: bounce 1s ease infinite;
+    }
+
+    @@keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .restore-message {
+        color: var(--text-primary);
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+    }
+
+    .login-btn {
+        display: inline-block;
+        padding: 0.8rem 2rem;
+        background: var(--success-color);
+        color: var(--text-light);
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: var(--shadow-md);
+    }
+
+    .login-btn:hover {
+        background: var(--success-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        color: var(--text-light);
+        text-decoration: none;
+    }
+
+    .redirect-text {
+        margin-top: 1rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    #countdown {
+        font-weight: bold;
+        color: var(--success-color);
+    }
+</style>
+
+<div class="restore-container">
+    <div class="restore-card">
+        <div class="restore-header">
+            <h3><i class="fas fa-shield-alt me-2"></i>Account Successfully Restored</h3>
+        </div>
+        <div class="restore-body">
+            <i class="fas fa-check-circle success-icon"></i>
+            <p class="restore-message">
+                Great news! Your account has been successfully restored. 
+                You can now access all your account features and continue using our services.
+            </p>
+            <a href="@Url.Action("Login", "Account")" class="login-btn">
+                <i class="fas fa-sign-in-alt me-2"></i>Go to Login Page
+            </a>
+            <p class="redirect-text">
+                Redirecting to login page in <span id="countdown">5</span> seconds...
+            </p>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Auto-redirect to Login after 5 seconds
-        setTimeout(function() {
-            window.location.href = "@Url.Action("Login", "Account")";
-        }, 5000); // Redirect after 5 seconds
+        // Countdown timer
+        let seconds = 5;
+        const countdownElement = document.getElementById('countdown');
+        
+        const countdown = setInterval(function() {
+            seconds--;
+            if (countdownElement) {
+                countdownElement.textContent = seconds;
+            }
+            
+            if (seconds <= 0) {
+                clearInterval(countdown);
+                window.location.href = "@Url.Action("Login", "Account")";
+            }
+        }, 1000);
     </script>
 }

@@ -62,13 +62,31 @@
             margin-bottom: 0;
             z-index: 1002;
         }
+
+        .info {
+            position:fixed;
+            top:30px;
+            left:50%;
+            transform:translateX(-50%);
+            z-index:9999;
+            min-width:300px;
+            max-width:600px;
+            text-align:center;
+            pointer-events:auto;
+            transition:opacity 0.5s;
+        }
     </style>
 
     @RenderSection("head", false)
 </head>
 
 <body>
-    <div class="info">@Html.Raw(TempData["Info"])</div>
+    @if (TempData["Info"] != null && !string.IsNullOrWhiteSpace(TempData["Info"].ToString()))
+    {
+        <div class="info" style="position:fixed;top:30px;left:50%;transform:translateX(-50%);z-index:9999;min-width:300px;max-width:600px;text-align:center;pointer-events:auto;transition:opacity 0.5s;">
+            @Html.Raw(TempData["Info"])
+        </div>
+    }
 
     <header>
         <!-- Logo -->
@@ -181,21 +199,31 @@
             return confirm("Are you sure you want to logout?");
         }
 
-        // Auto-dismiss success messages after 4 seconds
+        // Auto-dismiss .info messages after 40 seconds
+        document.addEventListener('DOMContentLoaded', function () {
+            const infoDiv = document.querySelector('.info');
+            if (infoDiv && infoDiv.textContent.trim() !== "") {
+                infoDiv.style.opacity = 1;
+                setTimeout(function () {
+                    infoDiv.style.opacity = 0;
+                    setTimeout(() => infoDiv.remove(), 500);
+                }, 40000); // 40 seconds
+            }
+        });
+
+        // Auto-dismiss success messages after 40 seconds (for important Bootstrap alerts)
         document.addEventListener('DOMContentLoaded', function () {
             const autoDissmissAlerts = document.querySelectorAll('.alert.auto-dismiss');
             autoDissmissAlerts.forEach(function(alert) {
                 setTimeout(function() {
-                    // Use Bootstrap's alert close method
                     if (typeof bootstrap !== 'undefined' && bootstrap.Alert) {
                         const bootstrapAlert = bootstrap.Alert.getOrCreateInstance(alert);
                         bootstrapAlert.close();
                     } else {
-                        // Fallback: manually fade out and remove
                         alert.classList.remove('show');
                         setTimeout(() => alert.remove(), 150);
                     }
-                }, 4000); // 4 seconds
+                }, 40000); // 40 seconds
             });
         });
 
