@@ -9,155 +9,201 @@
     <div class="alert">@TempData["Message"]</div>
 }
 
-
 <div class="container mt-4">
-    <div class="row">
+    <ul class="nav nav-tabs mb-4" id="createMenuTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="single-tab" data-bs-toggle="tab" data-bs-target="#single" type="button" role="tab" aria-controls="single" aria-selected="true">
+                <i class="fas fa-plus-circle"></i> Create Single Item
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="bulk-tab" data-bs-toggle="tab" data-bs-target="#bulk" type="button" role="tab" aria-controls="bulk" aria-selected="false">
+                <i class="fas fa-upload"></i> Bulk Upload
+            </button>
+        </li>
+    </ul>
 
-        <!-- Left: Bulk Upload -->
-        <div class="col-md-5">
-            <h3>Bulk Upload Menu Items (TXT)</h3>
-            <div id="bulkUploadMessage"></div>
+    <div class="tab-content" id="createMenuTabContent">
+        <!-- Single Item Creation Tab -->
+        <div class="tab-pane fade show active" id="single" role="tabpanel" aria-labelledby="single-tab">
+            <div class="row">
+                <div class="col-md-12">
+                    <h3>Add New Menu Item</h3>
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+                    }
 
-            <form id="dummyTokenForm" style="display:none;">
-                @Html.AntiForgeryToken()
-            </form>
+                    <form asp-action="Create" method="post" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        
+                        <div class="row">
+                            <!-- Left Column: Item Details -->
+                            <div class="col-md-7">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Name">Item Name</label>
+                                    <input asp-for="Name" class="form-control" placeholder="Enter menu item name" />
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
 
-            <div id="txtDropArea" class="drag-area">
-                <input type="file" id="txtFileInput" name="txtFile" accept=".txt" style="display:none;" />
-                <div id="txtPreviewContent">
-                    <span id="txtDropText">Drag & drop a TXT file here, or click to select.</span>
+                                <div class="form-group mb-3">
+                                    <label asp-for="Description">Description</label>
+                                    <textarea asp-for="Description" class="form-control" placeholder="Enter item description" rows="3"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label asp-for="Price">Price</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">RM</span>
+                                        <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" placeholder="0.00" />
+                                    </div>
+                                    <span asp-validation-for="Price" class="text-danger"></span>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label asp-for="CategoryId">Category</label>
+                                    <select asp-for="CategoryId" class="form-control" asp-items="@(new SelectList(categories, "CategoryId", "Name"))">
+                                        <option value="">-- Select Category --</option>
+                                    </select>
+                                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label asp-for="StockQuantity">Stock Quantity</label>
+                                    <input asp-for="StockQuantity" class="form-control" type="number" min="0" placeholder="0" />
+                                    <span asp-validation-for="StockQuantity" class="text-danger"></span>
+                                    <small class="form-text text-muted">Enter the available quantity in stock. Set to 0 if out of stock.</small>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Photo Upload -->
+                            <div class="col-md-5">
+                                <div class="form-group">
+                                    <label for="imageFile">Photo (Optional)</label>
+                                    <div class="image-upload-container">
+                                        <!-- Input Area -->
+                                        <div id="drop-area" class="drag-area" style="display:block;">
+                                            <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" style="display:none;" />
+                                            <div id="drop-text" class="upload-prompt">
+                                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                                <p>Drag & drop an image here, or click to select.</p>
+                                                <small>(Max 2MB)</small>
+                                            </div>
+                                        </div>
+                                        <!-- Preview Area -->
+                                        <div id="preview-container" class="preview-container" style="display:none;">
+                                            <div class="preview-header d-flex align-items-center justify-content-between">
+                                                <h6 class="m-0">Preview</h6>
+                                                <button type="button" id="removeImageBtn" class="btn btn-outline-danger btn-sm ms-2">
+                                                    <i class="fas fa-trash-alt"></i> Remove
+                                                </button>
+                                            </div>
+                                            <div id="preview-images" class="preview-images"></div>
+                                            <div class="image-controls d-flex gap-2 justify-content-center mt-2">
+                                                <button type="button" id="rotateLeftBtn" class="btn btn-sm btn-light" title="Rotate Left">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                                <button type="button" id="rotateRightBtn" class="btn btn-sm btn-light" title="Rotate Right">
+                                                    <i class="fas fa-redo"></i>
+                                                </button>
+                                                <button type="button" id="resizeBtn" class="btn btn-sm btn-light" title="Resize">
+                                                    <i class="fas fa-expand-arrows-alt"></i>
+                                                </button>
+                                                <button type="button" id="resetBtn" class="btn btn-sm btn-warning" title="Reset">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                </button>
+                                            </div>
+                                            <div class="resize-inputs d-flex gap-2 justify-content-center mt-2">
+                                                <input type="number" id="resizeWidth" class="form-control form-control-sm" placeholder="Width" min="10" max="2000" style="width:80px;" />
+                                                <input type="number" id="resizeHeight" class="form-control form-control-sm" placeholder="Height" min="10" max="2000" style="width:80px;" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted">Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 2MB.</small>
+                                    <span asp-validation-for="PhotoURL" class="text-danger"></span>
+                                    <input type="hidden" id="processedImageData" name="processedImageData" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary submit-btn">Create Item</button>
+                            <br>
+                            <br>
+                            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                        </div>
+                    </form>
                 </div>
             </div>
-            <small class="form-text text-muted">
-                TXT format: Name; Description; Price; CategoryName; OptionalPhotoURL <br />
-                Example 1: Cheeseburger; Juicy beef burger with cheese; 12.50; Main Course; https://example.com/images/cheeseburger.jpg <br />
-                Example 2: Chocolate Cake; Rich chocolate cake slice; 7.00; Desserts; https://example.com/images/chocolatecake.jpg
-            </small>
-            <br />
-            <br />
-            <h3>Multiple Photo Upload</h3>
-            <form id="photoUploadForm" method="post" enctype="multipart/form-data" asp-controller="MenuItem" asp-action="UploadPhotos">
-                @Html.AntiForgeryToken()
-                <div id="photoDropArea" class="drag-area">
-                    <input type="file" id="photoInput" name="photos" accept="image/*" multiple hidden />
-                    <div id="photoDropText">Drag & drop images here or click to select (Max size: 2MB each)</div>
-                    <div id="photoPreview" class="preview-images"></div>
-                </div>
-                <br />
-                <button type="submit" class="btn btn-secondary">Upload Photos</button>
-            </form>
         </div>
 
-        <!-- Middle: OR -->
-        <div class="col-md-2 text-center d-flex align-items-center justify-content-center">
-            <h4>OR</h4>
-        </div>
-
-        <!-- Right: Add New Menu Item -->
-        <div class="col-md-5">
-            <h3>Add New Menu Item</h3>
-
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
-            }
-
-            <form asp-action="Create" method="post" enctype="multipart/form-data">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-                <div class="form-group">
-                    <label asp-for="Name">Item Name</label>
-                    <input asp-for="Name" class="form-control" placeholder="Enter menu item name" />
-                    <span asp-validation-for="Name" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="Description">Description</label>
-                    <textarea asp-for="Description" class="form-control" placeholder="Enter item description" rows="3"></textarea>
-                    <span asp-validation-for="Description" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="Price">Price</label>
-                    <div class="input-group">
-                        <span class="input-group-text">RM</span>
-                        <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" placeholder="0.00" />
-                    </div>
-                    <span asp-validation-for="Price" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="CategoryId">Category</label>
-                    <select asp-for="CategoryId" class="form-control" asp-items="@(new SelectList(categories, "CategoryId", "Name"))">
-                        <option value="">-- Select Category --</option>
-                    </select>
-                    <span asp-validation-for="CategoryId" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="StockQuantity">Stock Quantity</label>
-                    <input asp-for="StockQuantity" class="form-control" type="number" min="0" placeholder="0" />
-                    <span asp-validation-for="StockQuantity" class="text-danger"></span>
-                    <small class="form-text text-muted">Enter the available quantity in stock. Set to 0 if out of stock.</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="imageFile">Photo (Optional)</label>
-                    <div class="image-upload-container">
-                        <!-- Input Area -->
-                        <div id="drop-area" class="drag-area" style="display:block;">
-                            <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" />
-                            <div id="drop-text" class="upload-prompt">
-                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                <p>Drag & drop an image here, or click to select.</p>
-                                <small>(Max 2MB)</small>
-                            </div>
+        <!-- Bulk Upload Tab -->
+        <div class="tab-pane fade" id="bulk" role="tabpanel" aria-labelledby="bulk-tab">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-file-upload"></i> Bulk Menu Items Upload</h5>
                         </div>
-                        <!-- Preview Area (Hidden initially) -->
-                        <div id="preview-container" class="preview-container" style="display:none;">
-                            <div class="preview-header d-flex align-items-center justify-content-between">
-                                <h6 class="m-0">Preview</h6>
-                                <button type="button" id="removeImageBtn" class="btn btn-outline-danger btn-sm ms-2">
-                                    <i class="fas fa-trash-alt"></i> Remove Image
-                                </button>
+                        <div class="card-body">
+                            <div id="bulkUploadMessage"></div>
+                            <form id="dummyTokenForm" style="display:none;">
+                                @Html.AntiForgeryToken()
+                            </form>
+                            <div id="txtDropArea" class="drag-area">
+                                <input type="file" id="txtFileInput" name="txtFile" accept=".txt" style="display:none;" />
+                                <div id="txtPreviewContent">
+                                    <span id="txtDropText">
+                                        <i class="fas fa-file-alt fa-2x mb-2"></i><br/>
+                                        Drag & drop a TXT file here, or click to select.
+                                    </span>
+                                </div>
                             </div>
-                            <div id="preview-images" class="preview-images"></div>
-                            <div class="image-controls d-flex gap-2 justify-content-center mt-2">
-                                <button type="button" id="rotateLeftBtn" class="btn btn-sm btn-light" title="Rotate Left">
-                                    <i class="fas fa-undo"></i>
-                                </button>
-                                <button type="button" id="rotateRightBtn" class="btn btn-sm btn-light" title="Rotate Right">
-                                    <i class="fas fa-redo"></i>
-                                </button>
-                                <button type="button" id="resizeBtn" class="btn btn-sm btn-light" title="Resize">
-                                    <i class="fas fa-expand-arrows-alt"></i>
-                                </button>
-                                <button type="button" id="resetBtn" class="btn btn-sm btn-warning" title="Reset">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                            </div>
-                            <div class="resize-inputs d-flex gap-2 justify-content-center mt-2">
-                                <input type="number" id="resizeWidth" class="form-control form-control-sm" placeholder="Width" min="10" max="2000" style="width:80px;" />
-                                <input type="number" id="resizeHeight" class="form-control form-control-sm" placeholder="Height" min="10" max="2000" style="width:80px;" />
+                            <div class="alert mt-3">
+                                <h6>Format Guide:</h6>
+                                <p class="mb-1">TXT format: Name; Description; Price; CategoryName; OptionalPhotoURL</p>
+                                <small>
+                                    Example 1: Cheeseburger; Juicy beef burger with cheese; 12.50; Main Course; https://example.com/images/cheeseburger.jpg<br />
+                                    Example 2: Chocolate Cake; Rich chocolate cake slice; 7.00; Desserts
+                                </small>
                             </div>
                         </div>
                     </div>
-                    <small class="form-text text-muted">Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 2MB.</small>
-                    <span asp-validation-for="PhotoURL" class="text-danger"></span>
-                    <input type="hidden" id="processedImageData" name="processedImageData" />
                 </div>
 
-                <button type="submit" class="btn btn-primary submit-btn">Create Item</button>
-            </form>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-images"></i> Multiple Photo Upload</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="photoUploadForm" method="post" enctype="multipart/form-data" asp-controller="MenuItem" asp-action="UploadPhotos">
+                                @Html.AntiForgeryToken()
+                                <div id="photoDropArea" class="drag-area">
+                                    <input type="file" id="photoInput" name="photos" accept="image/*" multiple hidden />
+                                    <div id="photoDropText">
+                                        <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i><br/>
+                                        Drag & drop images here or click to select
+                                        <br/><small>(Max size: 2MB each)</small>
+                                    </div>
+                                    <div id="photoPreview" class="preview-images mt-3"></div>
+                                </div>
+                                <button type="submit" class="btn btn-secondary mt-3">Upload Photos</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             /* ============================
@@ -169,14 +215,15 @@
             const txtPreviewContent = document.getElementById('txtPreviewContent');
             const bulkUploadMessage = document.getElementById('bulkUploadMessage');
 
-            // Prevent default on drag events
+            // Prevent default on drag events for txt upload
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 txtDropArea.addEventListener(eventName, e => {
                     e.preventDefault();
                     e.stopPropagation();
                 });
             });
-            // Visual feedback
+
+            // Visual feedback for txt upload
             ['dragenter', 'dragover'].forEach(eventName => {
                 txtDropArea.addEventListener(eventName, () => txtDropArea.classList.add('active'));
             });
@@ -184,17 +231,17 @@
                 txtDropArea.addEventListener(eventName, () => txtDropArea.classList.remove('active'));
             });
 
-            // Click to browse
+            // Click to browse txt file
             txtDropArea.addEventListener('click', () => txtFileInput.click());
 
-            // File chosen by dialog
+            // Handle txt file selection
             txtFileInput.addEventListener('change', () => {
                 if (txtFileInput.files.length > 0) {
                     handleTxtFile(txtFileInput.files[0]);
                 }
             });
 
-            // File dropped
+            // Handle txt file drop
             txtDropArea.addEventListener('drop', e => {
                 if (e.dataTransfer.files.length > 0) {
                     handleTxtFile(e.dataTransfer.files[0]);
@@ -209,7 +256,7 @@
                     return;
                 }
 
-                // Optional: quick preview of first few lines
+                // Preview txt content
                 const reader = new FileReader();
                 reader.onload = e => {
                     const text = (e.target.result || '').toString();
@@ -219,10 +266,11 @@
                             <strong>Preview (${file.name}):</strong>
                             <pre style="white-space:pre-wrap;margin-top:6px;">${lines.join('\n')}</pre>
                         </div>`;
-                    txtDropText && (txtDropText.style.display = 'none');
+                    txtDropText.style.display = 'none';
                 };
                 reader.readAsText(file);
 
+                // Upload txt file
                 uploadTxtFile(file);
             }
 
@@ -248,7 +296,6 @@
                 });
             }
 
-
             /* ============================
              * MULTIPLE PHOTO UPLOAD
              * ============================ */
@@ -257,14 +304,15 @@
             const photoPreview = document.getElementById('photoPreview');
             const photoDropText = document.getElementById('photoDropText');
 
-            // Prevent default on drag events
+            // Prevent default on drag events for photo upload
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 photoDropArea.addEventListener(eventName, e => {
                     e.preventDefault();
                     e.stopPropagation();
                 });
             });
-            // Visual feedback (FIXED: attach to events, not at load)
+
+            // Visual feedback for photo upload
             ['dragenter', 'dragover'].forEach(eventName => {
                 photoDropArea.addEventListener(eventName, () => photoDropArea.classList.add('active'));
             });
@@ -272,12 +320,15 @@
                 photoDropArea.addEventListener(eventName, () => photoDropArea.classList.remove('active'));
             });
 
+            // Click to browse photos
             photoDropArea.addEventListener('click', () => photoInput.click());
 
+            // Handle photo selection
             photoInput.addEventListener('change', () => {
-                updatePreviews(photoInput.files);
+                updatePhotoPreview(photoInput.files);
             });
 
+            // Handle photo drop
             photoDropArea.addEventListener('drop', e => {
                 const dt = new DataTransfer();
                 for (const file of e.dataTransfer.files) {
@@ -286,26 +337,33 @@
                     }
                 }
                 photoInput.files = dt.files;
-                updatePreviews(photoInput.files);
+                updatePhotoPreview(photoInput.files);
             });
 
-            function updatePreviews(files) {
-                photoPreview.innerHTML = "";
+            function updatePhotoPreview(files) {
+                photoPreview.innerHTML = '';
+                photoDropText.style.display = files.length > 0 ? 'none' : 'block';
+
                 for (const file of files) {
                     const reader = new FileReader();
                     reader.onload = e => {
+                        const previewCard = document.createElement('div');
+                        previewCard.className = 'preview-card mb-2';
+                        
                         const img = document.createElement('img');
                         img.src = e.target.result;
-                        photoPreview.appendChild(img);
+                        img.style.maxHeight = '100px';
+                        img.style.maxWidth = '100%';
+                        img.style.borderRadius = '4px';
+                        
+                        previewCard.appendChild(img);
+                        photoPreview.appendChild(previewCard);
                     };
                     reader.readAsDataURL(file);
                 }
             }
 
-
-            /* ============================
-             * SINGLE IMAGE PROCESSING
-             * ============================ */
+            // Single image upload and preview for single item tab
             const dropArea = document.getElementById('drop-area');
             const imageInput = document.getElementById('imageInput');
             const dropText = document.getElementById('drop-text');
@@ -319,44 +377,31 @@
             const resetBtn = document.getElementById('resetBtn');
             const resizeWidth = document.getElementById('resizeWidth');
             const resizeHeight = document.getElementById('resizeHeight');
-
             let originalImage = null;
             let currentImage = null;
             let cropper = null;
 
-            // Prevent default drag events
+            // Drag & drop events
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, e => {
                     e.preventDefault();
                     e.stopPropagation();
                 });
             });
-
-            // Visual feedback for drag events
             ['dragenter', 'dragover'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => {
-                    if (!cropper) dropArea.classList.add('active');
-                });
+                dropArea.addEventListener(eventName, () => dropArea.classList.add('active'));
             });
             ['dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'));
             });
-
-            // File handling
             dropArea.addEventListener('drop', e => {
-                if (!cropper) {
-                    const dt = e.dataTransfer;
-                    if (dt.files.length > 0) {
-                        imageInput.files = dt.files;
-                        handleFile(dt.files[0]);
-                    }
+                const dt = e.dataTransfer;
+                if (dt.files.length > 0) {
+                    imageInput.files = dt.files;
+                    handleFile(dt.files[0]);
                 }
             });
-
-            dropArea.addEventListener('click', () => {
-                if (!cropper) imageInput.click();
-            });
-
+            dropArea.addEventListener('click', () => imageInput.click());
             imageInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     handleFile(e.target.files[0]);
@@ -388,7 +433,6 @@
                     alert('Image size must be less than 2MB');
                     return;
                 }
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     originalImage = e.target.result;
@@ -398,11 +442,9 @@
                 };
                 reader.readAsDataURL(file);
             }
-
             function updatePreview(imageData) {
                 dropArea.style.display = 'none';
                 previewContainer.style.display = 'block';
-
                 previewImages.innerHTML = '';
                 const img = document.createElement('img');
                 img.src = imageData;
@@ -411,7 +453,6 @@
                 previewImages.appendChild(img);
                 processedImageData.value = imageData;
             }
-
             function clearPreview() {
                 imageInput.value = '';
                 previewImages.innerHTML = '';
@@ -419,11 +460,9 @@
                 originalImage = null;
                 currentImage = null;
             }
-
             function initCropper() {
                 const image = document.getElementById('previewImage');
                 if (!image) return;
-
                 cropper = new Cropper(image, {
                     viewMode: 1,
                     dragMode: 'move',
@@ -437,7 +476,6 @@
                     }
                 });
             }
-
             function rotateImage(degrees) {
                 if (!currentImage) return;
                 const canvas = document.createElement('canvas');
@@ -464,7 +502,6 @@
                 };
                 img.src = currentImage;
             }
-
             function resizeImage() {
                 const width = parseInt(resizeWidth.value);
                 const height = parseInt(resizeHeight.value);
@@ -489,7 +526,6 @@
                 };
                 img.src = currentImage;
             }
-
             function resetImage() {
                 if (originalImage) {
                     currentImage = originalImage;
@@ -501,7 +537,6 @@
                     }
                 }
             }
-
             // Form submission
             document.querySelector('form[asp-action="Create"]').addEventListener('submit', function(e) {
                 if (cropper) {
@@ -509,14 +544,18 @@
                     if (canvas) {
                         processedImageData.value = canvas.toDataURL('image/jpeg');
                     }
-                    // Clear the file input since we're using the processed data
                     imageInput.value = '';
                 }
             });
         });
     </script>
-
     <style>
+        .nav-tabs .nav-link { color: #495057; }
+        .nav-tabs .nav-link.active { font-weight: 500; }
+        .nav-tabs .nav-link i { margin-right: 5px; }
+        .card { box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .card-header { background-color: #f8f9fa; }
+        
         .image-upload-container {
             position: relative;
             margin-bottom: 1rem;
@@ -602,6 +641,23 @@
 
         #removeImageBtn i {
             margin-right: 0.25rem;
+        }
+
+        /* Add styles for photo preview cards */
+        .preview-card {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        #photoPreview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 0;
         }
     </style>
 }

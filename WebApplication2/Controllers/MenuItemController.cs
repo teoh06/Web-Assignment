@@ -441,44 +441,6 @@ public class MenuItemController : Controller
         }
     }
 
-    public IActionResult Delete(int id)
-    {
-        var menuItem = db.MenuItems.Include(m => m.Category).FirstOrDefault(m => m.MenuItemId == id);
-        if (menuItem == null) return NotFound();
-        return View(menuItem);
-    }
-
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public IActionResult DeleteConfirmed(int id)
-    {
-        var menuItem = db.MenuItems.Find(id);
-        if (menuItem != null)
-        {
-            db.MenuItems.Remove(menuItem);
-            db.SaveChanges();
-        }
-        return RedirectToAction(nameof(Index));
-    }
-
-    [AllowAnonymous]
-    public IActionResult Details(int id)
-    {
-        var menuItem = db.MenuItems.Include(m => m.Category)
-                                   .Include(m => m.MenuItemImages)
-                                   .FirstOrDefault(m => m.MenuItemId == id);
-        if (menuItem == null) return NotFound();
-        var ratings = db.MenuItemRatings.Where(r => r.MenuItemId == id).ToList();
-        var comments = db.MenuItemComments.Include(c => c.Member).Where(c => c.MenuItemId == id).OrderByDescending(c => c.CommentedAt).ToList();
-        var vm = new MenuItemDetailsVM
-        {
-            MenuItem = menuItem,
-            Ratings = ratings,
-            Comments = comments
-        };
-        return View(vm);
-    }
-
     [HttpPost]
     public IActionResult AddRating(int menuItemId, int value)
     {
@@ -774,5 +736,68 @@ public class MenuItemController : Controller
         return RedirectToAction("Create");
     }
 
+    [Authorize(Roles = "Admin")]
+    [HttpGet("MenuItem/Delete/{ids?}")]
+    public IActionResult Delete(string ids)
+    {
+        if (string.IsNullOrEmpty(ids))
+        {
+            return NotFound();
+        }
+
+        // Parse comma-separated ids for bulk delete or single id
+        var itemIds = ids.Contains(',') ? 
+            ids.Split(',').Select(int.Parse).ToList() : 
+            new List<int> { int.Parse(ids) };
+
+        var items = db.MenuItems
+            .Include(m => m.Category)
+            .Where(m => itemIds.Contains(m.MenuItemId))
+            .ToList();
+
+        if (!items.Any())
+        {
+            return NotFound();
+        }
+
+        return View(items);
+    }
+
+    [HttpPost]
+    [ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Admin")]
+    [Route("MenuItem/Delete")]
+    public IActionResult DeleteConfirmed(int[] ids)
+    {
+        if (ids == null || !ids.Any())
+        {
+            return BadRequest();
+        }
+
+        try
+        {
+            var items = db.MenuItems.Where(m => ids.Contains(m.MenuItemId)).ToList();
+            foreach (var item in items)
+            {
+                // Delete associated image if exists
+                if (!string.IsNullOrEmpty(item.PhotoURL))
+                {
+                    DeleteImage(item.PhotoURL);
+                }
+                db.MenuItems.Remove(item);
+            }
+
+            db.SaveChanges();
+            TempData["SuccessMessage"] = $"Successfully deleted {items.Count} menu item{(items.Count != 1 ? "s" : "")}!";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting menu items: {Message}", ex.Message);
+            TempData["ErrorMessage"] = "An error occurred while deleting the items.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
 
 }

@@ -1,211 +1,400 @@
-@model WebApplication2.Models.MenuItem
+@model List<WebApplication2.Models.MenuItem>
 @{
-    ViewBag.Title = "Delete Menu Item";
+    ViewBag.Title = Model.Count == 1 ? "Delete Menu Item" : "Bulk Delete Menu Items";
 }
 
 <style>
     .delete-card {
         background: var(--card-bg);
-        border-radius: 1rem;
-        box-shadow: var(--shadow-lg);
+        border-radius: 1.5rem;
+        box-shadow: 0 8px 32px rgba(220, 53, 69, 0.1);
         border: 2px solid var(--danger-color);
         animation: fadeInDown 0.7s cubic-bezier(.39,.58,.57,1) both;
         margin-bottom: 2rem;
+        overflow: hidden;
+        position: relative;
     }
-    @@keyframes fadeInDown {
-        0% {
-            opacity: 0;
-            transform: translateY(-30px);
-        }
 
-        100% {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    @@keyframes fadeInDown {
+        0% { opacity: 0; transform: translateY(-30px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
     }
 
     .delete-card-header {
-        background: var(--danger-color);
+        background: linear-gradient(135deg, var(--danger-color), #ff4757);
         color: var(--text-light);
-        border-top-left-radius: 1rem;
-        border-top-right-radius: 1rem;
-        padding: 1.2rem 1.5rem;
-        box-shadow: 0 2px 8px var(--danger-color);
+        border-top-left-radius: 1.3rem;
+        border-top-right-radius: 1.3rem;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
     }
 
-    .delete-image {
-        margin: 10px;
-        padding: 10px;
-        border: 3px solid var(--danger-color);
-        border-radius: 0.75rem;
-        box-shadow: 0 2px 12px var(--danger-color);
+    .delete-card-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 40%, transparent 50%);
+        animation: shimmer 2s infinite;
+    }
+
+    @@keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .items-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        padding: 1.5rem;
+        margin: 1rem 0;
+    }
+
+    .item-card {
         background: var(--bg-secondary);
-        transition: transform 0.2s;
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        position: relative;
     }
 
-        .delete-image:hover {
-            transform: scale(1.04);
-        }
-
-    .no-image-placeholder {
-        border: 2px dashed var(--danger-color);
-        background: var(--bg-accent);
-        color: var(--danger-color);
-        font-size: 1.2em;
+    .item-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.2);
     }
 
-    .delete-warning {
-        font-size: 1.1em;
-        font-weight: 500;
+    .item-image {
+        position: relative;
+        padding-top: 75%;
+        overflow: hidden;
+    }
+
+    .item-image img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    .item-card:hover .item-image img {
+        transform: scale(1.1);
+    }
+
+    .item-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.7));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .item-card:hover .item-overlay {
+        opacity: 1;
+    }
+
+    .item-details {
+        padding: 1.2rem;
+    }
+
+    .item-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .item-price {
+        font-size: 1.1rem;
         color: var(--danger-color);
-        background: var(--bg-accent);
+        font-weight: 600;
+    }
+
+    .item-category {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: 0.5rem;
+    }
+
+    .warning-box {
+        background: linear-gradient(135deg, #ff6b6b11, #ff474711);
         border-left: 4px solid var(--danger-color);
-        padding: 0.75rem 1rem;
+        padding: 1.5rem;
+        margin: 1.5rem;
+        border-radius: 1rem;
+        position: relative;
+    }
+
+    .warning-icon {
+        position: absolute;
+        top: -15px;
+        left: -15px;
+        background: var(--danger-color);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        animation: pulse 2s infinite;
+    }
+
+    .confirmation-section {
+        background: var(--bg-secondary);
+        padding: 2rem;
+        border-radius: 1rem;
+        margin: 1.5rem;
+        text-align: center;
+        border: 2px dashed var(--danger-color);
+        position: relative;
+    }
+
+    .confirm-input {
+        max-width: 300px;
+        margin: 1.5rem auto;
+        text-align: center;
+        font-size: 1.2rem;
+        padding: 0.8rem;
+        border: 2px solid var(--border-color);
         border-radius: 0.5rem;
-        margin-bottom: 1.2rem;
-        box-shadow: 0 1px 4px var(--danger-color);
+        transition: all 0.3s ease;
+    }
+
+    .confirm-input:focus {
+        border-color: var(--danger-color);
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
     }
 
     .delete-btn {
         background: var(--danger-color);
-        color: var(--text-light);
+        color: white;
         border: none;
+        padding: 1rem 2rem;
+        border-radius: 0.5rem;
         font-weight: 600;
-        border-radius: 8px;
-        box-shadow: var(--shadow-md);
-        padding: 12px 24px;
-        transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
 
-        .delete-btn:hover {
-            background: var(--danger-hover);
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px) scale(1.03);
-        }
+    .delete-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .delete-btn:not(:disabled):hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+    }
+
+    .delete-btn::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+        transform: translateX(-100%);
+    }
+
+    .delete-btn:not(:disabled):hover::after {
+        transform: translateX(100%);
+        transition: transform 0.6s ease;
+    }
 
     .cancel-btn {
+        background: transparent;
+        color: var(--text-primary);
         border: 2px solid var(--border-color);
-        color: var(--text-primary);
-        background: var(--bg-secondary);
+        padding: 1rem 2rem;
+        border-radius: 0.5rem;
         font-weight: 500;
-        border-radius: 8px;
-        padding: 12px 24px;
-        transition: background 0.2s, color 0.2s, border 0.2s;
+        transition: all 0.3s ease;
+        margin-left: 1rem;
     }
 
-        .cancel-btn:hover {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border-color: var(--border-strong);
-        }
+    .cancel-btn:hover {
+        background: var(--bg-accent);
+        border-color: var(--text-primary);
+        transform: translateY(-2px);
+    }
 
-    .delete-details dt {
-        color: var(--danger-color);
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem;
+        padding: 1rem;
+        background: var(--bg-accent);
+        border-radius: 1rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: var(--bg-secondary);
+        border-radius: 0.8rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
         font-weight: 600;
-    }
-
-    .delete-details dd {
-        color: var(--text-primary);
+        color: var(--danger-color);
         margin-bottom: 0.5rem;
     }
 
-    .badge {
-        background: var(--danger-color);
-        color: var(--text-light);
-        border-radius: 20px;
-        padding: 5px 12px;
-        font-size: 0.9em;
-        font-weight: 600;
-        box-shadow: var(--shadow-sm);
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
     }
 
-        .badge.bg-success {
-            background: var(--success-color);
-            color: var(--text-light);
-        }
-
-        .badge.bg-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
     @@media (max-width: 768px) {
-        .delete-card
+        .items-container {
+            grid-template-columns: 1fr;
+        }
 
-    {
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-    }
+        .confirmation-section {
+            padding: 1rem;
+        }
 
-    .delete-card-header {
-        border-radius: 0.5rem 0.5rem 0 0;
-        padding: 1rem;
-    }
-
+        .delete-btn, .cancel-btn {
+            width: 100%;
+            margin: 0.5rem 0;
+        }
     }
 </style>
 
 <div class="container mt-4">
     <div class="delete-card">
         <div class="delete-card-header">
-            <h3 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion</h3>
+            <h3 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                @(Model.Count == 1 ? "Confirm Deletion" : $"Bulk Delete ({Model.Count} Items)")
+            </h3>
         </div>
-        <div class="card-body" style="background: var(--card-bg); color: var(--text-primary);">
-            <div class="row">
-                <div class="col-md-4">
-                    @if (!string.IsNullOrEmpty(Model.PhotoURL))
-                    {
-                        <img src="~/Images/@Model.PhotoURL" alt="@Model.Name" class="img-fluid delete-image mb-3" />
-                    }
-                    else
-                    {
-                        <div class="no-image-placeholder rounded mb-3 d-flex align-items-center justify-content-center" style="height: 200px;">
-                            <i class="fas fa-image fa-3x"></i>
-                        </div>
-                    }
+
+        <div class="warning-box">
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h4 class="text-danger mb-3">Warning: Permanent Action</h4>
+            <p class="mb-0">
+                You are about to permanently delete 
+                @(Model.Count == 1 ? "this menu item" : $"{Model.Count} menu items"). 
+                <strong>This action cannot be undone</strong> and all associated data will be permanently removed.
+            </p>
+        </div>
+
+        @if (Model.Count > 1)
+        {
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-value">@Model.Count</div>
+                    <div class="stat-label">Items to Delete</div>
                 </div>
-                <div class="col-md-8">
-                    <h4 class="card-title" style="color: var(--danger-color); margin: 1.5rem;">Delete "@Model.Name"?</h4>
-                    <div class="delete-warning">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        Are you sure you want to permanently delete this menu item? <strong>This action cannot be undone.</strong>
-                    </div>
-                    <dl class="row delete-details">
-                        <dt class="col-sm-3">Category</dt>
-                        <dd class="col-sm-9">@Model.Category?.Name</dd>
-                        <dt class="col-sm-3">Description</dt>
-                        <dd class="col-sm-9">@Model.Description</dd>
-                        <dt class="col-sm-3">Price</dt>
-                        <dd class="col-sm-9">@Model.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</dd>
-                        <dt class="col-sm-3">Stock</dt>
-                        <dd class="col-sm-9">@Model.StockQuantity items</dd>
-                        <dt class="col-sm-3">Status</dt>
-                        <dd class="col-sm-9">
-                            @if (Model.IsActive)
-                            {
-                                <span class="badge bg-success">Active</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">Inactive</span>
-                            }
-                        </dd>
-                    </dl>
-                    <form asp-action="Delete" method="post" class="mt-4">
-                        <input type="hidden" asp-for="MenuItemId" />
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="delete-btn mb-3">
-                                <i class="fas fa-trash-alt me-2"></i>Delete Item
-                            </button>
-                            <a href="@Url.Action("Index")" class="cancel-btn mb-3" style="text-decoration: none;">
-                                <i class="fas fa-times me-2"></i>Cancel
-                            </a>
-                        </div>
-                    </form>
+                <div class="stat-item">
+                    <div class="stat-value">@Model.Select(i => i.Category?.Name).Distinct().Count()</div>
+                    <div class="stat-label">Categories Affected</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">@Model.Sum(i => i.Price).ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                    <div class="stat-label">Total Value</div>
                 </div>
             </div>
+        }
+
+        <div class="items-container">
+            @foreach (var item in Model)
+            {
+                <div class="item-card">
+                    <div class="item-image">
+                        <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" />
+                        <div class="item-overlay"></div>
+                    </div>
+                    <div class="item-details">
+                        <div class="item-name">@item.Name</div>
+                        <div class="item-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                        <div class="item-category">
+                            <i class="fas fa-tag me-1"></i>
+                            @item.Category?.Name
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="confirmation-section">
+            <p>Type <strong>DELETE</strong> to confirm this action</p>
+            
+            <input type="text" 
+                   id="confirmInput"
+                   class="form-control confirm-input" 
+                   placeholder="Type DELETE here"
+                   autocomplete="off" />
+            
+            <form asp-action="Delete" method="post" id="deleteForm">
+                @foreach (var item in Model)
+                {
+                    <input type="hidden" name="ids" value="@item.MenuItemId" />
+                }
+                
+                <div class="d-flex flex-column flex-md-row justify-content-center gap-2 mt-4">
+                    <button type="submit" class="delete-btn" id="deleteButton" disabled>
+                        <i class="fas fa-trash-alt me-2"></i>Confirm Delete
+                    </button>
+                    <a href="@Url.Action("Index")" class="cancel-btn">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 @section Scripts {
+    <script>
+        const confirmInput = document.getElementById('confirmInput');
+        const deleteButton = document.getElementById('deleteButton');
+        const deleteForm = document.getElementById('deleteForm');
+
+        confirmInput.addEventListener('input', function() {
+            const isValid = this.value === 'DELETE';
+            deleteButton.disabled = !isValid;
+            
+            if (isValid) {
+                deleteButton.classList.add('animate__animated', 'animate__pulse');
+            } else {
+                deleteButton.classList.remove('animate__animated', 'animate__pulse');
+            }
+        });
+
+        deleteForm.addEventListener('submit', function(e) {
+            if (!confirm('This is your final warning. Are you absolutely sure you want to delete these items?')) {
+                e.preventDefault();
+            } else {
+                deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+                deleteButton.disabled = true;
+            }
+        });
+    </script>
 }
