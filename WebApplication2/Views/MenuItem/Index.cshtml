@@ -47,10 +47,18 @@
 
     @if (isAdmin)
     {
-        <div class="admin-actions mb-4">
-            <a class="btn btn-success" asp-controller="MenuItem" asp-action="Create">
-                <i class="fas fa-plus"></i> Add New Product
-            </a>
+        <div class="admin-actions mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <a class="btn btn-success" asp-controller="MenuItem" asp-action="Create">
+                    <i class="fas fa-plus"></i> Add New Product
+                </a>
+                <button id="bulkDeleteBtn" class="btn btn-danger ms-2" style="display:none;">
+                    <i class="fas fa-trash"></i> Delete Selected Items
+                </button>
+            </div>
+            <div class="selected-count" style="display:none;">
+                <span class="badge bg-danger" id="selectedCount">0 items selected</span>
+            </div>
         </div>
     }
 
@@ -73,6 +81,12 @@
             var ratings = item.MenuItemRatings ?? new List<WebApplication2.Models.MenuItemRating>();
             double avgRating = ratings.Count > 0 ? ratings.Average(r => r.Value) : 0;
             <div class="menu-item-card">
+                @if (isAdmin)
+                {
+                    <div class="item-select">
+                        <input type="checkbox" class="item-checkbox" data-item-id="@item.MenuItemId" data-item-name="@item.Name" />
+                    </div>
+                }
                 <div class="item-image">
                     <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
                         <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" />
@@ -144,6 +158,124 @@
 
 @section Scripts {
     <script>
+        // Keep track of selected items globally
+        const selectedItems = new Set();
+        let lastCheckboxStates = new Map();
+
+        function updateMenuItems(items) {
+            const grid = document.getElementById('menuItemsGrid');
+            const isAdmin = @Json.Serialize(isAdmin);
+            const isMember = @Json.Serialize(isMember);
+
+            if (!items || items.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <p>No menu items found matching your criteria.</p>
+                    </div>`;
+                return;
+            }
+
+            // Save checkbox states before updating grid
+            if (isAdmin) {
+                document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+                    lastCheckboxStates.set(checkbox.dataset.itemId, checkbox.checked);
+                });
+            }
+
+            grid.innerHTML = items.map(item => `
+                <div class="menu-item-card${selectedItems.has(item.menuItemId.toString()) ? ' selected' : ''}">
+                    ${isAdmin ? `
+                        <div class="item-select">
+                            <input type="checkbox" class="item-checkbox" 
+                                data-item-id="${item.menuItemId}" 
+                                data-item-name="${item.name}"
+                                ${selectedItems.has(item.menuItemId.toString()) ? 'checked' : ''} />
+                        </div>
+                    ` : ''}
+                    <div class="item-image">
+                        <a href="/MenuItem/Details/${item.menuItemId}">
+                            <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
+                        </a>
+                        <span class="item-price">${item.price}</span>
+                        ${isAdmin && !item.isActive ? '<span class="inactive-badge">Inactive</span>' : ''}
+                        ${item.stockQuantity <= 0 ? '<span class="out-of-stock-badge">Out of Stock</span>' : ''}
+                        ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
+                    </div>
+                    <div class="item-info">
+                        <h3 class="item-name">${item.name}</h3>
+                        <p class="item-category">${item.categoryName}</p>
+                        <p class="item-stock">Stock: ${item.stockQuantity}</p>
+                        <div class="item-actions">
+                            ${getItemActions(item, isAdmin, isMember)}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Reattach checkbox listeners and restore states
+            if (isAdmin) {
+                attachCheckboxListeners();
+                updateBulkDeleteUI();
+            }
+
+            attachFormListeners();
+        }
+
+        // Modify checkbox event handler
+        function attachCheckboxListeners() {
+            document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const itemId = this.dataset.itemId;
+                    if (this.checked) {
+                        selectedItems.add(itemId);
+                        this.closest('.menu-item-card').classList.add('selected');
+                    } else {
+                        selectedItems.delete(itemId);
+                        this.closest('.menu-item-card').classList.remove('selected');
+                    }
+                    updateBulkDeleteUI();
+                });
+
+                // Restore state if item was previously selected
+                if (selectedItems.has(checkbox.dataset.itemId)) {
+                    checkbox.checked = true;
+                    checkbox.closest('.menu-item-card').classList.add('selected');
+                }
+            });
+        }
+
+        function updateBulkDeleteUI() {
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const selectedCountDisplay = document.querySelector('.selected-count');
+            const selectedCountBadge = document.getElementById('selectedCount');
+            
+            const count = selectedItems.size;
+            if (count > 0) {
+                bulkDeleteBtn.style.display = 'inline-block';
+                selectedCountDisplay.style.display = 'block';
+                selectedCountBadge.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+            } else {
+                bulkDeleteBtn.style.display = 'none';
+                selectedCountDisplay.style.display = 'none';
+            }
+        }
+
+        // Initialize bulk delete functionality
+        if (document.getElementById('bulkDeleteBtn')) {
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            
+            // Initial setup of checkboxes
+            attachCheckboxListeners();
+
+            bulkDeleteBtn.addEventListener('click', function() {
+                if (selectedItems.size > 0) {
+                    // Change from DeleteBulk to Delete
+                    window.location.href = `/MenuItem/Delete?ids=${Array.from(selectedItems).join(',')}`;
+                }
+            });
+        }
+
         document.getElementById('filterForm').addEventListener('submit', function(e) {
             e.preventDefault();
             performFilter();
@@ -155,6 +287,7 @@
             document.getElementById('minPriceInput').value = '';
             document.getElementById('maxPriceInput').value = '';
             performFilter();
+            // Don't clear selections when clearing filters
         });
 
         document.getElementById('searchInput').addEventListener('input', debounce(performFilter, 500));
@@ -193,45 +326,6 @@
                     document.getElementById('loadingIndicator').style.display = 'none';
                     document.getElementById('menuItemsGrid').style.opacity = '1';
                 });
-        }
-
-        function updateMenuItems(items) {
-            const grid = document.getElementById('menuItemsGrid');
-            const isAdmin = @Json.Serialize(isAdmin);
-            const isMember = @Json.Serialize(isMember);
-
-            if (!items || items.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <p>No menu items found matching your criteria.</p>
-                    </div>`;
-                return;
-            }
-
-            grid.innerHTML = items.map(item => `
-                <div class="menu-item-card">
-                    <div class="item-image">
-                        <a href="/MenuItem/Details/${item.menuItemId}">
-                            <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
-                        </a>
-                        <span class="item-price">${item.price}</span>
-                        ${isAdmin && !item.isActive ? '<span class="inactive-badge">Inactive</span>' : ''}
-                        ${item.stockQuantity <= 0 ? '<span class="out-of-stock-badge">Out of Stock</span>' : ''}
-                        ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
-                    </div>
-                    <div class="item-info">
-                        <h3 class="item-name">${item.name}</h3>
-                        <p class="item-category">${item.categoryName}</p>
-                        <p class="item-stock">Stock: ${item.stockQuantity}</p>
-                        <div class="item-actions">
-                            ${getItemActions(item, isAdmin, isMember)}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            attachFormListeners();
         }
 
         function getItemActions(item, isAdmin, isMember) {
@@ -523,4 +617,38 @@
         width: 100%;
     }
 }
-</style>
+
+.item-select {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    padding: 5px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.item-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.selected-count {
+    font-size: 1.1em;
+    padding: 0.5rem 1rem;
+}
+
+.menu-item-card {
+    position: relative;
+}
+
+.menu-item-card.selected {
+    box-shadow: 0 0 0 2px var(--danger-color);
+}
