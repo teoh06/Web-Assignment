@@ -328,6 +328,46 @@ public class MenuItemController : Controller
         }
     }
 
+    [AllowAnonymous]
+    public IActionResult Details(int id)
+    {
+        var menuItem = db.MenuItems
+            .Include(m => m.Category)
+            .Where(m => m.MenuItemId == id)
+            .Select(m => new
+            {
+                id = m.MenuItemId,
+                name = m.Name,
+                price = m.Price,
+                photoURL = m.PhotoURL,
+                categoryName = m.Category.Name,
+                stockQuantity = m.StockQuantity
+            })
+            .FirstOrDefault();
+
+        if (menuItem == null) return NotFound();
+
+        var ratings = db.MenuItemRatings.Where(r => r.MenuItemId == id).ToList();
+        var comments = db.MenuItemComments.Include(c => c.Member).Where(c => c.MenuItemId == id).OrderByDescending(c => c.CommentedAt).ToList();
+
+        var vm = new MenuItemDetailsVM
+        {
+            MenuItem = new MenuItem
+            {
+                MenuItemId = menuItem.id,
+                Name = menuItem.name,
+                Price = menuItem.price,
+                PhotoURL = menuItem.photoURL,
+                Category = new Category { Name = menuItem.categoryName },
+                StockQuantity = menuItem.stockQuantity
+            },
+            Ratings = ratings,
+            Comments = comments
+        };
+
+        return View(vm);
+    }
+
     // *** FIX: Add a centralized helper method for saving images ***
     private async Task<string?> SaveImage(IFormFile imageFile)
     {
