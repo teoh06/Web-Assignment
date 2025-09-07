@@ -161,7 +161,7 @@
                     var select = document.getElementById('statusSelect');
                     var newStatus = select ? select.value : status;
                     var msg = document.getElementById('statusUpdateMessage');
-                    if (msg) msg.innerHTML = '<div class="alert alert-info">Updating...</div>';
+                    if (msg) msg.innerHTML = '<div class="alert">Updating...</div>';
                  fetch('/Admin/UpdateOrderStatusAjax', {
                      method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
