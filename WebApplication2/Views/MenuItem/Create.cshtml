@@ -6,7 +6,7 @@
 
 @if (TempData["Message"] != null)
 {
-    <div class="alert alert-info">@TempData["Message"]</div>
+    <div class="alert">@TempData["Message"]</div>
 }
 
 
@@ -103,50 +103,47 @@
 
                 <div class="form-group">
                     <label for="imageFile">Photo (Optional)</label>
-                    <div id="drop-area" class="drag-area">
-                        <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" />
-                        <div id="preview-content">
-                            <span id="drop-text">Drag & drop an image here, or click to select. (Max 2MB)</span>
-                            <div id="preview-images" class="preview-images"></div>
+                    <div class="image-upload-container">
+                        <!-- Input Area -->
+                        <div id="drop-area" class="drag-area" style="display:block;">
+                            <input type="file" id="imageInput" name="imageFile" accept="image/*" class="file-input" />
+                            <div id="drop-text" class="upload-prompt">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <p>Drag & drop an image here, or click to select.</p>
+                                <small>(Max 2MB)</small>
+                            </div>
                         </div>
-                        <button type="button" id="deletePhoto" class="btn btn-danger btn-sm" style="display:none;">X</button>
+                        <!-- Preview Area (Hidden initially) -->
+                        <div id="preview-container" class="preview-container" style="display:none;">
+                            <div class="preview-header d-flex align-items-center justify-content-between">
+                                <h6 class="m-0">Preview</h6>
+                                <button type="button" id="removeImageBtn" class="btn btn-outline-danger btn-sm ms-2">
+                                    <i class="fas fa-trash-alt"></i> Remove Image
+                                </button>
+                            </div>
+                            <div id="preview-images" class="preview-images"></div>
+                            <div class="image-controls d-flex gap-2 justify-content-center mt-2">
+                                <button type="button" id="rotateLeftBtn" class="btn btn-sm btn-light" title="Rotate Left">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button type="button" id="rotateRightBtn" class="btn btn-sm btn-light" title="Rotate Right">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                                <button type="button" id="resizeBtn" class="btn btn-sm btn-light" title="Resize">
+                                    <i class="fas fa-expand-arrows-alt"></i>
+                                </button>
+                                <button type="button" id="resetBtn" class="btn btn-sm btn-warning" title="Reset">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                            <div class="resize-inputs d-flex gap-2 justify-content-center mt-2">
+                                <input type="number" id="resizeWidth" class="form-control form-control-sm" placeholder="Width" min="10" max="2000" style="width:80px;" />
+                                <input type="number" id="resizeHeight" class="form-control form-control-sm" placeholder="Height" min="10" max="2000" style="width:80px;" />
+                            </div>
+                        </div>
                     </div>
                     <small class="form-text text-muted">Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 2MB.</small>
                     <span asp-validation-for="PhotoURL" class="text-danger"></span>
-                </div>
-                
-                <!-- Image Processing Controls (hidden until image is selected) -->
-                <div id="imageProcessingControls" class="form-group" style="display:none;">
-                    <h5>Image Processing</h5>
-                    
-                    <!-- Resize Controls -->
-                    <div class="mb-3">
-                        <label for="resizeWidth" class="form-label">Resize Width (px)</label>
-                        <input type="number" id="resizeWidth" class="form-control" min="50" max="1000" value="300" />
-                        
-                        <label for="resizeHeight" class="form-label mt-2">Resize Height (px)</label>
-                        <input type="number" id="resizeHeight" class="form-control" min="50" max="1000" value="300" />
-                        
-                        <button type="button" id="resizeBtn" class="btn btn-sm btn-primary mt-2">Resize</button>
-                        <button type="button" id="resetBtn" class="btn btn-sm btn-secondary mt-2 ml-2">Reset</button>
-                    </div>
-                    
-                    <!-- Rotation Controls -->
-                    <div class="mb-3">
-                        <label class="form-label">Rotate Image</label>
-                        <div class="d-flex">
-                            <button type="button" id="rotateLeftBtn" class="btn btn-sm btn-info mr-2">Rotate Left</button>
-                            <button type="button" id="rotateRightBtn" class="btn btn-sm btn-info">Rotate Right</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Crop Controls -->
-                    <div class="mb-3">
-                        <button type="button" id="enableCropBtn" class="btn btn-sm btn-warning">Enable Crop</button>
-                        <button type="button" id="cropBtn" class="btn btn-sm btn-success ml-2" style="display:none;">Apply Crop</button>
-                        <button type="button" id="cancelCropBtn" class="btn btn-sm btn-danger ml-2" style="display:none;">Cancel Crop</button>
-                    </div>
-                    
                     <input type="hidden" id="processedImageData" name="processedImageData" />
                 </div>
 
@@ -159,6 +156,7 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -311,47 +309,53 @@
             const dropArea = document.getElementById('drop-area');
             const imageInput = document.getElementById('imageInput');
             const dropText = document.getElementById('drop-text');
+            const previewContainer = document.getElementById('preview-container');
             const previewImages = document.getElementById('preview-images');
-            const deleteBtn = document.getElementById('deletePhoto');
-            const processingControls = document.getElementById('imageProcessingControls');
+            const removeImageBtn = document.getElementById('removeImageBtn');
             const processedImageData = document.getElementById('processedImageData');
-
-            const resizeBtn = document.getElementById('resizeBtn');
-            const resetBtn = document.getElementById('resetBtn');
             const rotateLeftBtn = document.getElementById('rotateLeftBtn');
             const rotateRightBtn = document.getElementById('rotateRightBtn');
-            const enableCropBtn = document.getElementById('enableCropBtn');
-            const cropBtn = document.getElementById('cropBtn');
-            const cancelCropBtn = document.getElementById('cancelCropBtn');
+            const resizeBtn = document.getElementById('resizeBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const resizeWidth = document.getElementById('resizeWidth');
+            const resizeHeight = document.getElementById('resizeHeight');
 
             let originalImage = null;
             let currentImage = null;
             let cropper = null;
 
-            // Prevent default on drag events
+            // Prevent default drag events
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, e => {
                     e.preventDefault();
                     e.stopPropagation();
-                }, false);
-            });
-            // Visual feedback
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => dropArea.classList.add('active'), false);
-            });
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'), false);
+                });
             });
 
+            // Visual feedback for drag events
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    if (!cropper) dropArea.classList.add('active');
+                });
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.remove('active'));
+            });
+
+            // File handling
             dropArea.addEventListener('drop', e => {
-                const dt = e.dataTransfer;
-                if (dt.files.length > 0) {
-                    imageInput.files = dt.files;
-                    handleFile(dt.files[0]);
+                if (!cropper) {
+                    const dt = e.dataTransfer;
+                    if (dt.files.length > 0) {
+                        imageInput.files = dt.files;
+                        handleFile(dt.files[0]);
+                    }
                 }
             });
 
-            dropArea.addEventListener('click', () => imageInput.click());
+            dropArea.addEventListener('click', () => {
+                if (!cropper) imageInput.click();
+            });
 
             imageInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
@@ -359,109 +363,85 @@
                 }
             });
 
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                clearPreview();
-                processingControls.style.display = 'none';
+            // Remove image button
+            removeImageBtn.addEventListener('click', () => {
                 if (cropper) {
                     cropper.destroy();
                     cropper = null;
                 }
+                clearPreview();
+                dropArea.style.display = 'block';
+                previewContainer.style.display = 'none';
             });
 
-            resizeBtn.addEventListener('click', resizeImage);
-            resetBtn.addEventListener('click', resetImage);
+            // Rotate buttons
             rotateLeftBtn.addEventListener('click', () => rotateImage(-90));
             rotateRightBtn.addEventListener('click', () => rotateImage(90));
-            enableCropBtn.addEventListener('click', enableCrop);
-            cropBtn.addEventListener('click', applyCrop);
-            cancelCropBtn.addEventListener('click', cancelCrop);
+            // Resize button
+            resizeBtn.addEventListener('click', resizeImage);
+            // Reset button
+            resetBtn.addEventListener('click', resetImage);
 
             function handleFile(file) {
                 if (!file || !file.type.startsWith('image/')) return;
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Image size must be less than 2MB');
+                    return;
+                }
 
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     originalImage = e.target.result;
                     currentImage = originalImage;
                     updatePreview(currentImage);
-                    processingControls.style.display = 'block';
+                    initCropper();
                 };
                 reader.readAsDataURL(file);
             }
 
             function updatePreview(imageData) {
-                previewImages.innerHTML = '';
-                dropText.style.display = 'none';
-                deleteBtn.style.display = 'block';
+                dropArea.style.display = 'none';
+                previewContainer.style.display = 'block';
 
+                previewImages.innerHTML = '';
                 const img = document.createElement('img');
                 img.src = imageData;
                 img.id = 'previewImage';
                 img.className = 'preview-image';
-                img.style.maxWidth = '100%';
-                img.style.maxHeight = '300px';
                 previewImages.appendChild(img);
-
                 processedImageData.value = imageData;
             }
 
             function clearPreview() {
                 imageInput.value = '';
                 previewImages.innerHTML = '';
-                dropText.style.display = 'block';
-                deleteBtn.style.display = 'none';
                 processedImageData.value = '';
+                originalImage = null;
+                currentImage = null;
             }
 
-            function resizeImage() {
-                const width = parseInt(document.getElementById('resizeWidth').value);
-                const height = parseInt(document.getElementById('resizeHeight').value);
+            function initCropper() {
+                const image = document.getElementById('previewImage');
+                if (!image) return;
 
-                if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
-                    alert('Please enter valid dimensions');
-                    return;
-                }
-
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-
-                const img = new Image();
-                img.onload = function () {
-                    ctx.drawImage(img, 0, 0, width, height);
-                    currentImage = canvas.toDataURL('image/jpeg');
-                    updatePreview(currentImage);
-                    if (cropper) {
-                        cropper.destroy();
-                        cropper = null;
-                        enableCropBtn.style.display = 'block';
-                        cropBtn.style.display = 'none';
-                        cancelCropBtn.style.display = 'none';
+                cropper = new Cropper(image, {
+                    viewMode: 1,
+                    dragMode: 'move',
+                    aspectRatio: NaN,
+                    autoCropArea: 1,
+                    cropend: function() {
+                        const canvas = cropper.getCroppedCanvas();
+                        if (canvas) {
+                            processedImageData.value = canvas.toDataURL('image/jpeg');
+                        }
                     }
-                };
-                img.src = currentImage;
-            }
-
-            function resetImage() {
-                if (originalImage) {
-                    currentImage = originalImage;
-                    updatePreview(currentImage);
-                    if (cropper) {
-                        cropper.destroy();
-                        cropper = null;
-                        enableCropBtn.style.display = 'block';
-                        cropBtn.style.display = 'none';
-                        cancelCropBtn.style.display = 'none';
-                    }
-                }
+                });
             }
 
             function rotateImage(degrees) {
+                if (!currentImage) return;
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-
                 const img = new Image();
                 img.onload = function () {
                     if (Math.abs(degrees) === 90 || Math.abs(degrees) === 270) {
@@ -474,86 +454,154 @@
                     ctx.translate(canvas.width / 2, canvas.height / 2);
                     ctx.rotate(degrees * Math.PI / 180);
                     ctx.drawImage(img, -img.width / 2, -img.height / 2);
-
                     currentImage = canvas.toDataURL('image/jpeg');
                     updatePreview(currentImage);
                     if (cropper) {
                         cropper.destroy();
                         cropper = null;
-                        enableCropBtn.style.display = 'block';
-                        cropBtn.style.display = 'none';
-                        cancelCropBtn.style.display = 'none';
+                        initCropper();
                     }
                 };
                 img.src = currentImage;
             }
 
-            function enableCrop() {
-                const image = document.getElementById('previewImage');
-                if (!image) return;
-                cropper = new Cropper(image, {
-                    aspectRatio: NaN,
-                    viewMode: 1,
-                    guides: true,
-                    highlight: true,
-                    dragMode: 'crop'
-                });
-                enableCropBtn.style.display = 'none';
-                cropBtn.style.display = 'inline-block';
-                cancelCropBtn.style.display = 'inline-block';
+            function resizeImage() {
+                const width = parseInt(resizeWidth.value);
+                const height = parseInt(resizeHeight.value);
+                if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+                    alert('Please enter valid dimensions');
+                    return;
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = function () {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    currentImage = canvas.toDataURL('image/jpeg');
+                    updatePreview(currentImage);
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                        initCropper();
+                    }
+                };
+                img.src = currentImage;
             }
 
-            function applyCrop() {
-                if (!cropper) return;
-                const canvas = cropper.getCroppedCanvas();
-                if (!canvas) return;
-                currentImage = canvas.toDataURL('image/jpeg');
-                cropper.destroy();
-                cropper = null;
-                updatePreview(currentImage);
-                enableCropBtn.style.display = 'block';
-                cropBtn.style.display = 'none';
-                cancelCropBtn.style.display = 'none';
+            function resetImage() {
+                if (originalImage) {
+                    currentImage = originalImage;
+                    updatePreview(currentImage);
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                        initCropper();
+                    }
+                }
             }
 
-            function cancelCrop() {
-                if (!cropper) return;
-                cropper.destroy();
-                cropper = null;
-                updatePreview(currentImage);
-                enableCropBtn.style.display = 'block';
-                cropBtn.style.display = 'none';
-                cancelCropBtn.style.display = 'none';
-            }
+            // Form submission
+            document.querySelector('form[asp-action="Create"]').addEventListener('submit', function(e) {
+                if (cropper) {
+                    const canvas = cropper.getCroppedCanvas();
+                    if (canvas) {
+                        processedImageData.value = canvas.toDataURL('image/jpeg');
+                    }
+                    // Clear the file input since we're using the processed data
+                    imageInput.value = '';
+                }
+            });
         });
     </script>
 
     <style>
+        .image-upload-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
         .drag-area {
             border: 2px dashed #ccc;
-            padding: 20px;
+            padding: 2rem;
             text-align: center;
             cursor: pointer;
-            border-radius: 5px;
-            transition: border-color 0.3s, background-color 0.3s;
-            margin-bottom: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
         }
 
-            .drag-area.active {
-                border-color: #007bff;
-                background-color: #f8f9fa;
-            }
+        .drag-area.active {
+            border-color: #007bff;
+        }
 
-        .preview-images img {
-            max-width: 300px;
+        .drag-area.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .upload-prompt {
+            color: #666;
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: #007bff;
+            margin-bottom: 1rem;
+        }
+
+        .preview-container {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-size: 1.2rem;
+            padding: 0.25rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .btn-close:hover {
+            color: #c82333;
+        }
+
+        .preview-images {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .preview-image {
+            max-width: 100%;
             max-height: 300px;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+            border-radius: 4px;
+        }
+
+        .image-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        #removeImageBtn {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        #removeImageBtn i {
+            margin-right: 0.25rem;
         }
     </style>
-}
-
 }
