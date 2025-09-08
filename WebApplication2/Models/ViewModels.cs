@@ -128,13 +128,6 @@ public class ProfilePhotoVM
 }
 
 
-public class FeaturedMenuItemVM
-{
-    public string Image { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public decimal Price { get; set; }
-}
 public class MenuItemIndexVM
 {
     public List<MenuItem> MenuItems { get; set; }
@@ -266,4 +259,58 @@ public class CartItemInputModel
     public string? SelectedPersonalizations { get; set; }
 }
 
+public class CartUpdateModel
+{
+    public int MenuItemId { get; set; }
+    public int Quantity { get; set; }
+}
 
+public class CartItemVM
+{
+    public int MenuItemId { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+    public int Quantity { get; set; }
+    public string PhotoURL { get; set; }
+    public string? SelectedPersonalizations { get; set; }
+}
+
+
+
+// ReceiptVM is now defined in Models/ViewModels.cs
+
+public class OrderHistoryVM
+{
+    public List<OrderSummaryVM> Orders { get; set; } = new List<OrderSummaryVM>();
+}
+
+
+public class OrderItemVM
+{
+    public string MenuItemName { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public string PhotoURL { get; set; }
+    public string? SelectedPersonalizations { get; set; }
+}
+
+public class OrderRefundVM
+{
+    [Required]
+    [Display(Name = "Order Number")]
+    public int OrderId { get; set; }
+
+    [Required]
+    [StringLength(500)]
+    [Display(Name = "Reason for Refund")]
+    public string Reason { get; set; }
+}
+
+public class FeaturedMenuItemVM
+{
+    public int MenuItemId { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public decimal Price { get; set; }
+    public string Image { get; set; }
+}

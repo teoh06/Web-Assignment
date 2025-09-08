@@ -70,11 +70,4 @@ public class HomeController : Controller
         return View();
     }
 }
-public class FeaturedMenuItemVM
-{
-    public int MenuItemId { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public decimal Price { get; set; }
-    public string Image { get; set; }
-}
+

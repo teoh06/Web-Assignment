@@ -994,7 +994,7 @@ namespace WebApplication2.Controllers
                 return Json(new { error = "Failed to load purchase summary data" });
             }
         }
-        
+
         // GET: /Cart/GetOrderStatus
         [HttpGet]
         public async Task<IActionResult> GetOrderStatus(int orderId)
@@ -1005,31 +1005,48 @@ namespace WebApplication2.Controllers
                 {
                     return Json(new { success = false, message = "Invalid order ID" });
                 }
-                
+
                 var order = await _db.Orders
+                    .Include(o => o.OrderItems)
+                        .ThenInclude(oi => oi.MenuItem) // Load menu item details
                     .FirstOrDefaultAsync(o => o.OrderId == orderId);
-                    
+
                 if (order == null)
                 {
                     return Json(new { success = false, message = "Order not found" });
                 }
-                
-                // Check if the current user is authorized to view this order
+
+                // Security check
                 var currentUserEmail = User.Identity?.Name;
                 var isAdmin = User.IsInRole("Admin");
-                
+
                 if (!isAdmin && order.MemberEmail != currentUserEmail)
                 {
                     return Json(new { success = false, message = "You are not authorized to view this order" });
                 }
-                
+
+                // Calculate totals
+                var items = order.OrderItems.Select(i => new {
+                    productName = i.MenuItem?.Name ?? "Unknown Item",
+                    quantity = i.Quantity,
+                    unitPrice = i.UnitPrice,
+                    lineTotal = i.Quantity * i.UnitPrice,
+                    personalizations = i.SelectedPersonalizations
+                }).ToList();
+
+                var orderTotal = items.Sum(i => i.lineTotal);
+
                 return Json(new
                 {
                     success = true,
                     orderId = order.OrderId,
                     status = order.Status ?? "Unknown",
                     orderDate = order.OrderDate.ToString("yyyy-MM-dd HH:mm:ss"),
-                    deliveryOption = order.DeliveryOption ?? "Standard"
+                    deliveryOption = order.DeliveryOption ?? "Standard",
+                    deliveryAddress = order.DeliveryAddress,
+                    paymentMethod = order.PaymentMethod,
+                    items,
+                    orderTotal
                 });
             }
             catch (Exception ex)
@@ -1038,7 +1055,9 @@ namespace WebApplication2.Controllers
                 return Json(new { success = false, message = "An error occurred while retrieving order status" });
             }
         }
-        
+
+
+
         // POST: /Cart/Refund
         [Authorize(Roles = "Member")]
         [HttpPost]
@@ -1221,106 +1240,5 @@ namespace WebApplication2.Controllers
     // ViewModels
     // =======================
 
-    public class CartUpdateModel
-    {
-        public int MenuItemId { get; set; }
-        public int Quantity { get; set; }
-    }
 
-    public class CartItemVM
-    {
-        public int MenuItemId { get; set; }
-        public string Name { get; set; }
-        public decimal Price { get; set; }
-        public int Quantity { get; set; }
-        public string PhotoURL { get; set; }
-        public string? SelectedPersonalizations { get; set; }
-    }
-
-    public class PaymentVM
-    {
-        [Display(Name = "Payment Method")]
-        [Required(ErrorMessage = "Please select a payment method.")]
-        public string PaymentMethod { get; set; }
-
-        [Display(Name = "Card Number")]
-        [RegularExpression(@"^\d{16}$", ErrorMessage = "Card number must be 16 digits.")]
-        public string? CardNumber { get; set; }
-
-        [Display(Name = "Card Holder Name")]
-        [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
-        public string? CardHolderName { get; set; }
-
-        [Display(Name = "Expiry Date")]
-        [RegularExpression(@"^(0[1-9]|1[0-2])\/([0-9]{2})$", ErrorMessage = "Expiry date must be in MM/YY format")]
-        public string? ExpiryDate { get; set; }
-
-        [Display(Name = "CVV")]
-        [RegularExpression(@"^\d{3,4}$", ErrorMessage = "CVV must be 3 or 4 digits")]
-        public string? CVV { get; set; }
-
-        [Display(Name = "Billing Address")]
-        [StringLength(200, ErrorMessage = "Address cannot exceed 200 characters")]
-        public string? BillingAddress { get; set; }
-
-        [Display(Name = "Phone Number")]
-        [RegularExpression(@"^\d{10,12}$", ErrorMessage = "Please enter a valid phone number")]
-        [Required(ErrorMessage = "Phone number is required")]
-        public string PhoneNumber { get; set; }
-
-        [Display(Name = "Delivery Instructions")]
-        [StringLength(500, ErrorMessage = "Delivery instructions cannot exceed 500 characters")]
-        public string? DeliveryInstructions { get; set; }
-
-        [Display(Name = "Delivery Option")]
-        [Required(ErrorMessage = "Please select a delivery option.")]
-        public string DeliveryOption { get; set; }
-
-        [Display(Name = "Delivery Address")]
-        [Required(ErrorMessage = "Delivery address is required.")]
-        [StringLength(200, ErrorMessage = "Address cannot exceed 200 characters")]
-        public string DeliveryAddress { get; set; }
-
-        public decimal Total { get; set; }
-        public List<CartItemVM> CartItems { get; set; } = new List<CartItemVM>();
-    }
-
-    // ReceiptVM is now defined in Models/ViewModels.cs
-
-    public class OrderHistoryVM
-    {
-        public List<OrderSummaryVM> Orders { get; set; } = new List<OrderSummaryVM>();
-    }
-
-    public class OrderSummaryVM
-    {
-        public int OrderId { get; set; }
-        public DateTime OrderDate { get; set; }
-        public decimal Total { get; set; }
-        public string Status { get; set; }
-        public List<OrderItemVM> Items { get; set; } = new List<OrderItemVM>();
-        public string DeliveryAddress { get; set; }
-        public string DeliveryOption { get; set; }
-    }
-
-    public class OrderItemVM
-    {
-        public string MenuItemName { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public string PhotoURL { get; set; }
-        public string? SelectedPersonalizations { get; set; }
-    }
-
-    public class OrderRefundVM
-    {
-        [Required]
-        [Display(Name = "Order Number")]
-        public int OrderId { get; set; }
-
-        [Required]
-        [StringLength(500)]
-        [Display(Name = "Reason for Refund")]
-        public string Reason { get; set; }
-    }
 }

@@ -12,7 +12,8 @@
             <form id="trackOrderForm" method="post" onsubmit="return false;">
                 <div class="field-row">
                     <label asp-for="OrderNumber">Order Number</label>
-                    <input asp-for="OrderNumber" class="form-input" autofocus placeholder="Enter your order number (or select below)">
+                    <input asp-for="OrderNumber" id="orderNumberInput" class="form-input" placeholder="Enter your order number (or select below)" autofocus>
+
                     <span asp-validation-for="OrderNumber" class="field-validation-error"></span>
                 </div>
                 <div class="field-row">
@@ -105,7 +106,7 @@
                     <strong>Order #: </strong>@order.OrderNumber<br />
                     <strong>Date: </strong>@order.OrderDate<br />
                     <strong>Status: </strong>@order.Status<br />
-                    <strong>Delivery Option:</strong> @order.DeliveryOption<br />
+
                     <button type="button" onclick="document.getElementById('orderNumberInput').value='@order.OrderNumber'; trackOrderAjax();" class="btn btn-sm btn-outline-primary mt-2">Track This Order</button>
                 </li>
             }
@@ -267,214 +268,78 @@
 </style>
 
 <script>
-    // Store profile address as a global variable to avoid issues with HTML encoding
-    var profileAddress = '@Html.Raw(Model.Address?.Replace("\r\n", "\\n")?.Replace("\"", "\\\"")?? "")';
-    
+    // Store profile address
+    var profileAddress = '@Html.Raw(Model.Address?.Replace("\r\n", "\\n")?.Replace("\"", "\\\"") ?? "")';
+
     document.addEventListener('DOMContentLoaded', function() {
-        var orderInput = document.querySelector('input[name="OrderNumber"]');
-        if (orderInput) orderInput.id = 'orderNumberInput';
-        
         var addressInput = document.getElementById('addressInput');
-        
-        // Auto-fill address on page load if user has a profile address
+
         if (profileAddress.trim() && profileAddress !== '') {
             addressInput.value = profileAddress;
             addressInput.placeholder = 'Address auto-filled from your profile';
         } else {
             addressInput.placeholder = 'Enter your delivery address';
         }
-        
-        // Update button visibility based on whether user has profile address
+
         var useMyAddressBtn = document.getElementById('useMyAddressBtn');
-        if (profileAddress.trim() === '' || profileAddress === '') {
+        if (useMyAddressBtn && (profileAddress.trim() === '' || profileAddress === '')) {
             useMyAddressBtn.style.display = 'none';
         }
     });
-    
-    // Function to use the user's profile address
+
+    // Fill profile address
     function useMyAddress() {
         var addressInput = document.getElementById('addressInput');
-        
         if (profileAddress.trim() && profileAddress !== '') {
             addressInput.value = profileAddress;
-            addressInput.focus();
-            
-            // Add a subtle animation to indicate the field was updated
-            addressInput.style.backgroundColor = '#d4edda';
-            addressInput.style.border = '2px solid #28a745';
-            setTimeout(function() {
-                addressInput.style.backgroundColor = '';
-                addressInput.style.border = '';
-            }, 2000);
-            
-            // Show success message briefly
-            var successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success mt-2';
-            successMsg.style.fontSize = '12px';
-            successMsg.style.padding = '5px 10px';
-            successMsg.innerHTML = '✅ Address filled from your profile!';
-            addressInput.parentElement.appendChild(successMsg);
-            
-            setTimeout(function() {
-                if (successMsg.parentElement) {
-                    successMsg.parentElement.removeChild(successMsg);
-                }
-            }, 3000);
         } else {
-            alert('❌ No address found in your profile. Please update your profile with your delivery address.');
+            alert('No address found in your profile.');
         }
     }
 
+    // Track order directly from DB
     function trackOrderAjax() {
         var orderNumber = document.getElementById('orderNumberInput').value;
-        var address = document.querySelector('input[name="Address"]').value;
-        var formData = new FormData();
-        formData.append('OrderNumber', orderNumber);
-        formData.append('Address', address);
-        
-        // Get animation elements
+
+        if (!orderNumber) {
+            alert("Please enter an order number.");
+            return;
+        }
+
         var animationBox = document.getElementById('deliveryAnimation');
-        var deliveryAnimBox = document.getElementById('deliveryAnimationBox');
-        var pickupAnimBox = document.getElementById('pickupAnimationBox');
-        var motorBody = document.getElementById('motorBody');
-        var motorWheel1 = document.getElementById('motorWheel1');
-        var motorWheel2 = document.getElementById('motorWheel2');
-        var status = document.getElementById('animationStatus');
         var orderResult = document.getElementById('orderResult');
-        
-        // Clear previous results
+
+        animationBox.style.display = 'block';
         orderResult.innerHTML = '';
-        
-        // First, make a preliminary request to get the delivery option
-        fetch('/Cart/GetDeliveryOption', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Show animation box
-            animationBox.style.display = 'block';
-            
-            // Determine which animation to show based on delivery option
-            var isDelivery = data.deliveryOption === 'Delivery';
-            
-            if (isDelivery) {
-                // Show delivery animation
-                deliveryAnimBox.style.display = 'block';
-                pickupAnimBox.style.display = 'none';
-                status.textContent = 'Order is being delivered...';
-                
-                // Setup delivery animation
-                motorBody.style.left = '30px';
-                motorWheel1.style.left = '32px';
-                motorWheel2.style.left = '70px';
-                
-                // Animate delivery
-                var distance = 60;
-                var duration = 2000;
-                var start = null;
-                
-                function animateMotor(ts) {
-                    if (!start) start = ts;
-                    var progress = ts - start;
-                    var percent = Math.min(progress / duration, 1);
-                    var move = 30 + percent * distance;
-                    motorBody.style.left = move + 'px';
-                    motorWheel1.style.left = (move + 2) + 'px';
-                    motorWheel2.style.left = (move + 40) + 'px';
-                    
-                    if (percent < 1) {
-                        window.requestAnimationFrame(animateMotor);
-                    } else {
-                        completeAnimation();
+        document.getElementById('animationStatus').textContent = 'Checking order status...';
+
+        // Call backend directly
+        setTimeout(function() {
+            fetch(`/Cart/GetOrderStatus?orderId=${orderNumber}`)
+                .then(r => r.json())
+                .then(orderData => {
+                    animationBox.style.display = 'none';
+
+                    if (!orderData.success) {
+                        orderResult.innerHTML = `<div class="alert alert-danger">${orderData.message}</div>`;
+                        return;
                     }
-                }
-                
-                window.requestAnimationFrame(animateMotor);
-            } else {
-                // Show pickup animation
-                deliveryAnimBox.style.display = 'none';
-                pickupAnimBox.style.display = 'block';
-                status.textContent = 'Preparing your order for pickup...';
-                
-                // For pickup, we'll just show the animation for a fixed duration
-                setTimeout(completeAnimation, 2000);
-            }
-            
-            function completeAnimation() {
-                status.textContent = 'Checking order status...';
-                fetch('/Cart/Track', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.text())
-                .then(html => {
-                    animationBox.style.display = 'none';
-                    orderResult.innerHTML = html;
-                    // Execute any scripts embedded in the partial so tracking logic runs
-                    try {
-                        var scripts = orderResult.querySelectorAll('script');
-                        scripts.forEach(function(script) {
-                            var newScript = document.createElement('script');
-                            if (script.src) {
-                                newScript.src = script.src;
-                            } else {
-                                newScript.text = script.textContent;
-                            }
-                            document.body.appendChild(newScript);
-                            document.body.removeChild(newScript);
-                        });
-                    } catch (e) { console.error('Failed to execute tracking scripts:', e); }
+
+                    orderResult.innerHTML = `
+                        <div class="card p-3">
+                            <h5>Order #${orderData.orderId}</h5>
+                            <p><strong>Status:</strong> ${orderData.status}</p>
+                            <p><strong>Date:</strong> ${orderData.orderDate}</p>
+                           
+                        </div>
+                    `;
                 })
                 .catch(() => {
                     animationBox.style.display = 'none';
-                    orderResult.innerHTML = '<div class="text-danger">Failed to track order. Please try again.</div>';
+                    orderResult.innerHTML = '<div class="alert alert-danger">Failed to track order.</div>';
                 });
-            }
-        })
-        .catch(() => {
-            // If we can't determine the delivery option, default to delivery animation
-            animationBox.style.display = 'block';
-            deliveryAnimBox.style.display = 'block';
-            pickupAnimBox.style.display = 'none';
-            status.textContent = 'Checking your order...';
-            
-            // Setup delivery animation
-            motorBody.style.left = '30px';
-            motorWheel1.style.left = '32px';
-            motorWheel2.style.left = '70px';
-            
-            // Animate for a short time then proceed
-            setTimeout(function() {
-                status.textContent = 'Checking order status...';
-                fetch('/Cart/Track', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.text())
-                .then(html => {
-                    animationBox.style.display = 'none';
-                    orderResult.innerHTML = html;
-                    // Execute any scripts embedded in the partial so tracking logic runs
-                    try {
-                        var scripts = orderResult.querySelectorAll('script');
-                        scripts.forEach(function(script) {
-                            var newScript = document.createElement('script');
-                            if (script.src) {
-                                newScript.src = script.src;
-                            } else {
-                                newScript.text = script.textContent;
-                            }
-                            document.body.appendChild(newScript);
-                            document.body.removeChild(newScript);
-                        });
-                    } catch (e) { console.error('Failed to execute tracking scripts:', e); }
-                })
-                .catch(() => {
-                    animationBox.style.display = 'none';
-                    orderResult.innerHTML = '<div class="text-danger">Failed to track order. Please try again.</div>';
-                });
-            }, 2000);
-        });
+        }, 2000); 
     }
 </script>
+
+
