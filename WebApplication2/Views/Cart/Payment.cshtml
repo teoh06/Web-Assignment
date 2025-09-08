@@ -7,171 +7,388 @@
 }
 
 <div class="container py-4">
-    <h2 class="mb-4">Payment Details</h2>
-    <form asp-action="Payment" method="post" class="needs-validation" novalidate>
-        <div class="row">
-            <div class="col-md-8">
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title mb-4">Contact Information</h5>
-                        <div class="mb-3">
-                            <label asp-for="DeliveryOption" class="form-label"></label>
-                            <select asp-for="DeliveryOption" class="form-select" required>
-                                <option value="" disabled selected>Select delivery option...</option>
-                                <option value="Delivery">Delivery</option>
-                                <option value="Pickup">Pickup</option>
-                            </select>
-                            <span asp-validation-for="DeliveryOption" class="text-danger"></span>
-                        </div>
-                        <div class="mb-3">
-                            <label asp-for="PhoneNumber" class="form-label"></label>
-                            <input asp-for="PhoneNumber" class="form-control" placeholder="Enter your phone number" required />
-                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-                        </div>
-                        <div class="mb-3" id="address-block">
-                            <label asp-for="DeliveryAddress" class="form-label"></label>
-                            <input asp-for="DeliveryAddress" class="form-control" placeholder="@(Model.DeliveryAddress ?? "Enter your address")" />
-                            <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="DeliveryInstructions" class="form-label"></label>
-                            <textarea asp-for="DeliveryInstructions" class="form-control" rows="3" 
-                                    placeholder="Add any special delivery instructions here"></textarea>
-                            <span asp-validation-for="DeliveryInstructions" class="text-danger"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title mb-4">Payment Information</h5>
-                        <div class="mb-4">
-                            <label asp-for="PaymentMethod" class="form-label"></label>
-                            <select asp-for="PaymentMethod" class="form-select" required>
-                                <option value="">Select payment method...</option>
-                                <option value="Card">Credit/Debit Card</option>
-                                <option value="Cash">Cash on Delivery</option>
-                            </select>
-                            <span asp-validation-for="PaymentMethod" class="text-danger"></span>
-                        </div>
-
-                        <div id="card-fields" style="display:none">
-                            <div class="mb-3">
-                                <label asp-for="CardHolderName" class="form-label"></label>
-                                <input asp-for="CardHolderName" class="form-control" placeholder="Name on card" />
-                                <span asp-validation-for="CardHolderName" class="text-danger"></span>
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <h2 class="mb-4 text-center">Complete Your Order</h2>
+            
+            <form asp-action="Payment" method="post" class="needs-validation" novalidate>
+                <input type="hidden" name="orderToken" value="@ViewBag.OrderToken" />
+                
+                <div class="row">
+                    <!-- Left Column: Order Details -->
+                    <div class="col-lg-8">
+                        <!-- Delivery Option Selection -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Delivery Method</h5>
                             </div>
-
-                            <div class="mb-3">
-                                <label asp-for="CardNumber" class="form-label"></label>
-                                <input asp-for="CardNumber" class="form-control" placeholder="1234 5678 9012 3456" 
-                                       maxlength="16" pattern="\d{16}" />
-                                <span asp-validation-for="CardNumber" class="text-danger"></span>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="ExpiryDate" class="form-label"></label>
-                                    <input asp-for="ExpiryDate" class="form-control" placeholder="MM/YY" maxlength="5" />
-                                    <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="delivery-option-card" data-option="Delivery">
+                                            <div class="card h-100 border-2" id="delivery-card">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-truck fa-3x text-primary mb-3"></i>
+                                                    <h6 class="card-title">Home Delivery</h6>
+                                                    <p class="card-text small text-muted">We'll deliver to your address</p>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="DeliveryOption" value="Delivery" id="delivery-option" required>
+                                                        <label class="form-check-label" for="delivery-option">
+                                                            Choose Delivery
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="delivery-option-card" data-option="Pickup">
+                                            <div class="card h-100 border-2" id="pickup-card">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-store fa-3x text-success mb-3"></i>
+                                                    <h6 class="card-title">Store Pickup</h6>
+                                                    <p class="card-text small text-muted">Pick up at our location</p>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="DeliveryOption" value="Pickup" id="pickup-option" required>
+                                                        <label class="form-check-label" for="pickup-option">
+                                                            Choose Pickup
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="CVV" class="form-label"></label>
-                                    <input asp-for="CVV" class="form-control" placeholder="123" maxlength="4" />
-                                    <span asp-validation-for="CVV" class="text-danger"></span>
+                                <span asp-validation-for="DeliveryOption" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-phone me-2"></i>Contact Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="PhoneNumber" class="form-label">
+                                        <i class="fas fa-mobile-alt me-1"></i>Phone Number
+                                    </label>
+                                    <input asp-for="PhoneNumber" class="form-control" placeholder="Enter your phone number" required />
+                                    <div class="form-text">We'll use this to contact you about your order</div>
+                                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="mb-3">
-                                <label asp-for="BillingAddress" class="form-label"></label>
-                                <textarea asp-for="BillingAddress" class="form-control" rows="3" 
-                                        placeholder="Enter your billing address"></textarea>
-                                <span asp-validation-for="BillingAddress" class="text-danger"></span>
+                        <!-- Delivery Information (Only for Delivery) -->
+                        <div class="card mb-4" id="delivery-info-section" style="display: none;">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Delivery Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="DeliveryAddress" class="form-label">
+                                        <i class="fas fa-home me-1"></i>Delivery Address
+                                    </label>
+                                    <input asp-for="DeliveryAddress" class="form-control" placeholder="Enter your delivery address" />
+                                    <div class="form-text">Please provide your complete address for delivery</div>
+                                    <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="DeliveryInstructions" class="form-label">
+                                        <i class="fas fa-sticky-note me-1"></i>Delivery Instructions
+                                    </label>
+                                    <textarea asp-for="DeliveryInstructions" class="form-control" rows="3" 
+                                            placeholder="Any special delivery instructions (e.g., gate code, building access, etc.)"></textarea>
+                                    <div class="form-text">Optional: Add any special instructions for our delivery team</div>
+                                    <span asp-validation-for="DeliveryInstructions" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pickup Information (Only for Pickup) -->
+                        <div class="card mb-4" id="pickup-info-section" style="display: none;">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-store me-2"></i>Pickup Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Pickup Location:</strong> 123 Main Street, City Center<br>
+                                    <strong>Pickup Hours:</strong> 10:00 AM - 10:00 PM (Daily)<br>
+                                    <strong>Estimated Ready Time:</strong> 15-20 minutes after order confirmation
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-sticky-note me-1"></i>Pickup Instructions
+                                    </label>
+                                    <textarea class="form-control" rows="2" 
+                                            placeholder="Any special pickup instructions (e.g., call when ready, specific time preference)"></textarea>
+                                    <div class="form-text">Optional: Add any special instructions for pickup</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Information -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payment Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-4">
+                                    <label asp-for="PaymentMethod" class="form-label">
+                                        <i class="fas fa-wallet me-1"></i>Payment Method
+                                    </label>
+                                    <select asp-for="PaymentMethod" class="form-select" required>
+                                        <option value="">Select payment method...</option>
+                                        <option value="Card">Credit/Debit Card</option>
+                                        <option value="Cash">Cash on Delivery/Pickup</option>
+                                    </select>
+                                    <div class="form-text">Choose your preferred payment method</div>
+                                    <span asp-validation-for="PaymentMethod" class="text-danger"></span>
+                                </div>
+
+                                <div id="card-fields" style="display:none">
+                                    <div class="alert">
+                                        <i class="fas fa-shield-alt me-2"></i>
+                                        <strong>Secure Payment:</strong> Your card information is encrypted and secure.
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label asp-for="CardHolderName" class="form-label">
+                                            <i class="fas fa-user me-1"></i>Cardholder Name
+                                        </label>
+                                        <input asp-for="CardHolderName" class="form-control" placeholder="Name as it appears on card" />
+                                        <span asp-validation-for="CardHolderName" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="CardNumber" class="form-label">
+                                            <i class="fas fa-credit-card me-1"></i>Card Number
+                                        </label>
+                                        <input asp-for="CardNumber" class="form-control" placeholder="1234 5678 9012 3456" 
+                                               maxlength="16" pattern="\d{16}" />
+                                        <div class="form-text">Enter your 16-digit card number</div>
+                                        <span asp-validation-for="CardNumber" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label asp-for="ExpiryDate" class="form-label">
+                                                <i class="fas fa-calendar me-1"></i>Expiry Date
+                                            </label>
+                                            <input asp-for="ExpiryDate" class="form-control" placeholder="MM/YY" maxlength="5" />
+                                            <span asp-validation-for="ExpiryDate" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label asp-for="CVV" class="form-label">
+                                                <i class="fas fa-lock me-1"></i>CVV
+                                            </label>
+                                            <input asp-for="CVV" class="form-control" placeholder="123" maxlength="4" />
+                                            <div class="form-text">3 or 4 digit security code</div>
+                                            <span asp-validation-for="CVV" class="text-danger"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="BillingAddress" class="form-label">
+                                            <i class="fas fa-map-marker-alt me-1"></i>Billing Address
+                                        </label>
+                                        <textarea asp-for="BillingAddress" class="form-control" rows="3" 
+                                                placeholder="Enter your billing address (optional)"></textarea>
+                                        <div class="form-text">Optional: Billing address for your records</div>
+                                        <span asp-validation-for="BillingAddress" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div id="cash-fields" style="display:none">
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-money-bill-wave me-2"></i>
+                                        <strong>Cash Payment:</strong> You'll pay when your order is delivered or when you pick it up.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Order Summary -->
+                    <div class="col-lg-4">
+                        <!-- Order Summary Card -->
+                        <div class="card sticky-top" style="top: 20px;">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Order Summary</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Order Items -->
+                                <div class="mb-3">
+                                    <h6 class="text-muted mb-2">Items (@Model.CartItems.Count)</h6>
+                                    @foreach (var item in Model.CartItems)
+                                    {
+                                        <div class="d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold small">@item.Name</div>
+                                                @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
+                                                {
+                                                    <div class="text-muted" style="font-size: 0.75rem;">
+                                                        @item.SelectedPersonalizations
+                                                    </div>
+                                                }
+                                                <div class="text-muted" style="font-size: 0.75rem;">Qty: @item.Quantity</div>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="fw-bold">@((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))</div>
+                                                <div class="text-muted" style="font-size: 0.75rem;">@item.Price.ToString("C", new CultureInfo("en-MY")) each</div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Order Total -->
+                                <div class="border-top pt-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">Total</h5>
+                                        <h4 class="mb-0 text-success">@Model.Total.ToString("C", new CultureInfo("en-MY"))</h4>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" id="payButton" class="btn btn-success btn-lg" data-original-text="Complete Order">
+                                        <span class="button-text">
+                                            <i class="fas fa-check-circle me-2"></i>Complete Order
+                                        </span>
+                                    </button>
+                                    
+                                    <div id="processingIndicator" class="alert mt-2" style="display: none;">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>
+                                        <strong>Processing your order...</strong><br>
+                                        <small>Please do not refresh the page or click the button again.</small>
+                                    </div>
+                                    
+                                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>Back to Cart
+                                    </a>
+                                </div>
+
+                                <!-- Security Notice -->
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        Your payment information is secure and encrypted.
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title mb-4">Order Summary</h5>
-                        <div class="d-flex justify-content-between mb-3">
-                            <span>Total</span>
-                            <strong>@Model.Total.ToString("C", new CultureInfo("en-MY"))</strong>
-                        </div>
-                        <!-- To show personalizations, pass cart items to the view and enumerate them here -->
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th class="w-50">Item</th>
-                                    <th class="w-25 text-end">Price</th>
-                                    <th class="w-25 text-end">Quantity</th>
-                                    <th class="w-25 text-end">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cartTableBody">
-                                @foreach (var item in Model.CartItems)
-                                {
-                                    <tr data-menu-item-id="@item.MenuItemId">
-                                        <td>
-                                            <h6 class="mb-0">@item.Name</h6>
-                                            @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
-                                            {
-                                                var personalizations = item.SelectedPersonalizations.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                                                if (personalizations.Length > 1)
-                                                {
-                                                    <div class="small text-muted">Personalizations:</div>
-                                                    <ul>
-                                                        @foreach (var personalization in personalizations)
-                                                        {
-                                                            <li>@personalization.Trim()</li>
-                                                        }
-                                                    </ul>
-                                                }
-                                                else
-                                                {
-                                                    <div class="small text-muted">Personalization: @item.SelectedPersonalizations</div>
-                                                }
-                                            }
-                                        </td>
-                                        <td class="text-end item-price" data-price="@item.Price">
-                                            @item.Price.ToString("C", new CultureInfo("en-MY"))
-                                        </td>
-                                        <td class="text-end">@item.Quantity</td>
-                                        <td class="text-end">
-                                            @((item.Price * item.Quantity).ToString("C", new CultureInfo("en-MY")))
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-
-                        <button type="submit" class="btn btn-success w-100 mb-2">Pay & Place Order</button>
-                        <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">Back to Cart</a>
-                    </div>
-                </div>
-            </div>
+            </form>
         </div>
-    </form>
+    </div>
 </div>
 
 @section Scripts {
+    <style>
+        /* Enhanced button states for better visual feedback */
+        #payButton {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #payButton:disabled {
+            cursor: not-allowed !important;
+            transform: none !important;
+        }
+        
+        #payButton:disabled:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        #payButton.processing {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @@keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .form-disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        
+        .alert-warning {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @@keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* Delivery option cards */
+        .delivery-option-card .card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #dee2e6;
+        }
+        
+        .delivery-option-card .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .delivery-option-card .card.border-primary {
+            border-color: #0d6efd !important;
+            background-color: #f8f9ff;
+        }
+        
+        .delivery-option-card .card.border-secondary {
+            border-color: #6c757d;
+        }
+        
+        /* Sticky order summary */
+        .sticky-top {
+            position: sticky;
+            z-index: 1020;
+        }
+        
+        /* Form sections */
+        .card-header {
+            border-bottom: 1px solid rgba(0,0,0,0.125);
+        }
+        
+        /* Responsive adjustments */
+        @@media (max-width: 991.98px) {
+            .sticky-top {
+                position: relative;
+                top: auto !important;
+            }
+        }
+    </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const paymentMethodSelect = document.querySelector('[name="PaymentMethod"]');
-            const deliveryOptionSelect = document.querySelector('[name="DeliveryOption"]');
             const cardFields = document.getElementById('card-fields');
-            const cardInputs = cardFields.querySelectorAll('input, textarea');
-            const addressBlock = document.getElementById('address-block');
-            const addressInput = document.querySelector('[name="DeliveryAddress"]');
+            const cashFields = document.getElementById('cash-fields');
+            const deliveryInfoSection = document.getElementById('delivery-info-section');
+            const pickupInfoSection = document.getElementById('pickup-info-section');
+            const deliveryCards = document.querySelectorAll('.delivery-option-card');
+            const deliveryAddressInput = document.querySelector('[name="DeliveryAddress"]');
 
-            function toggleCardFields() {
+            // Function to toggle payment method fields
+            function togglePaymentFields() {
                 const isCard = paymentMethodSelect.value === 'Card';
-                cardFields.style.display = isCard ? 'block' : 'none';
+                const isCash = paymentMethodSelect.value === 'Cash';
                 
+                cardFields.style.display = isCard ? 'block' : 'none';
+                cashFields.style.display = isCash ? 'block' : 'none';
+                
+                // Handle required fields
+                const cardInputs = cardFields.querySelectorAll('input, textarea');
                 cardInputs.forEach(input => {
                     input.required = isCard;
                     if (!isCard) {
@@ -180,17 +397,68 @@
                 });
             }
 
-            function toggleAddressByOption() {
-                const isPickup = deliveryOptionSelect && deliveryOptionSelect.value === 'Pickup';
-                if (addressBlock) addressBlock.style.display = isPickup ? 'none' : 'block';
-                if (addressInput) {
-                    addressInput.required = !isPickup;
-                    if (isPickup) addressInput.value = '';
+            // Function to toggle delivery/pickup sections
+            function toggleDeliverySections() {
+                const selectedOption = document.querySelector('input[name="DeliveryOption"]:checked');
+                
+                if (selectedOption) {
+                    const isDelivery = selectedOption.value === 'Delivery';
+                    const isPickup = selectedOption.value === 'Pickup';
+                    
+                    deliveryInfoSection.style.display = isDelivery ? 'block' : 'none';
+                    pickupInfoSection.style.display = isPickup ? 'block' : 'none';
+                    
+                    // Handle required fields
+                    if (deliveryAddressInput) {
+                        deliveryAddressInput.required = isDelivery;
+                        if (isPickup) {
+                            deliveryAddressInput.value = '';
+                        }
+                    }
+                } else {
+                    deliveryInfoSection.style.display = 'none';
+                    pickupInfoSection.style.display = 'none';
                 }
             }
 
-            paymentMethodSelect.addEventListener('change', toggleCardFields);
-            if (deliveryOptionSelect) deliveryOptionSelect.addEventListener('change', toggleAddressByOption);
+            // Function to handle delivery option card selection
+            function handleDeliveryOptionSelection() {
+                deliveryCards.forEach(card => {
+                    const radio = card.querySelector('input[type="radio"]');
+                    const cardElement = card.querySelector('.card');
+                    
+                    cardElement.addEventListener('click', function() {
+                        radio.checked = true;
+                        updateCardStyles();
+                        toggleDeliverySections();
+                    });
+                    
+                    radio.addEventListener('change', function() {
+                        updateCardStyles();
+                        toggleDeliverySections();
+                    });
+                });
+            }
+
+            // Function to update card styles based on selection
+            function updateCardStyles() {
+                deliveryCards.forEach(card => {
+                    const radio = card.querySelector('input[type="radio"]');
+                    const cardElement = card.querySelector('.card');
+                    
+                    if (radio.checked) {
+                        cardElement.classList.add('border-primary', 'shadow');
+                        cardElement.classList.remove('border-secondary');
+                    } else {
+                        cardElement.classList.remove('border-primary', 'shadow');
+                        cardElement.classList.add('border-secondary');
+                    }
+                });
+            }
+
+            // Event listeners
+            paymentMethodSelect.addEventListener('change', togglePaymentFields);
+            handleDeliveryOptionSelection();
 
             // Format expiry date input
             const expiryInput = document.querySelector('[name="ExpiryDate"]');
@@ -212,9 +480,199 @@
                 });
             }
 
-            // initial state
-            toggleCardFields();
-            toggleAddressByOption();
+            // Initial state setup
+            togglePaymentFields();
+            toggleDeliverySections();
+            updateCardStyles();
+
+            // --- ULTRA-ROBUST spam protection and submission handling ---
+            const form = document.querySelector('form');
+            const payBtn = document.getElementById('payButton');
+            const buttonText = payBtn.querySelector('.button-text');
+            const originalText = payBtn.getAttribute('data-original-text');
+            const processingIndicator = document.getElementById('processingIndicator');
+            
+            let isSubmitting = false;
+            let submissionCount = 0;
+            let lastSubmissionTime = 0;
+            
+            // Function to disable button completely
+            function disableButton() {
+                payBtn.disabled = true;
+                payBtn.style.pointerEvents = 'none';
+                payBtn.classList.add('btn-secondary', 'processing');
+                payBtn.classList.remove('btn-success');
+                
+                // Add loading spinner
+                const spinner = document.createElement('span');
+                spinner.className = 'spinner-border spinner-border-sm me-2';
+                spinner.setAttribute('role', 'status');
+                spinner.setAttribute('aria-hidden', 'true');
+                buttonText.textContent = 'Processing Payment...';
+                payBtn.insertBefore(spinner, buttonText);
+                
+                // Disable all form inputs and add visual feedback
+                form.classList.add('form-disabled');
+                processingIndicator.style.display = 'block';
+                const inputs = form.querySelectorAll('input, select, textarea, button');
+                inputs.forEach(input => {
+                    if (input !== payBtn) {
+                        input.disabled = true;
+                    }
+                });
+            }
+            
+            // Function to re-enable button
+            function enableButton() {
+                isSubmitting = false;
+                payBtn.disabled = false;
+                payBtn.style.pointerEvents = 'auto';
+                payBtn.classList.remove('btn-secondary', 'processing');
+                payBtn.classList.add('btn-success');
+                
+                // Remove spinner and restore text
+                const spinner = payBtn.querySelector('.spinner-border');
+                if (spinner) {
+                    spinner.remove();
+                }
+                buttonText.textContent = originalText;
+                
+                // Re-enable all form inputs and remove visual feedback
+                form.classList.remove('form-disabled');
+                processingIndicator.style.display = 'none';
+                const inputs = form.querySelectorAll('input, select, textarea, button');
+                inputs.forEach(input => {
+                    input.disabled = false;
+                });
+            }
+            
+            // Prevent any clicks on the button if already submitting
+            payBtn.addEventListener('click', function(e) {
+                const currentTime = Date.now();
+                
+                // Prevent rapid clicking (less than 500ms between clicks)
+                if (currentTime - lastSubmissionTime < 500) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+                
+                // Prevent if already submitting
+                if (isSubmitting || payBtn.disabled) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+                
+                lastSubmissionTime = currentTime;
+                submissionCount++;
+                
+                // If user has clicked multiple times in quick succession, show warning
+                if (submissionCount > 1) {
+                    console.warn(`Multiple rapid clicks detected (${submissionCount}). Preventing submission.`);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+            
+            // Main form submission handler
+            form.addEventListener('submit', function(e) {
+                const currentTime = Date.now();
+                
+                // Multiple layers of protection
+                if (isSubmitting || payBtn.disabled) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Submission blocked: Already processing');
+                    return false;
+                }
+                
+                // Check for rapid submissions (within 1 second)
+                if (currentTime - lastSubmissionTime < 1000) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Submission blocked: Too rapid');
+                    return false;
+                }
+                
+                // Check if form is valid
+                if (!form.checkValidity()) {
+                    e.preventDefault();
+                    form.reportValidity();
+                    return false;
+                }
+                
+                // Set submission state IMMEDIATELY
+                isSubmitting = true;
+                lastSubmissionTime = currentTime;
+                
+                // Disable button and form immediately
+                disableButton();
+                
+                // Add a small delay to ensure the button is properly disabled
+                setTimeout(() => {
+                    if (isSubmitting) {
+                        console.log('Form submission proceeding...');
+                    }
+                }, 100);
+                
+                // Safety timeout - re-enable after 15 seconds if no response
+                setTimeout(function() {
+                    if (isSubmitting) {
+                        console.warn('Submission timeout - re-enabling form');
+                        enableButton();
+                        submissionCount = 0;
+                        
+                        // Show error message
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'alert alert-warning mt-3';
+                        errorDiv.innerHTML = '<strong>Warning:</strong> The payment is taking longer than expected. Please try again.';
+                        form.appendChild(errorDiv);
+                        
+                        // Remove error message after 5 seconds
+                        setTimeout(() => {
+                            if (errorDiv.parentNode) {
+                                errorDiv.remove();
+                            }
+                        }, 5000);
+                    }
+                }, 15000);
+            });
+            
+            // Additional protection: Prevent form submission via Enter key spam
+            form.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && (isSubmitting || payBtn.disabled)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+            
+            // Reset submission count after 5 seconds of inactivity
+            setInterval(() => {
+                const currentTime = Date.now();
+                if (currentTime - lastSubmissionTime > 5000) {
+                    submissionCount = 0;
+                }
+            }, 1000);
+            
+            // Prevent page navigation during processing
+            window.addEventListener('beforeunload', function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    e.returnValue = 'Your order is being processed. Are you sure you want to leave?';
+                    return 'Your order is being processed. Are you sure you want to leave?';
+                }
+            });
+            
+            // Additional protection: Disable right-click context menu on button during processing
+            payBtn.addEventListener('contextmenu', function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
         });
     </script>
 }
