@@ -333,17 +333,8 @@ public class MenuItemController : Controller
     {
         var menuItem = db.MenuItems
             .Include(m => m.Category)
-            .Where(m => m.MenuItemId == id)
-            .Select(m => new
-            {
-                id = m.MenuItemId,
-                name = m.Name,
-                price = m.Price,
-                photoURL = m.PhotoURL,
-                categoryName = m.Category.Name,
-                stockQuantity = m.StockQuantity
-            })
-            .FirstOrDefault();
+            .Include(m => m.MenuItemImages)
+            .FirstOrDefault(m => m.MenuItemId == id);
 
         if (menuItem == null) return NotFound();
 
@@ -352,15 +343,7 @@ public class MenuItemController : Controller
 
         var vm = new MenuItemDetailsVM
         {
-            MenuItem = new MenuItem
-            {
-                MenuItemId = menuItem.id,
-                Name = menuItem.name,
-                Price = menuItem.price,
-                PhotoURL = menuItem.photoURL,
-                Category = new Category { Name = menuItem.categoryName },
-                StockQuantity = menuItem.stockQuantity
-            },
+            MenuItem = menuItem,
             Ratings = ratings,
             Comments = comments
         };

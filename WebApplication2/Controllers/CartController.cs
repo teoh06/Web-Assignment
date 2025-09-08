@@ -258,191 +258,251 @@ namespace WebApplication2.Controllers
                 CartItems = cart,
                 DeliveryAddress = member?.Address ?? ""
             };
+
+            // --- Anti-duplicate order token ---
+            var orderToken = Guid.NewGuid().ToString();
+            HttpContext.Session.SetString("OrderToken", orderToken);
+            ViewBag.OrderToken = orderToken;
+
             return View(vm);
         }
 
-        // -------------------
-        // Process payment
-        // -------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Payment(PaymentVM vm)
+        public async Task<IActionResult> Payment(PaymentVM vm, string orderToken)
         {
             if (!User.IsInRole("Member"))
                 return Unauthorized();
 
-            RemoveInactiveItemsFromCart();
-
-            var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
-            vm.Total = cart.Sum(item => item.Price * item.Quantity);
-            vm.CartItems = cart;
-
-            var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
-            if (vm.DeliveryOption == "Pickup")
+            // --- Enhanced Anti-duplicate order token check ---
+            var sessionToken = HttpContext.Session.GetString("OrderToken");
+            if (string.IsNullOrEmpty(orderToken) || orderToken != sessionToken)
             {
-                // For pickup, delivery address is not required and should not be stored
-                ModelState.Remove(nameof(vm.DeliveryAddress));
-                vm.DeliveryAddress = string.Empty; // keep non-null to satisfy DB constraint
-            }
-            else
-            {
-                // For delivery, ensure address is present; fallback to profile address
-                if (string.IsNullOrWhiteSpace(vm.DeliveryAddress))
-                {
-                    vm.DeliveryAddress = member?.Address ?? "";
-                }
-            }
-            if (vm.PaymentMethod == "Cash")
-            {
-                ModelState.Remove(nameof(vm.CardNumber));
-                vm.CardNumber = null;
-            }
-            else if (vm.PaymentMethod == "Card")
-            {
-                if (string.IsNullOrWhiteSpace(vm.CardNumber))
-                {
-                    ModelState.AddModelError(nameof(vm.CardNumber), "Card number is required for card payment.");
-                }
-            }
-            if (!ModelState.IsValid || vm.Total <= 0 || !cart.Any())
-            {
-                if (vm.Total <= 0 || !cart.Any())
-                {
-                    ModelState.AddModelError("", "Your cart is empty or total is zero. Cannot proceed with payment.");
-                }
-                return View(vm);
-            }
-
-            // When creating a new order, copy member info
-            var order = new Order
-            {
-                MemberEmail = member.Email,
-                MemberName = member.Name,
-                MemberPhone = !string.IsNullOrWhiteSpace(vm.PhoneNumber) ? vm.PhoneNumber : (member?.PhoneNumber ?? ""),
-                OrderDate = DateTime.Now,
-                Status = "Paid",
-                PaymentMethod = vm.PaymentMethod,
-                DeliveryAddress = vm.DeliveryOption == "Pickup" ? string.Empty : vm.DeliveryAddress,
-                DeliveryOption = vm.DeliveryOption
-            };
-            _db.Orders.Add(order);
-            await _db.SaveChangesAsync();
-
-            // Check stock availability before finalizing order
-            bool stockIssue = false;
-            string stockErrorMessage = "";
-            
-            foreach (var item in cart)
-            {
-                var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
-                if (menuItem == null)
-                {
-                    stockIssue = true;
-                    stockErrorMessage = $"Menu item {item.Name} no longer exists.";
-                    break;
-                }
-                
-                if (menuItem.StockQuantity < item.Quantity)
-                {
-                    stockIssue = true;
-                    stockErrorMessage = $"Not enough stock for {item.Name}. Only {menuItem.StockQuantity} available.";
-                    break;
-                }
-            }
-            
-            if (stockIssue)
-            {
-                // Remove the order we just created
-                _db.Orders.Remove(order);
-                await _db.SaveChangesAsync();
-                
-                ModelState.AddModelError("", stockErrorMessage);
+                ModelState.AddModelError("", "Duplicate or invalid order submission detected. Please refresh and try again.");
                 return View(vm);
             }
             
-            foreach (var item in cart)
+            // Check if user is already processing an order (additional protection)
+            var processingKey = $"ProcessingOrder_{User.Identity.Name}";
+            if (HttpContext.Session.GetString(processingKey) != null)
             {
-                // Add order item
-                _db.OrderItems.Add(new OrderItem
-                {
-                    OrderId = order.OrderId,
-                    MenuItemId = item.MenuItemId,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.Price,
-                    SelectedPersonalizations = item.SelectedPersonalizations
-                });
-                
-                // Update stock quantity
-                var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
-                menuItem.StockQuantity -= item.Quantity;
+                ModelState.AddModelError("", "⚠️ An order is already being processed. Please wait for the current order to complete before placing another order.");
+                TempData["Error"] = "Multiple order submission detected. Please wait for your current order to process.";
+                return View(vm);
             }
-            await _db.SaveChangesAsync();
-
-            // Save info for receipt
-            TempData["LastPaymentMethod"] = vm.PaymentMethod;
-            TempData["LastPhoneNumber"] = vm.PhoneNumber;
-            TempData["LastDeliveryInstructions"] = vm.DeliveryInstructions;
-            TempData["LastDeliveryOption"] = vm.DeliveryOption;
-            TempData["LastDeliveryAddress"] = vm.DeliveryAddress;
-            if (vm.PaymentMethod == "Card")
-            {
-                TempData["LastCardNumber"] = vm.CardNumber;
-            }
-
-            // --- Send receipt email ---
-            var receiptVm = new ReceiptVM
-            {
-                OrderId = order.OrderId,
-                Date = order.OrderDate,
-                Items = cart.Select(x => new CartItemVM
-                {
-                    MenuItemId = x.MenuItemId,
-                    Name = x.Name,
-                    Price = x.Price,
-                    Quantity = x.Quantity,
-                    SelectedPersonalizations = x.SelectedPersonalizations
-                }).ToList(),
-                Total = cart.Sum(x => x.Price * x.Quantity),
-                PaymentMethod = vm.PaymentMethod,
-                MemberEmail = member?.Email ?? User.Identity.Name,
-                Status = order.Status,
-                PhoneNumber = vm.PhoneNumber,
-                DeliveryInstructions = vm.DeliveryInstructions,
-                // Mask the card number for security - only show last 4 digits
-                CardNumber = vm.PaymentMethod == "Card" && !string.IsNullOrEmpty(vm.CardNumber) 
-                    ? "**** **** **** " + vm.CardNumber.Substring(Math.Max(0, vm.CardNumber.Length - 4)) 
-                    : "",
-                DeliveryOption = vm.DeliveryOption,
-                DeliveryAddress = vm.DeliveryAddress
-            };
+            
+            // Set processing flag immediately
+            HttpContext.Session.SetString(processingKey, "true");
+            
             try
             {
-                string html = await RenderViewToStringAsync("Receipt", receiptVm);
+                // Invalidate token after use
+                HttpContext.Session.Remove("OrderToken");
+
+                RemoveInactiveItemsFromCart();
+
+                var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
+                vm.Total = cart.Sum(item => item.Price * item.Quantity);
+                vm.CartItems = cart;
+
+                var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+                if (vm.DeliveryOption == "Pickup")
+                {
+                    ModelState.Remove(nameof(vm.DeliveryAddress));
+                    vm.DeliveryAddress = string.Empty;
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(vm.DeliveryAddress))
+                    {
+                        vm.DeliveryAddress = member?.Address ?? "";
+                    }
+                }
+                if (vm.PaymentMethod == "Cash")
+                {
+                    ModelState.Remove(nameof(vm.CardNumber));
+                    vm.CardNumber = null;
+                }
+                else if (vm.PaymentMethod == "Card")
+                {
+                    if (string.IsNullOrWhiteSpace(vm.CardNumber))
+                    {
+                        ModelState.AddModelError(nameof(vm.CardNumber), "Card number is required for card payment.");
+                    }
+                }
+                if (!ModelState.IsValid || vm.Total <= 0 || !cart.Any())
+                {
+                    if (vm.Total <= 0 || !cart.Any())
+                    {
+                        ModelState.AddModelError("", "Your cart is empty or total is zero. Cannot proceed with payment.");
+                    }
+                    return View(vm);
+                }
+
+                // Generate order hash for duplicate detection (only for same-session prevention)
+                var cartHash = GenerateCartHash(cart, member.Email);
                 
-                // Use the injected email service instead of direct mail message
-                string subject = $"Your Order Receipt - #{order.OrderId.ToString().PadLeft(6, '0')}";
-                var recipient = member?.Email;
-                if (string.IsNullOrWhiteSpace(recipient))
-                    recipient = User.Identity.Name;
+                // Check for duplicate orders within the same session (last 30 seconds) - only prevent rapid double-clicks
+                var recentDuplicate = await _db.Orders
+                    .Where(o => o.MemberEmail == member.Email && 
+                               o.OrderHash == cartHash &&
+                               o.OrderDate > DateTime.Now.AddSeconds(-30))
+                    .FirstOrDefaultAsync();
                 
-                // Ensure recipient is not null or empty
-                if (string.IsNullOrWhiteSpace(recipient))
-                    recipient = "bait2173.email@gmail.com";
+                if (recentDuplicate != null)
+                {
+                    ModelState.AddModelError("", $"⚠️ Duplicate submission detected! You just placed this order (Order #{recentDuplicate.OrderId}). Please wait a moment before placing another order.");
+                    TempData["Error"] = $"Duplicate submission prevented. You just placed Order #{recentDuplicate.OrderId}.";
+                    return View(vm);
+                }
+
+                // When creating a new order, copy member info
+                var order = new Order
+                {
+                    MemberEmail = member.Email,
+                    MemberName = member.Name,
+                    MemberPhone = !string.IsNullOrWhiteSpace(vm.PhoneNumber) ? vm.PhoneNumber : (member?.PhoneNumber ?? ""),
+                    OrderDate = DateTime.Now,
+                    Status = "Paid",
+                    PaymentMethod = vm.PaymentMethod,
+                    DeliveryAddress = vm.DeliveryOption == "Pickup" ? string.Empty : vm.DeliveryAddress,
+                    DeliveryOption = vm.DeliveryOption,
+                    OrderHash = cartHash
+                };
+                _db.Orders.Add(order);
+                await _db.SaveChangesAsync();
+
+                // Check stock availability before finalizing order
+                bool stockIssue = false;
+                string stockErrorMessage = "";
+                
+                foreach (var item in cart)
+                {
+                    var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
+                    if (menuItem == null)
+                    {
+                        stockIssue = true;
+                        stockErrorMessage = $"Menu item {item.Name} no longer exists.";
+                        break;
+                    }
                     
-                // Log email sending attempt
-                Console.WriteLine($"Attempting to send email to: {recipient}");
-                await _emailService.SendEmailAsync(recipient, subject, html);
-                TempData["Info"] = "A copy of your receipt has been sent to your email.";
+                    if (menuItem.StockQuantity < item.Quantity)
+                    {
+                        stockIssue = true;
+                        stockErrorMessage = $"Not enough stock for {item.Name}. Only {menuItem.StockQuantity} available.";
+                        break;
+                    }
+                }
+                
+                if (stockIssue)
+                {
+                    // Remove the order we just created
+                    _db.Orders.Remove(order);
+                    await _db.SaveChangesAsync();
+                    
+                    ModelState.AddModelError("", stockErrorMessage);
+                    return View(vm);
+                }
+                
+                foreach (var item in cart)
+                {
+                    // Add order item
+                    _db.OrderItems.Add(new OrderItem
+                    {
+                        OrderId = order.OrderId,
+                        MenuItemId = item.MenuItemId,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.Price,
+                        SelectedPersonalizations = item.SelectedPersonalizations
+                    });
+                    
+                    // Update stock quantity
+                    var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
+                    menuItem.StockQuantity -= item.Quantity;
+                }
+                await _db.SaveChangesAsync();
+
+                // Save info for receipt
+                TempData["LastPaymentMethod"] = vm.PaymentMethod;
+                TempData["LastPhoneNumber"] = vm.PhoneNumber;
+                TempData["LastDeliveryInstructions"] = vm.DeliveryInstructions;
+                TempData["LastDeliveryOption"] = vm.DeliveryOption;
+                TempData["LastDeliveryAddress"] = vm.DeliveryAddress;
+                if (vm.PaymentMethod == "Card")
+                {
+                    TempData["LastCardNumber"] = vm.CardNumber;
+                }
+
+                // --- Send receipt email ---
+                var receiptVm = new ReceiptVM
+                {
+                    OrderId = order.OrderId,
+                    Date = order.OrderDate,
+                    Items = cart.Select(x => new CartItemVM
+                    {
+                        MenuItemId = x.MenuItemId,
+                        Name = x.Name,
+                        Price = x.Price,
+                        Quantity = x.Quantity,
+                        SelectedPersonalizations = x.SelectedPersonalizations
+                    }).ToList(),
+                    Total = cart.Sum(x => x.Price * x.Quantity),
+                    PaymentMethod = vm.PaymentMethod,
+                    MemberEmail = member?.Email ?? User.Identity.Name,
+                    Status = order.Status,
+                    PhoneNumber = vm.PhoneNumber,
+                    DeliveryInstructions = vm.DeliveryInstructions,
+                    // Mask the card number for security - only show last 4 digits
+                    CardNumber = vm.PaymentMethod == "Card" && !string.IsNullOrEmpty(vm.CardNumber) 
+                        ? "**** **** **** " + vm.CardNumber.Substring(Math.Max(0, vm.CardNumber.Length - 4)) 
+                        : "",
+                    DeliveryOption = vm.DeliveryOption,
+                    DeliveryAddress = vm.DeliveryAddress
+                };
+                try
+                {
+                    string html = await RenderViewToStringAsync("Receipt", receiptVm);
+                    
+                    // Use the injected email service instead of direct mail message
+                    string subject = $"Your Order Receipt - #{order.OrderId.ToString().PadLeft(6, '0')}";
+                    var recipient = member?.Email;
+                    if (string.IsNullOrWhiteSpace(recipient))
+                        recipient = User.Identity.Name;
+                    
+                    // Ensure recipient is not null or empty
+                    if (string.IsNullOrWhiteSpace(recipient))
+                        recipient = "bait2173.email@gmail.com";
+                        
+                    // Log email sending attempt
+                    Console.WriteLine($"Attempting to send email to: {recipient}");
+                    await _emailService.SendEmailAsync(recipient, subject, html);
+                    TempData["Info"] = "A copy of your receipt has been sent to your email.";
+                }
+                catch (Exception ex)
+                {
+                    TempData["Error"] = $"Failed to send receipt email: {ex.Message}";
+                }
+
+                HttpContext.Session.Remove(CartSessionKey);
+                ClearCartCookie();
+                TempData["Success"] = $"Order #{order.OrderId} placed successfully! Thank you for your purchase.";
+                return RedirectToAction("Receipt", new { id = order.OrderId });
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Failed to send receipt email: {ex.Message}";
+                // Log the error
+                Console.WriteLine($"Error processing payment: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                
+                ModelState.AddModelError("", "❌ An error occurred while processing your order. Please check your information and try again. If the problem persists, please contact support.");
+                TempData["Error"] = "Payment processing failed. Please try again or contact support if the issue continues.";
+                return View(vm);
             }
-
-            HttpContext.Session.Remove(CartSessionKey);
-            ClearCartCookie();
-            TempData["Success"] = $"Order #{order.OrderId} placed successfully! Thank you for your purchase.";
-            return RedirectToAction("Receipt", new { id = order.OrderId });
+            finally
+            {
+                // Always clear the processing flag
+                HttpContext.Session.Remove(processingKey);
+            }
         }
 
         // --- Helper to render Razor view to string for email ---
@@ -717,6 +777,20 @@ namespace WebApplication2.Controllers
             var json = JsonSerializer.Serialize(cart);
             HttpContext.Response.Cookies.Append(CartCookieKey, json, options);
         }
+        
+        // --- Generate cart hash for duplicate detection ---
+        private string GenerateCartHash(List<CartItemVM> cart, string memberEmail)
+        {
+            // Create a string representation of the cart contents
+            var cartString = $"{memberEmail}|{string.Join("|", cart.OrderBy(x => x.MenuItemId).Select(x => $"{x.MenuItemId}:{x.Quantity}:{x.Price}:{x.SelectedPersonalizations ?? ""}"))}";
+            
+            // Generate SHA256 hash
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(cartString));
+                return Convert.ToBase64String(hashBytes);
+            }
+        }
         private List<CartItemVM> LoadCartFromCookie()
         {
             var json = HttpContext.Request.Cookies[CartCookieKey];
@@ -785,7 +859,7 @@ namespace WebApplication2.Controllers
                 // Use member email as primary recipient
                 var recipient = member?.Email;
                 
-                // Fallback to order email if member email is not available
+                // Fallback to order member email if available
                 if (string.IsNullOrWhiteSpace(recipient))
                     recipient = order.MemberEmail;
                     

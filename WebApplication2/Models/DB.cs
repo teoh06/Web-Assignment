@@ -35,6 +35,17 @@ public class DB : DbContext
         // Other configurations (e.g., for User inheritance if not done via TPT/TPH convention)
         // modelBuilder.Entity<Admin>().ToTable("Admins");
         // modelBuilder.Entity<Member>().ToTable("Members");
+        
+        // Add unique constraint to prevent duplicate orders within a short time window
+        modelBuilder.Entity<Order>()
+            .HasIndex(o => new { o.MemberEmail, o.OrderHash })
+            .HasDatabaseName("IX_Orders_MemberEmail_OrderHash")
+            .IsUnique(false); // Allow multiple orders with same hash, but we'll check in code
+            
+        // Add index for efficient duplicate checking
+        modelBuilder.Entity<Order>()
+            .HasIndex(o => new { o.MemberEmail, o.OrderDate })
+            .HasDatabaseName("IX_Orders_MemberEmail_OrderDate");
     }
 }
 
@@ -169,6 +180,10 @@ public class Order
     public string MemberName { get; set; } // Store member name at time of order
     [MaxLength(15)]
     public string MemberPhone { get; set; } // Store member phone at time of order
+    
+    // --- Anti-duplicate order protection ---
+    [MaxLength(64)]
+    public string? OrderHash { get; set; } // Hash of cart contents for duplicate detection
 }
 
 public class OrderItem

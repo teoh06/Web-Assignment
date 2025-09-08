@@ -93,7 +93,7 @@
             <a href="@Url.Action("Index")" class="btn btn-secondary">Back to List</a>
             @if (User.IsInRole("Member"))
             {
-                <form asp-controller="Cart" asp-action="Add" method="post" id="addToCartForm" class="add-to-cart-form">
+                <form asp-controller="Cart" asp-action="Add" method="post" id="addToCartForm" class="add-to-cart-form mt-3">
                     <input type="hidden" name="menuItemId" value="@menuItem.MenuItemId" />
                     <div class="quantity-row mb-2">
                         <label>Quantity:</label>
@@ -101,31 +101,40 @@
                     </div>
                     @if (options.Any())
                     {
-                        <div class="mb-2">
-                            <label>Personalization:</label>
+                        <div class="personalization-section mb-3">
+                            <label class="form-label fw-bold">Personalization Options:</label>
                             <div class="personalization-options">
                                 @foreach (var opt in options)
                                 {
-                                    <label class="me-2">
-                                        <input type="checkbox" name="personalizations" value="@opt.Name" /> @opt.Name
-                                    </label>
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                               class="form-check-input" 
+                                               name="personalizations" 
+                                               id="opt_@opt.Name.Replace(" ", "_")" 
+                                               value="@opt.Name" />
+                                        <label class="form-check-label" for="opt_@opt.Name.Replace(" ", "_")">
+                                            @opt.Name
+                                        </label>
+                                    </div>
                                 }
                             </div>
                         </div>
                     }
                     <input type="hidden" name="SelectedPersonalizations" id="SelectedPersonalizations" />
-                    <button type="submit" class="btn btn-success" onclick="collectPersonalizations(event)">Add to Cart</button>
+                    <button type="submit" class="btn btn-success" onclick="collectPersonalizations(event)">
+                        <i class="fas fa-cart-plus me-2"></i>Add to Cart
+                    </button>
                 </form>
             }
         </div>
     </div>
     <div class="menuitem-comments-card card mt-4">
-        <div class="card-header my-muted">Comments</div>
+        <div class="card-header">Comments</div>
         <div class="card-body">
             <div id="comments-list">
                 @foreach (var c in Model.Comments)
                 {
-                    <div class="mb-2 comment-item"><b>@c.Member?.Name (Foodie Voice)</b>: @c.Content <span class="my-muted small">(@c.CommentedAt.ToShortTimeString())</span></div>
+                    <div class="mb-2 comment-item"><b>@c.Member?.Name (Foodie Voice)</b>: @c.Content <span class="text-muted small">(@c.CommentedAt.ToShortTimeString())</span></div>
                 }
             </div>
             @if (User.Identity!.IsAuthenticated)
@@ -139,7 +148,7 @@
             }
             else
             {
-                <div class="my-muted">Login to add a comment.</div>
+                <div class="text-muted">Login to add a comment.</div>
             }
         </div>
     </div>
@@ -162,127 +171,133 @@
         slidesPerView: 1,
         spaceBetween: 10,
     });
-function getAntiForgeryToken() {
-    // Try to get the token from the form if present
-    var token = $('input[name="__RequestVerificationToken"]').val();
-    if (!token) {
-        // Try to get from layout if not present in this form
-        token = $("form input[name='__RequestVerificationToken']").first().val();
+
+    function getAntiForgeryToken() {
+        var token = $('input[name="__RequestVerificationToken"]').val();
+        if (!token) {
+            token = $("form input[name='__RequestVerificationToken']").first().val();
+        }
+        return token;
     }
-    return token;
-}
-function refreshFavoriteList() {
-    if ($('#favoriteList').length) {
-        $.get('/Account/GetFavoriteListPartial', function(html) {
-            $('#favoriteList').html(html);
-        });
+
+    function refreshFavoriteList() {
+        if ($('#favoriteList').length) {
+            $.get('/Account/GetFavoriteListPartial', function(html) {
+                $('#favoriteList').html(html);
+            });
+        }
     }
-}
-function toggleFavorite(btn) {
-    var icon = document.getElementById('fav-icon');
-    var menuItemId = $(btn).data('id');
-    var token = getAntiForgeryToken();
-    $.ajax({
-        url: '/MenuItem/ToggleFavorite',
-        type: 'POST',
-        data: {
-            menuItemId: menuItemId,
-            __RequestVerificationToken: token
-        },
-        xhrFields: { withCredentials: true },
-        success: function(data) {
-            if (data.favorited) {
-                icon.textContent = '♥';
-                btn.classList.remove('btn-outline-danger');
-                btn.classList.add('btn-danger');
-            } else {
-                icon.textContent = '♡';
-                btn.classList.remove('btn-danger');
-                btn.classList.add('btn-outline-danger');
+
+    function toggleFavorite(btn) {
+        var icon = document.getElementById('fav-icon');
+        var menuItemId = $(btn).data('id');
+        var token = getAntiForgeryToken();
+        $.ajax({
+            url: '/MenuItem/ToggleFavorite',
+            type: 'POST',
+            data: {
+                menuItemId: menuItemId,
+                __RequestVerificationToken: token
+            },
+            xhrFields: { withCredentials: true },
+            success: function(data) {
+                if (data.favorited) {
+                    icon.textContent = '♥';
+                    btn.classList.remove('btn-outline-danger');
+                    btn.classList.add('btn-danger');
+                } else {
+                    icon.textContent = '♡';
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-outline-danger');
+                }
+                refreshFavoriteList();
+                if (typeof showFeedback === 'function') showFeedback(data.favorited ? 'Added to favorites!' : 'Removed from favorites!', 'info');
+            },
+            error: function(xhr) {
+                alert('Failed to update favorite. Please log in and try again.');
             }
-            refreshFavoriteList();
-            if (typeof showFeedback === 'function') showFeedback(data.favorited ? 'Added to favorites!' : 'Removed from favorites!', 'info');
-        },
-        error: function(xhr) {
-            alert('Failed to update favorite. Please log in and try again.');
-        }
-    });
-}
-// Star rating AJAX
-const stars = document.querySelectorAll('.star');
-stars.forEach(star => {
-    star.addEventListener('mouseover', function() {
-        const val = parseInt(this.getAttribute('data-value'));
-        stars.forEach((s, i) => s.textContent = i < val ? '★' : '☆');
-    });
-    star.addEventListener('mouseout', function() {
-        stars.forEach(s => s.textContent = '☆');
-    });
-    star.addEventListener('click', function() {
-        const val = this.getAttribute('data-value');
-        fetch('@Url.Action("AddRating", "MenuItem")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-            body: `menuItemId=@menuItem.MenuItemId&value=${val}`
-        })
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('avg-rating').textContent = data.avg.toFixed(1);
-            document.querySelector('.rating-summary .ms-2').textContent = `(${data.count} ratings)`;
-            alert('Thank you for rating ' + val + ' stars!');
-        });
-    });
-});
-// Comment AJAX
-function addComment(e) {
-    e.preventDefault();
-    var input = document.getElementById('comment-input');
-    var list = document.getElementById('comments-list');
-    if (input.value.trim()) {
-        fetch('@Url.Action("AddComment", "MenuItem")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-            body: `menuItemId=@menuItem.MenuItemId&content=${encodeURIComponent(input.value)}`
-        })
-        .then(r => r.json())
-        .then(data => {
-            var div = document.createElement('div');
-            div.className = 'mb-2 comment-item';
-            div.innerHTML = `<b>You</b>: ${data.content} <span class='my-muted small'>(just now)</span>`;
-            list.prepend(div);
-            input.value = '';
         });
     }
-}
-function collectPersonalizations(e) {
-    var checked = Array.from(document.querySelectorAll('input[name="personalizations"]:checked')).map(x => x.value);
-    document.getElementById('SelectedPersonalizations').value = checked.join(',');
-}
-document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    collectPersonalizations(e);
-    var form = e.target;
-    var formData = new FormData(form);
-    var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-    fetch(form.action, {
-        method: 'POST',
-        headers: {
-            'RequestVerificationToken': token
-        },
-        body: new URLSearchParams([...formData])
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-        } else {
-            alert(data.message || 'Failed to add to cart.');
-        }
-    })
-    .catch(error => {
-        console.error('Error adding to cart:', error);
-        alert('Something went wrong.');
+
+    const stars = document.querySelectorAll('.star');
+    stars.forEach(star => {
+        star.addEventListener('mouseover', function() {
+            const val = parseInt(this.getAttribute('data-value'));
+            stars.forEach((s, i) => s.textContent = i < val ? '★' : '☆');
+        });
+        star.addEventListener('mouseout', function() {
+            stars.forEach(s => s.textContent = '☆');
+        });
+        star.addEventListener('click', function() {
+            const val = this.getAttribute('data-value');
+            fetch('@Url.Action("AddRating", "MenuItem")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': getAntiForgeryToken() },
+                body: `menuItemId=@menuItem.MenuItemId&value=${val}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('avg-rating').textContent = data.avg.toFixed(1);
+                document.querySelector('.rating-summary .ms-2').textContent = `(${data.count} ratings)`;
+                alert('Thank you for rating ' + val + ' stars!');
+            });
+        });
     });
-})
+
+    function addComment(e) {
+        e.preventDefault();
+        var input = document.getElementById('comment-input');
+        var list = document.getElementById('comments-list');
+        if (input.value.trim()) {
+            fetch('@Url.Action("AddComment", "MenuItem")', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded', 
+                    'RequestVerificationToken': getAntiForgeryToken() 
+                },
+                body: `menuItemId=@menuItem.MenuItemId&content=${encodeURIComponent(input.value)}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                var div = document.createElement('div');
+                div.className = 'mb-2 comment-item';
+                div.innerHTML = `<b>You</b>: ${data.content} <span class='text-muted small'>(just now)</span>`;
+                list.prepend(div);
+                input.value = '';
+            });
+        }
+    }
+
+    function collectPersonalizations(e) {
+        var checked = Array.from(document.querySelectorAll('input[name="personalizations"]:checked')).map(x => x.value);
+        document.getElementById('SelectedPersonalizations').value = checked.join(',');
+    }
+
+    document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        collectPersonalizations(e);
+        var form = e.target;
+        var formData = new FormData(form);
+        var token = getAntiForgeryToken();
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'RequestVerificationToken': token
+            },
+            body: new URLSearchParams([...formData])
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+            } else {
+                alert(data.message || 'Failed to add to cart.');
+            }
+        })
+        .catch(error => {
+            console.error('Error adding to cart:', error);
+            alert('Something went wrong.');
+        });
+    });
 </script>
 }
