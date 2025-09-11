@@ -601,6 +601,21 @@ public class MenuItemController : Controller
         return Json(topItems);
     }
 
+    // Helper method to generate star HTML for ratings
+    private static string GetRatingStarsHtml(double avg)
+    {
+        int full = (int)Math.Floor(avg);
+        bool half = avg - full >= 0.5;
+        int empty = 5 - full - (half ? 1 : 0);
+        var html = new System.Text.StringBuilder();
+        
+        for (int i = 0; i < full; i++) html.Append("<span class='star-full'>&#9733;</span>");
+        if (half) html.Append("<span class='star-half'>&#9733;</span>");
+        for (int i = 0; i < empty; i++) html.Append("<span class='star-empty'>&#9734;</span>");
+        
+        return html.ToString();
+    }
+
     [AllowAnonymous]
     [HttpGet]
     public IActionResult GetFilteredMenuItems(string? search, int? categoryId, decimal? minPrice, decimal? maxPrice)
@@ -609,6 +624,7 @@ public class MenuItemController : Controller
         {
             var query = db.MenuItems
                 .Include(m => m.Category)
+                .Include(m => m.MenuItemRatings)
                 .AsQueryable();
 
             // Search by name, description, or category name
@@ -648,7 +664,9 @@ public class MenuItemController : Controller
                     categoryName = m.Category.Name,
                     price = m.Price.ToString("C", new System.Globalization.CultureInfo("en-MY")),
                     isActive = m.IsActive,
-                    stockQuantity = m.StockQuantity
+                    stockQuantity = m.StockQuantity,
+                    avgRating = m.MenuItemRatings.Any() ? m.MenuItemRatings.Average(r => r.Value).ToString("0.0") : "0.0",
+                    ratingHtml = GetRatingStarsHtml(m.MenuItemRatings.Any() ? m.MenuItemRatings.Average(r => r.Value) : 0)
                 })
                 .ToList();
 
