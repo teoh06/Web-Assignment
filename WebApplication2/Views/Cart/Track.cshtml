@@ -1,4 +1,4 @@
-@using Microsoft.AspNetCore.Mvc;   
+@using Microsoft.AspNetCore.Mvc;
 @using WebApplication2.Models;
 @model WebApplication2.Models.TrackOrderVM
 
@@ -45,52 +45,26 @@
                     <button type="button" class="btn-primary" onclick="trackOrderAjax()">Track Order</button>
                 </div>
             </form>
-            <div id="deliveryAnimation" style="display:none; text-align:center; margin-top:30px; padding: 20px; background: linear-gradient(135deg, #F7931E 30%, #FF6B35 100%); border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <!-- Delivery Animation -->
-                <div id="deliveryAnimationBox" class="animation-box" style="display:none; width:250px;height:80px;margin:auto;position:relative;background: linear-gradient(to right, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%);border-radius:10px;overflow:hidden;">
-                    <!-- Road lines -->
-                    <div style="position:absolute;bottom:15px;left:0;right:0;height:2px;background:#333;opacity:0.3;"></div>
-                    <div style="position:absolute;bottom:12px;left:10px;width:20px;height:1px;background:#fff;opacity:0.5;animation:roadLine 1s infinite linear;"></div>
-                    
-                    <!-- Animated motor -->
-                    <div id="motorContainer" style="position:absolute;left:20px;top:25px;">
-                        <div id="motorBody" style="width:45px;height:25px;background:#2196F3;border-radius:12px 12px 6px 6px;position:relative;"></div>
-                        <div id="motorWheel1" class="wheel" style="width:15px;height:15px;background:#333;border:2px solid #666;border-radius:50%;position:absolute;left:5px;top:22px;"></div>
-                        <div id="motorWheel2" class="wheel" style="width:15px;height:15px;background:#333;border:2px solid #666;border-radius:50%;position:absolute;left:25px;top:22px;"></div>
-                        <div id="motorSeat" style="width:15px;height:8px;background:#555;border-radius:4px;position:absolute;left:15px;top:-3px;"></div>
-                        <div id="motorRider" style="width:12px;height:12px;background:#4CAF50;border-radius:50%;position:absolute;left:17px;top:-10px;"></div>
-                        <div id="motorHandle" style="width:10px;height:3px;background:#333;position:absolute;left:35px;top:10px;border-radius:2px;"></div>
-                        <!-- Exhaust smoke effect -->
-                        <div class="smoke" style="position:absolute;left:-5px;top:15px;width:8px;height:8px;background:#ddd;border-radius:50%;opacity:0.6;animation:smoke 0.8s infinite;"></div>
+            <div id="orderTrackingResult" style="display:none; margin-top: 30px;">
+                <div class="progress" style="height: 25px; border-radius: 12px; overflow: hidden; background-color: #e9ecef;">
+                    <div id="orderProgressBar" class="progress-bar" role="progressbar" style="width: 0%; background: linear-gradient(90deg, #4CAF50, #8BC34A);" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <span id="orderProgressText" style="color: white; font-weight: bold;">0%</span>
                     </div>
                 </div>
-                
-                <!-- Pickup Animation -->
-                <div id="pickupAnimationBox" class="animation-box" style="display:none; width:250px;height:80px;margin:auto;position:relative;background: linear-gradient(to right, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);border-radius:10px;overflow:hidden;">
-                    <!-- Counter/Kitchen area -->
-                    <div style="position:absolute;top:10px;left:20px;width:80px;height:30px;background:#795548;border-radius:5px;"></div>
-                    <div style="position:absolute;top:40px;left:20px;width:80px;height:5px;background:#5D4037;border-radius:2px;"></div>
-                    
-                    <!-- Chef -->
-                    <div id="chef" style="position:absolute;top:15px;left:40px;width:15px;height:20px;">
-                        <div style="width:15px;height:15px;background:#FFCCBC;border-radius:50%;position:relative;">
-                            <!-- Chef hat -->
-                            <div style="position:absolute;top:-10px;left:0;width:15px;height:10px;background:white;border-radius:5px 5px 0 0;"></div>
-                        </div>
-                        <div style="width:15px;height:5px;background:#795548;position:relative;top:0;"></div>
-                    </div>
-                    
-                    <!-- Food package -->
-                    <div id="foodPackage" style="position:absolute;top:25px;left:70px;width:20px;height:15px;background:#FFECB3;border:1px solid #FFC107;border-radius:3px;transform-origin:center;animation:packagePulse 2s infinite ease-in-out;"></div>
-                    
-                    <!-- Customer -->
-                    <div id="customer" style="position:absolute;top:25px;right:40px;width:15px;height:30px;">
-                        <div style="width:15px;height:15px;background:#BBDEFB;border-radius:50%;"></div>
-                        <div style="width:15px;height:15px;background:#2196F3;border-radius:3px 3px 0 0;position:relative;top:0;"></div>
-                    </div>
+                <div id="orderStatusSteps" class="d-flex justify-content-between mt-2" style="font-weight: 600; color: #555;">
+                    <span class="status-step">Pending</span>
+                    <span class="status-step">Paid</span>
+                    <span class="status-step">Preparing</span>
+                    <span class="status-step" id="finalStatusStep">Ready for Pickup</span>
+                    <span class="status-step refunded-step" id="refundedStatusStep" style="display: none; background: linear-gradient(45deg, #ff4444, #ffffff, #ff4444); color: #000; border-radius: 4px; padding: 2px 8px; font-weight: bold; border: 2px solid #ff4444;">Refunded</span>
                 </div>
-                
-                <div id="animationStatus" style="margin-top:15px;font-weight:bold;color:white;font-size:16px;"></div>
+                <div id="purchasedItems" class="mt-4">
+                    <h5>Purchased Items</h5>
+                    <ul class="list-group" style="max-height: 200px; overflow-y: auto;">
+                        <!-- Items will be dynamically inserted here -->
+                    </ul>
+                </div>
+                <div id="orderResultMessage" class="mt-3"></div>
             </div>
             <div id="orderResult"></div>
         </div>
@@ -123,29 +97,29 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-    
+
     @@keyframes roadLine {
         0% { transform: translateX(-250px); }
         100% { transform: translateX(250px); }
     }
-    
+
     @@keyframes smoke {
-        0% { 
-            opacity: 0.6; 
-            transform: translateX(0) scale(1); 
+        0% {
+            opacity: 0.6;
+            transform: translateX(0) scale(1);
         }
-        100% { 
-            opacity: 0; 
-            transform: translateX(-20px) scale(0.5); 
+        100% {
+            opacity: 0;
+            transform: translateX(-20px) scale(0.5);
         }
     }
-    
+
     @@keyframes packagePulse {
         0% { transform: scale(1); }
         50% { transform: scale(1.1); }
         100% { transform: scale(1); }
     }
-    
+
     @@keyframes chefCooking {
         0% { transform: translateX(0); }
         25% { transform: translateX(2px); }
@@ -153,33 +127,33 @@
         75% { transform: translateX(-2px); }
         100% { transform: translateX(0); }
     }
-    
+
     @@keyframes customerWaiting {
         0% { transform: translateY(0); }
         50% { transform: translateY(2px); }
         100% { transform: translateY(0); }
     }
-    
+
     .wheel {
         animation: wheelRotate 0.2s infinite linear;
     }
-    
+
     .smoke {
         animation: smoke 0.8s infinite;
     }
-    
+
     #chef {
         animation: chefCooking 1s infinite ease-in-out;
     }
-    
+
     #customer {
         animation: customerWaiting 2s infinite ease-in-out;
     }
-    
+
     .field-row {
         margin-bottom: 1rem;
     }
-    
+
     .form-input {
         width: 100%;
         padding: 0.75rem;
@@ -188,13 +162,13 @@
         font-size: 1rem;
         transition: all 0.3s ease;
     }
-    
+
     .form-input:focus {
         border-color: #4CAF50;
         box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
         outline: none;
     }
-    
+
     .btn-primary {
         background: linear-gradient(135deg, #4CAF50, #45a049);
         color: white;
@@ -206,24 +180,24 @@
         cursor: pointer;
         transition: all 0.3s ease;
     }
-    
+
     .btn-primary:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
     }
-    
+
     /* Address input container styling */
     .address-input-container {
         display: flex;
         gap: 10px;
         align-items: stretch;
     }
-    
+
     .address-input {
         flex: 1;
         margin-right: 0;
     }
-    
+
     .use-address-btn {
         background: linear-gradient(135deg, #2196F3, #1976D2);
         color: white;
@@ -240,30 +214,52 @@
         align-items: center;
         justify-content: center;
     }
-    
+
     .use-address-btn:hover {
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
         background: linear-gradient(135deg, #1976D2, #1565C0);
     }
-    
+
     .profile-address-info {
         display: block;
         padding: 8px;
         border-radius: 4px;
         border-left: 4px solid #4CAF50;
     }
-    
+
     @@media (max-width: 768px) {
         .address-input-container {
             flex-direction: column;
             gap: 8px;
         }
-        
+
         .use-address-btn {
             min-width: auto;
             width: 100%;
         }
+    }
+
+    .status-step.active {
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    
+    .refunded-step.active { 
+        color:#000 !important; 
+        background: linear-gradient(45deg, #ff4444, #ffffff, #ff4444) !important;
+        animation: refundPulse 2s infinite;
+    }
+    
+    @@keyframes refundPulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+    }
+    
+    .btn-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(255, 193, 7, 0.4) !important;
     }
 </style>
 
@@ -306,40 +302,174 @@
             return;
         }
 
-        var animationBox = document.getElementById('deliveryAnimation');
+        var trackingResult = document.getElementById('orderTrackingResult');
         var orderResult = document.getElementById('orderResult');
 
-        animationBox.style.display = 'block';
+        trackingResult.style.display = 'block';
         orderResult.innerHTML = '';
-        document.getElementById('animationStatus').textContent = 'Checking order status...';
+        document.getElementById('orderResultMessage').textContent = 'Checking order status...';
 
         // Call backend directly
-        setTimeout(function() {
-            fetch(`/Cart/GetOrderStatus?orderId=${orderNumber}`)
-                .then(r => r.json())
-                .then(orderData => {
-                    animationBox.style.display = 'none';
+        fetch(`/Cart/GetOrderStatus?orderId=${orderNumber}`)
+            .then(r => r.json())
+            .then(orderData => {
+                if (!orderData.success) {
+                    trackingResult.style.display = 'none';
+                    orderResult.innerHTML = `<div class="alert">${orderData.message}</div>`;
+                    return;
+                }
 
-                    if (!orderData.success) {
-                        orderResult.innerHTML = `<div class="alert alert-danger">${orderData.message}</div>`;
-                        return;
-                    }
+                // Determine adjusted status for progress bar and display
+                var adjustedStatus = orderData.status;
+                var paymentMade = orderData.paymentMade || false;
+                var manualRefund = orderData.manualRefund || false;
+                
+                // If payment is not success/pending, stay pending for order tracking
+                if (orderData.status === 'Pending' && !paymentMade) {
+                    adjustedStatus = 'Pending';
+                }
+                // After payment made, then the order is paid
+                else if (paymentMade && orderData.status === 'Pending') {
+                    adjustedStatus = 'Paid';
+                }
+                // Start to prepare after payment
+                else if (orderData.status === 'Preparing' && paymentMade) {
+                    adjustedStatus = 'Preparing';
+                }
+                // Based on delivery option chosen by member
+                else if (orderData.status === 'Ready for Pickup' && orderData.deliveryOption === 'Pickup' && paymentMade) {
+                    adjustedStatus = 'Ready for Pickup';
+                } else if (orderData.status === 'Delivered' && orderData.deliveryOption === 'Delivery' && paymentMade) {
+                    adjustedStatus = 'Delivered';
+                }
+                // For Refunded, only display when member manually refund the order
+                else if (orderData.status === 'Refunded' && manualRefund) {
+                    adjustedStatus = 'Refunded';
+                }
 
-                    orderResult.innerHTML = `
-                        <div class="card p-3">
-                            <h5>Order #${orderData.orderId}</h5>
-                            <p><strong>Status:</strong> ${orderData.status}</p>
-                            <p><strong>Date:</strong> ${orderData.orderDate}</p>
-                           
-                        </div>
-                    `;
-                })
-                .catch(() => {
-                    animationBox.style.display = 'none';
-                    orderResult.innerHTML = '<div class="alert alert-danger">Failed to track order.</div>';
-                });
-        }, 2000); 
+                // Update final step text based on delivery option
+                var finalStatusStep = document.getElementById('finalStatusStep');
+                if (orderData.deliveryOption === 'Pickup') {
+                    finalStatusStep.textContent = 'Ready for Pickup';
+                } else {
+                    finalStatusStep.textContent = 'Delivered';
+                }
+
+                // Show/hide refunded step and update progress bar styling
+                var refundedStatusStep = document.getElementById('refundedStatusStep');
+                var progressBar = document.getElementById('orderProgressBar');
+                if (manualRefund && adjustedStatus === 'Refunded') {
+                    refundedStatusStep.style.display = 'block';
+                    progressBar.style.background = 'linear-gradient(90deg, #ff4444, #ffffff, #ff4444)';
+                } else {
+                    refundedStatusStep.style.display = 'none';
+                    progressBar.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+                }
+
+                // Update progress bar based on adjusted status
+                var progressPercent = getProgressPercent(adjustedStatus, orderData.deliveryOption);
+                progressBar.style.width = progressPercent + '%';
+                progressBar.setAttribute('aria-valuenow', progressPercent);
+                document.getElementById('orderProgressText').textContent = progressPercent + '%';
+
+                // Highlight current status step
+                highlightStatusStep(adjustedStatus, manualRefund);
+
+                // Populate purchased items
+                var itemsList = document.getElementById('purchasedItems').querySelector('ul');
+                itemsList.innerHTML = '';
+                if (orderData.items && orderData.items.length > 0) {
+                    orderData.items.forEach(item => {
+                        var li = document.createElement('li');
+                        li.className = 'list-group-item d-flex align-items-center';
+                        // Fix image URL to ensure it points to wwwroot/images correctly
+                        var imageUrl = '/images/' + (item.imageUrl || 'default-item.png');
+                        li.innerHTML = `
+                            <img src="${imageUrl}" alt="${item.name}" style="width: 50px; height: 50px; margin-right: 10px; border-radius: 5px;">
+                            <div>
+                                <strong>${item.name}</strong><br>
+                                Quantity: ${item.quantity}<br>
+                                Price: RM${item.price}
+                                ${item.personalization ? '<br>Personalization: ' + item.personalization : ''}
+                            </div>
+                        `;
+                        itemsList.appendChild(li);
+                    });
+                } else {
+                    itemsList.innerHTML = '<li class="list-group-item">No items found.</li>';
+                }
+
+                // Update result message with separated Pickup/Delivery info
+                var deliveryInfo = '';
+                var additionalInfo = '';
+                if (orderData.deliveryOption === 'Pickup') {
+                    deliveryInfo = '<p><strong>Pickup Location:</strong> Please pick up your order at the store counter.</p>';
+                    additionalInfo = '<p><strong>Estimated Pickup Time:</strong> Within 15 minutes after order is ready.</p>';
+                } else {
+                    deliveryInfo = `<p><strong>Delivery Address:</strong> ${orderData.deliveryAddress || 'N/A'}</p>`;
+                    additionalInfo = '<p><strong>Estimated Delivery Time:</strong> 30-45 minutes depending on location.</p>';
+                }
+
+                // Add payment button if status is pending and payment not made
+                var paymentButtonHtml = '';
+                if (adjustedStatus === 'Pending' && !paymentMade) {
+                    paymentButtonHtml = '<button class="btn btn-warning btn-lg mt-3" onclick="proceedToPayment(' + orderData.orderId + ')" style="width: 100%; padding: 12px; font-weight: bold; border-radius: 8px; box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);">💳 Proceed to Payment</button>';
+                }
+
+                document.getElementById('orderResultMessage').innerHTML = `
+                    <div class="alert">
+                        <h5>Order #${orderData.orderId}</h5>
+                        <p><strong>Status:</strong> ${orderData.status}</p>
+                        <p><strong>Date:</strong> ${orderData.orderDate}</p>
+                        ${deliveryInfo}
+                        ${additionalInfo}
+                        ${paymentButtonHtml}
+                    </div>
+                `;
+
+                // Ensure the tracking result div remains visible
+                trackingResult.style.display = 'block';
+            })
+            .catch(() => {
+                trackingResult.style.display = 'none';
+                orderResult.innerHTML = '<div class="alert">Failed to track order.</div>';
+            });
+    }
+
+    // Function to handle payment button click
+    function proceedToPayment(orderNumber) {
+        // Redirect to payment page with order context
+        window.location.href = '/Cart/Payment?orderId=' + orderNumber;
+    }
+
+    function getProgressPercent(status, deliveryOption) {
+        switch (status) {
+            case 'Pending': return 25;
+            case 'Paid': return 50;
+            case 'Preparing': return 75;
+            case 'Ready for Pickup': return deliveryOption === 'Pickup' ? 100 : 75;
+            case 'Delivered': return 100;
+            case 'Refunded': return 100;
+            case 'Declined': return 0;
+            default: return 0;
+        }
+    }
+
+    function highlightStatusStep(currentStatus, manualRefund) {
+        var steps = document.querySelectorAll('#orderStatusSteps .status-step:not(#refundedStatusStep)');
+        steps.forEach(step => {
+            step.classList.remove('active');
+            if (step.textContent === currentStatus) {
+                step.classList.add('active');
+            }
+        });
+        
+        // Handle refunded step separately
+        var refundedStep = document.getElementById('refundedStatusStep');
+        if (manualRefund && currentStatus === 'Refunded') {
+            refundedStep.classList.add('active');
+        } else {
+            refundedStep.classList.remove('active');
+        }
     }
 </script>
-
-

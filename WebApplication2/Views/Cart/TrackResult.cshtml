@@ -5,9 +5,9 @@
 @if (order == null)
 {
     <p>No orders found with the given information.</p>
-        }
-        else
-        {
+}
+else
+{
     <div class="card p-4 mb-3" style="max-width:560px;margin:auto;">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <h4 class="mb-0">Order #@order.OrderNumber</h4>
@@ -15,195 +15,263 @@
         </div>
         <div class="small text-muted mb-3">@order.OrderDate</div>
 
-        <div class="progress mb-2" style="height:20px;background:#e9ecef;border-radius:10px;overflow:hidden;">
-            <div id="progressBar" style="height:100%;width:0;background:linear-gradient(90deg,#4CAF50,#8BC34A);transition:width .4s ease;position:relative;">
-                <span id="progressText" style="position:absolute;right:8px;top:0;color:#fff;font-weight:bold;line-height:20px;">0%</span>
+        <div class="progress mb-2" style="height:25px;background:#e9ecef;border-radius:12px;overflow:hidden;">
+            <div id="progressBar" class="progress-bar" role="progressbar" style="height:100%;width:0;background:linear-gradient(90deg,#4CAF50,#8BC34A);transition:width .4s ease;position:relative;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                <span id="progressText" style="position:absolute;right:8px;top:0;color:#fff;font-weight:bold;line-height:25px;">0%</span>
             </div>
         </div>
 
-        <div class="d-flex justify-content-between mb-2" id="steps">
-            <span class="step">Placed</span>
-            <span class="step">Preparing</span>
-            <span class="step" id="step3">@(order.DeliveryOption == "Pickup" ? "Ready" : "On the way")</span>
-            <span class="step">Delivered</span>
+            <div class="d-flex justify-content-between mb-2" id="steps">
+                <span class="step">Pending</span>
+                <span class="step">Paid</span>
+                <span class="step">Preparing</span>
+                <span class="step" id="finalStep">Ready for Pickup</span>
+                <span class="step refunded-step" id="refundedStep" style="display: none; background: linear-gradient(45deg, #ff4444, #ffffff, #ff4444); color: #000; border-radius: 4px; padding: 2px 8px; font-weight: bold; border: 2px solid #ff4444;">Refunded</span>
+            </div>
+
+        <div id="animBox" style="width:240px;height:80px;margin:10px auto;position:relative;border-radius:12px;overflow:hidden;background:linear-gradient(90deg,#e8f5e9,#c8e6c9);">
+            <div id="pkg" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:18px;height:14px;background:#FFECB3;border:1px solid #FFC107;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.15);"></div>
         </div>
 
-        <div id="animBox" style="width:240px;height:80px;margin:10px auto;position:relative;border-radius:12px;overflow:hidden;background:@(order.DeliveryOption=="Pickup"?"linear-gradient(90deg,#e8f5e9,#c8e6c9)":"linear-gradient(90deg,#e3f2fd,#bbdefb)");">
-            <div id="road" style="display:@(order.DeliveryOption=="Pickup"?"none":"block");position:absolute;bottom:12px;left:8px;right:8px;height:2px;background:#333;opacity:.25;"></div>
-            <div id="truck" style="display:@(order.DeliveryOption=="Pickup"?"none":"block");position:absolute;left:8px;top:26px;width:36px;height:18px;background:#2196F3;border-radius:9px 9px 5px 5px;box-shadow:0 1px 2px rgba(0,0,0,.2);"></div>
-            <div id="pkg" style="display:@(order.DeliveryOption=="Pickup"?"block":"none");position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:18px;height:14px;background:#FFECB3;border:1px solid #FFC107;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.15);"></div>
-            </div>
-            
-        <div class="mt-2" id="statusText" style="font-weight:bold;color:#333;">Loading status...</div>
+        <div class="mt-2" id="statusText" style="font-weight:bold;color:#333;">@order.Status</div>
         <div class="small mt-1">ETA: <span id="etaText"></span></div>
-        @if (!string.Equals(order.DeliveryOption, "Pickup", StringComparison.OrdinalIgnoreCase))
+        
+        <!-- Payment Button - Only show if payment is pending -->
+        <div id="paymentButtonContainer" style="display: none; margin-top: 15px;">
+            <button id="proceedPaymentBtn" class="btn btn-warning btn-lg" onclick="proceedToPayment('@order.OrderNumber')" style="width: 100%; padding: 12px; font-weight: bold; border-radius: 8px; box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);">
+                💳 Proceed to Payment
+            </button>
+        </div>
+        @if (order.DeliveryOption == "Pickup")
         {
-            <div class="small mt-1">Address: <span>@(string.IsNullOrWhiteSpace(Model?.Address) ? "-" : Model.Address)</span></div>
+            <div class="alert mt-3">
+                <strong>Pickup Information:</strong> Please pick up your order at the store counter. Estimated pickup time: within 15 minutes after order is ready.
+            </div>
+        }
+        else
+        {
+            <div class="alert mt-3">
+                <strong>Delivery Information:</strong> Your order will be delivered to the address on file. Estimated delivery time: 30-45 minutes depending on location.
+            </div>
         }
 
-        @if (User.IsInRole("Admin"))
-        {
-            <div class="admin-controls mt-3 p-3 bg-light border rounded">
-                <div class="d-flex mb-2">
-                    <select id="statusSelect" class="form-select me-2">
-                        <option value="Pending" selected="@(order.Status=="Pending")">Pending</option>
-                        <option value="Paid" selected="@(order.Status=="Paid")">Paid</option>
-                        <option value="Preparing" selected="@(order.Status=="Preparing")">Preparing</option>
-                        <option value="Ready for Pickup" selected="@(order.Status=="Ready for Pickup")">Ready for Pickup</option>
-                        <option value="Out for Delivery" selected="@(order.Status=="Out for Delivery")">Out for Delivery</option>
-                        <option value="Delivered" selected="@(order.Status=="Delivered")">Delivered</option>
-                        <option value="Cancelled" selected="@(order.Status=="Cancelled")">Cancelled</option>
-                        <option value="Refunded" selected="@(order.Status=="Refunded")">Refunded</option>
-                    </select>
-                    <button id="updateStatusBtn" class="btn btn-primary">Update Status</button>
+        <div id="purchasedItems" class="mt-4">
+            <h5>Purchased Items</h5>
+            <ul class="list-group" style="max-height: 200px; overflow-y: auto;">
+                @if (order.Items != null && order.Items.Any())
+                {
+                    @foreach (var item in order.Items)
+                    {
+                        <li class="list-group-item d-flex align-items-center">
+                            <img src="@(item.PhotoURL ?? "/images/default-item.png")" alt="@item.MenuItemName" style="width: 50px; height: 50px; margin-right: 10px; border-radius: 5px;">
+                            <div>
+                                <strong>@item.MenuItemName</strong><br>
+                                Quantity: @item.Quantity<br>
+                                Price: RM$@item.UnitPrice
+                                @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
+                                {
+                                    <text><br />Personalization: @item.SelectedPersonalizations</text>
+                                }
+                            </div>
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="list-group-item">No items found.</li>
+                }
+            </ul>
         </div>
-                <div id="statusUpdateMessage"></div>
-        </div>
-        }
     </div>
 
-    <style>
-        .step { color:#888; font-size:.9rem; }
-        .step.active { color:#4CAF50; font-weight:600; }
-    </style>
-    
-    <script>
+    @section Scripts {
         (function(){
-            var orderId = '@order.OrderNumber';
             var status = '@order.Status';
             var deliveryOption = '@order.DeliveryOption';
-            var orderDateStr = '@order.OrderDate.ToString("yyyy-MM-dd HH:mm:ss")';
-            var orderDate = new Date(orderDateStr);
-            // 1 minute ETA for testing
-            var eta = new Date(orderDate.getTime() + 60*1000);
-            var graceMs = 5000;
+            var orderNumber = '@order.OrderNumber';
 
-            var progressBar = document.getElementById('progressBar');
-            var progressText = document.getElementById('progressText');
-            var statusText = document.getElementById('statusText');
-            var steps = Array.prototype.slice.call(document.querySelectorAll('#steps .step'));
-            var truck = document.getElementById('truck');
-            var etaText = document.getElementById('etaText');
-
-            function fmtEta(d){
-                if (!d) return '-';
-                var now = new Date();
-                return (now < d) ? d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Any moment now...';
+            // Adjust status for progress bar and display logic
+            function adjustStatus(s, paymentMade, manualRefund, deliveryOpt) {
+                // If payment is not success/pending, stay pending for order tracking
+                if (s === 'Pending' && !paymentMade) {
+                    return 'Pending';
+                }
+                
+                // After payment made, then the order is paid
+                if (paymentMade && s === 'Pending') {
+                    return 'Paid';
+                }
+                
+                // Start to prepare after payment
+                if (s === 'Preparing' && paymentMade) {
+                    return 'Preparing';
+                }
+                
+                // Based on delivery option chosen by member
+                if (s === 'Ready for Pickup' && deliveryOpt === 'Pickup' && paymentMade) {
+                    return 'Ready for Pickup';
+                } else if (s === 'Delivered' && deliveryOpt === 'Delivery' && paymentMade) {
+                    return 'Delivered';
+                }
+                
+                // For Refunded, only display when member manually refund the order
+                if (s === 'Refunded' && manualRefund) {
+                    return 'Refunded';
+                }
+                
+                return s;
             }
 
-            function mapProgress(s){
+            function mapProgress(s, deliveryOpt){
                 switch(s){
-                    case 'Paid': return 25;
-                    case 'Preparing': return 50;
-                    case 'Ready for Pickup': return 75;
-                    case 'Out for Delivery': return 75;
+                    case 'Pending': return 25;
+                    case 'Paid': return 50;
+                    case 'Preparing': return 75;
+                    case 'Ready for Pickup': return deliveryOpt === 'Pickup' ? 100 : 75;
                     case 'Delivered': return 100;
-                    case 'Cancelled':
-                    case 'Refunded': return 0;
-                    default: return 10;
+                    case 'Refunded': return 100;
+                    case 'Declined': return 0;
+                    default: return 0;
                 }
             }
 
             function statusMessage(s){
                 switch(s){
-                    case 'Paid': return 'Order placed. Getting things ready...';
-                    case 'Preparing': return 'We are preparing your order.';
-                    case 'Ready for Pickup': return 'Ready for pickup at the counter.';
-                    case 'Out for Delivery': return 'On the way to your address.';
-                    case 'Delivered': return 'Delivered. Enjoy your meal!';
-                    case 'Cancelled': return 'Order cancelled.';
-                    case 'Refunded': return 'Order refunded.';
-                    default: return 'Processing...';
+                    case 'Pending': return 'Order confirmed, pending payment';
+                    case 'Paid': return 'Order confirmed and paid';
+                    case 'Preparing': return deliveryOption === 'Pickup' ? 'Preparing your order' : 'Preparing for delivery';
+                    case 'Ready for Pickup': return 'Ready for pickup at counter';
+                    case 'Delivered': return deliveryOption === 'Pickup' ? 'Order picked up' : 'Order delivered';
+                    case 'Refunded': return 'Order refunded';
+                    case 'Declined': return 'Order declined';
+                    default: return 'Processing order...';
                 }
             }
 
-            function render(progress, s){
+            function updateProgressBar(progress, currentStatus, paymentMade, manualRefund) {
+                var progressBar = document.getElementById('progressBar');
+                var progressText = document.getElementById('progressText');
+                var statusText = document.getElementById('statusText');
+                var paymentButtonContainer = document.getElementById('paymentButtonContainer');
+                var refundedStep = document.getElementById('refundedStep');
+                var finalStep = document.getElementById('finalStep');
+
+                // Update final step text based on delivery option
+                if (deliveryOption === 'Pickup') {
+                    finalStep.textContent = 'Ready for Pickup';
+                } else {
+                    finalStep.textContent = 'Delivered';
+                }
+
+                // Show/hide refunded step
+                if (manualRefund && currentStatus === 'Refunded') {
+                    refundedStep.style.display = 'block';
+                    // Change progress bar color for refunded orders
+                    progressBar.style.background = 'linear-gradient(90deg, #ff4444, #ffffff, #ff4444)';
+                } else {
+                    refundedStep.style.display = 'none';
+                    progressBar.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+                }
+
+                // Show payment button only if status is pending and payment not made
+                if (currentStatus === 'Pending' && !paymentMade) {
+                    paymentButtonContainer.style.display = 'block';
+                } else {
+                    paymentButtonContainer.style.display = 'none';
+                }
+
+                // Smooth transition
+                progressBar.style.transition = 'width 0.8s ease-in-out';
                 progressBar.style.width = progress + '%';
                 progressText.textContent = Math.round(progress) + '%';
-                statusText.textContent = statusMessage(s);
-
-                steps.forEach(function(el, idx){
-                    var stepThreshold = (idx+1)*25;
-                    if (progress >= stepThreshold) el.classList.add('active'); else el.classList.remove('active');
-                });
-
-                if (deliveryOption !== 'Pickup' && truck){
-                    var box = document.getElementById('animBox');
-                    var boxW = box ? box.clientWidth : 240;
-                    var truckW = truck.clientWidth || 36;
-                    var padding = 8; // match CSS left/right in road
-                    var minL = padding;
-                    var maxL = Math.max(padding, boxW - padding - truckW);
-                    var left = minL + (maxL - minL) * (progress/100);
-                    truck.style.left = Math.round(left) + 'px';
-                }
-
-                if (s === 'Delivered'){
-                    progressBar.style.background = 'linear-gradient(90deg,#4CAF50,#2E7D32)';
-                }
+                statusText.textContent = statusMessage(currentStatus);
             }
 
-            function fastForwardIfOverdue(){
-                try{
-                    if (Date.now() >= eta.getTime() + graceMs && status !== 'Delivered' && status !== 'Cancelled' && status !== 'Refunded'){
-                        status = 'Delivered';
-                        render(100, status);
-                        return true;
+            function updateStepsVisualState(progress, currentStatus, manualRefund) {
+                var steps = document.querySelectorAll('#steps .step:not(#refundedStep)');
+                steps.forEach(function(step, index) {
+                    var stepProgress = (index + 1) * 25;
+                    step.classList.remove('active');
+                    if (progress >= stepProgress) {
+                        step.classList.add('active');
                     }
-                }catch(e){}
-                return false;
-            }
-
-            function bindAdmin(){
-                var btn = document.getElementById('updateStatusBtn');
-                if (!btn) return;
-                btn.addEventListener('click', function(){
-                    var select = document.getElementById('statusSelect');
-                    var newStatus = select ? select.value : status;
-                    var msg = document.getElementById('statusUpdateMessage');
-                    if (msg) msg.innerHTML = '<div class="alert">Updating...</div>';
-                 fetch('/Admin/UpdateOrderStatusAjax', {
-                     method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'orderId=' + encodeURIComponent(orderId) + '&status=' + encodeURIComponent(newStatus)
-                    })
-                    .then(r=>r.json()).then(function(data){
-                        if (data && data.success){
-                            status = newStatus;
-                            render(mapProgress(status), status);
-                            if (msg) msg.innerHTML = '<div class="alert alert-success">Updated.</div>';
-                    } else {
-                            if (msg) msg.innerHTML = '<div class="alert alert-danger">Failed: ' + (data && data.message ? data.message : 'Unknown error') + '</div>';
-                        }
-                    }).catch(function(err){ if (msg) msg.innerHTML = '<div class="alert alert-danger">Error: ' + err + '</div>'; });
                 });
+                
+                // Handle refunded step separately
+                var refundedStep = document.getElementById('refundedStep');
+                if (manualRefund && currentStatus === 'Refunded') {
+                    refundedStep.classList.add('active');
+                } else {
+                    refundedStep.classList.remove('active');
+                }
             }
 
-            // Initial draw
-            etaText.textContent = fmtEta(eta);
-            render(mapProgress(status), status);
-            fastForwardIfOverdue();
-            bindAdmin();
+            // Initial render with adjusted status
+            var paymentMade = false; // Default to false, update dynamically if possible
+            var manualRefund = false; // Default to false, update dynamically if possible
+            var adjustedStatus = adjustStatus(status, paymentMade, manualRefund, deliveryOption);
+            var progress = mapProgress(adjustedStatus, deliveryOption);
+            updateProgressBar(progress, adjustedStatus, paymentMade, manualRefund);
+            updateStepsVisualState(progress, adjustedStatus, manualRefund);
 
-            // Poll every 3s for real status
-            var poller = setInterval(function(){
-                if (fastForwardIfOverdue()) { clearInterval(poller); return; }
-                fetch('/Cart/GetOrderStatus?orderId=' + orderId)
-                    .then(r=>r.json())
-                    .then(function(data){
-                        if (!data || !data.success) return;
-                        if (data.status !== status){
+            // Auto-refresh status every 3 seconds for demo purposes
+            var refreshInterval = setInterval(function() {
+                fetch('/Cart/GetOrderStatus?orderId=' + orderNumber)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
                             status = data.status;
-                            render(mapProgress(status), status);
-                        }
-                        if (status === 'Delivered' || status === 'Cancelled' || status === 'Refunded'){
-                            clearInterval(poller);
+                            paymentMade = data.paymentMade || false;
+                            manualRefund = data.manualRefund || false;
+                            adjustedStatus = adjustStatus(status, paymentMade, manualRefund, deliveryOption);
+                            progress = mapProgress(adjustedStatus, deliveryOption);
+                            updateProgressBar(progress, adjustedStatus, paymentMade, manualRefund);
+                            updateStepsVisualState(progress, adjustedStatus, manualRefund);
+
+                            // If order is delivered or final status, stop refreshing
+                            if (adjustedStatus === 'Delivered' || adjustedStatus === 'Ready for Pickup' || adjustedStatus === 'Refunded' || adjustedStatus === 'Declined') {
+                                clearInterval(refreshInterval);
+                            }
                         }
                     })
-                    .catch(function(){ /* ignore */ });
-            }, 3000);
+                    .catch(error => {
+                        console.log('Status check failed:', error);
+                    });
+            }, 3000); // Check every 3 seconds
+
+            // Stop refreshing after 15 seconds for demo
+            setTimeout(function() {
+                clearInterval(refreshInterval);
+            }, 15000);
         })();
-    </script>
+
+        // Function to handle payment button click
+        function proceedToPayment(orderNumber) {
+            // Redirect to payment page with order context
+            window.location.href = '/Cart/Payment?orderId=' + orderNumber;
+        }
+    }
+
+    <style>
+        .step { color:#888; font-size:.9rem; transition: all 0.3s ease; }
+        .step.active { color:#4CAF50; font-weight:600; }
+        .refunded-step.active { 
+            color:#000 !important; 
+            background: linear-gradient(45deg, #ff4444, #ffffff, #ff4444) !important;
+            animation: refundPulse 2s infinite;
+        }
+        
+        @@keyframes refundPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+        }
+        
+        #proceedPaymentBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 193, 7, 0.4);
+        }
+    </style>
 }
 
 

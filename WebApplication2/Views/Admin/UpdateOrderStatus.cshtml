@@ -10,12 +10,12 @@
             <label for="Status" class="form-label">Status</label>
             <select asp-for="Status" class="form-select">
                 <option value="Pending">Pending</option>
+                <option value="Paid">Paid</option>
                 <option value="Preparing">Preparing</option>
                 <option value="Ready for Pickup">Ready for Pickup</option>
-                <option value="Out for Delivery">Out for Delivery</option>
                 <option value="Delivered">Delivered</option>
-                <option value="Cancelled">Cancelled</option>
                 <option value="Refunded">Refunded</option>
+                <option value="Declined">Declined</option>
             </select>
         </div>
         <button type="submit" class="btn btn-primary">Update Status</button>
