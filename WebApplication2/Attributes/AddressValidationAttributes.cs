@@ -3,9 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace WebApplication2.Attributes;
 
-/// <summary>
 /// Validates address format and content
-/// </summary>
 public class ValidAddressAttribute : ValidationAttribute
 {
     public int MinimumLength { get; set; } = 10;

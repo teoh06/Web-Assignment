@@ -90,16 +90,10 @@
             // Style images
             $(".order-card img").addClass("rounded shadow-sm border");
 
-            // --- Status Filter: Reload with Query Param for Server-Side Filtering ---
+            // --- Status Filter: Client-side filtering for immediate response ---
             $('#statusFilter').off('change').on('change', function() {
-                const status = $(this).val();
-                const url = new URL(window.location.href);
-                if (status) {
-                    url.searchParams.set('status', status);
-                } else {
-                    url.searchParams.delete('status');
-                }
-                window.location.href = url.toString();
+                const selectedStatus = $(this).val();
+                filterOrdersByStatus(selectedStatus);
             });
 
             // --- Track Order Button: Go to Track Page with Order Number ---
@@ -206,28 +200,44 @@
                 
                 switch(sortOption) {
                     case 'date-newest':
-                        const dateA = new Date(cardA.find('.order-date').data('date'));
-                        const dateB = new Date(cardB.find('.order-date').data('date'));
+                        const dateA = new Date(cardA.data('order-date'));
+                        const dateB = new Date(cardB.data('order-date'));
                         return dateB - dateA; // Newest first
                     case 'date-oldest':
-                        const dateC = new Date(cardA.find('.order-date').data('date'));
-                        const dateD = new Date(cardB.find('.order-date').data('date'));
+                        const dateC = new Date(cardA.data('order-date'));
+                        const dateD = new Date(cardB.data('order-date'));
                         return dateC - dateD; // Oldest first
                     case 'price-highest':
-                        const priceA = parseFloat(cardA.find('.order-total').data('price'));
-                        const priceB = parseFloat(cardB.find('.order-total').data('price'));
+                        const priceA = parseFloat(cardA.data('order-total'));
+                        const priceB = parseFloat(cardB.data('order-total'));
                         return priceB - priceA; // Highest first
                     case 'price-lowest':
-                        const priceC = parseFloat(cardA.find('.order-total').data('price'));
-                        const priceD = parseFloat(cardB.find('.order-total').data('price'));
+                        const priceC = parseFloat(cardA.data('order-total'));
+                        const priceD = parseFloat(cardB.data('order-total'));
                         return priceC - priceD; // Lowest first
+                    case 'status-asc':
+                        const statusA = cardA.data('order-status').toLowerCase();
+                        const statusB = cardB.data('order-status').toLowerCase();
+                        return statusA.localeCompare(statusB);
+                    case 'status-desc':
+                        const statusC = cardA.data('order-status').toLowerCase();
+                        const statusD = cardB.data('order-status').toLowerCase();
+                        return statusD.localeCompare(statusC);
+                    case 'id-asc':
+                        const idA = parseInt(cardA.data('order-id'));
+                        const idB = parseInt(cardB.data('order-id'));
+                        return idA - idB;
+                    case 'id-desc':
+                        const idC = parseInt(cardA.data('order-id'));
+                        const idD = parseInt(cardB.data('order-id'));
+                        return idD - idC;
                     default:
                         return 0; // No sorting
                 }
             });
             
             // Reappend the sorted cards to the container
-            const container = $('.order-history-list');
+            const container = $('#ordersList');
             $.each(orderCards, function(index, card) {
                 container.append(card);
             });
@@ -328,7 +338,7 @@
             paginationHtml += '</div>';
             
             // Append pagination controls
-            $('.order-history-list').after(paginationHtml);
+            $('#ordersList').after(paginationHtml);
             
             // Add event listeners
             $('.page-btn[data-page]').on('click', function() {
@@ -391,19 +401,19 @@
                 }, 400); // Match the animation duration
             }
             
-            // Scroll to top of order list
-            $('html, body').animate({
-                scrollTop: $('.order-history-list').offset().top - 100
-            }, 300);
+            // No auto-scrolling when paginating - let users stay where they are
         }
         
-        // Function to perform search on orders
+        // Enhanced function to perform comprehensive search on orders
         function performSearch() {
             const searchTerm = $('#searchInput').val().trim().toLowerCase();
+            
+            // Remove previous no-results message
+            $('#no-results-message').remove();
+            
             if (!searchTerm) {
                 // If search is empty, show all orders
                 $('.order-card').show();
-                // Initialize pagination with all orders
                 initPagination();
                 return;
             }
@@ -411,81 +421,184 @@
             // Hide all orders initially
             $('.order-card').hide();
             
-            // Split search term into individual words for better matching
+            // Enhanced search: split into words and support partial matching
             const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
+            let matchedCount = 0;
             
             // Show orders that match the search term
             $('.order-card').each(function() {
                 const orderCard = $(this);
-                const orderId = orderCard.find('.order-id').text().toLowerCase();
-                const orderDate = orderCard.find('.order-date').text().toLowerCase();
-                const orderTotal = orderCard.find('.order-total').text().toLowerCase();
-                const orderStatus = orderCard.find('.badge').text().toLowerCase();
+                let isMatch = false;
                 
-                // Search in order items (product names) with word matching
-                let orderItemsMatch = false;
+                // Get searchable data from card attributes and elements
+                const orderId = orderCard.data('order-id').toString().toLowerCase();
+                const orderDate = orderCard.data('order-date').toString().toLowerCase();
+                const orderTotal = orderCard.data('order-total').toString().toLowerCase();
+                const orderStatus = orderCard.data('order-status').toString().toLowerCase();
+                const orderItems = (orderCard.data('order-items') || '').toString().toLowerCase();
+                
+                // Get text content from visible elements
+                const orderIdText = orderCard.find('.order-id').text().toLowerCase();
+                const orderDateText = orderCard.find('.order-date').text().toLowerCase();
+                const orderTimeText = orderCard.find('.order-time').text().toLowerCase();
+                const orderTotalText = orderCard.find('.order-total').text().toLowerCase();
+                const statusBadgeText = orderCard.find('.status-badge').text().toLowerCase();
+                const deliveryOptionText = orderCard.find('.detail-value').first().text().toLowerCase();
+                const deliveryAddressText = orderCard.find('.detail-value').last().text().toLowerCase();
+                
+                // Get product names from order items
+                let productNames = '';
                 orderCard.find('.order-item-name').each(function() {
-                    const itemName = $(this).text().toLowerCase();
-                    
-                    // Check if any search word matches the item name
-                    for (let word of searchWords) {
-                        if (itemName.includes(word)) {
-                            orderItemsMatch = true;
-                            break;
-                        }
-                    }
-                    
-                    if (orderItemsMatch) {
-                        return false; // Break out of each loop
-                    }
+                    productNames += $(this).text().toLowerCase() + ' ';
                 });
                 
-                // Also search in the order card data attributes for product names
-                const orderData = orderCard.data('order-items') || '';
-                const orderItemsData = orderData.toLowerCase();
+                // Get personalizations
+                let personalizations = '';
+                orderCard.find('.item-personalization').each(function() {
+                    personalizations += $(this).text().toLowerCase() + ' ';
+                });
                 
-                // Check if any search word matches the order data
-                let orderDataMatch = false;
-                for (let word of searchWords) {
-                    if (orderItemsData.includes(word)) {
-                        orderDataMatch = true;
-                        break;
-                    }
-                }
+                // Create comprehensive search content
+                const searchableContent = [
+                    orderId, orderIdText,
+                    orderDate, orderDateText, orderTimeText,
+                    orderTotal, orderTotalText,
+                    orderStatus, statusBadgeText,
+                    orderItems, productNames,
+                    personalizations,
+                    deliveryOptionText, deliveryAddressText
+                ].join(' ');
                 
-                // Check basic fields
-                let basicMatch = false;
-                for (let word of searchWords) {
-                    if (orderId.includes(word) || 
-                        orderDate.includes(word) || 
-                        orderTotal.includes(word) ||
-                        orderStatus.includes(word)) {
-                        basicMatch = true;
-                        break;
-                    }
-                }
+                // Check if ALL search words are found (AND logic)
+                const allWordsMatch = searchWords.every(word => {
+                    return searchableContent.includes(word) || 
+                           // Fuzzy matching for common typos
+                           searchableContent.includes(word.replace(/o/g, '0')) ||
+                           searchableContent.includes(word.replace(/0/g, 'o')) ||
+                           searchableContent.includes(word.replace(/i/g, '1')) ||
+                           searchableContent.includes(word.replace(/1/g, 'i'));
+                });
                 
-                if (basicMatch || orderItemsMatch || orderDataMatch) {
+                // Alternative: Check if ANY search word is found (OR logic)
+                const anyWordMatch = searchWords.some(word => {
+                    return searchableContent.includes(word) ||
+                           // Fuzzy matching for common typos
+                           searchableContent.includes(word.replace(/o/g, '0')) ||
+                           searchableContent.includes(word.replace(/0/g, 'o')) ||
+                           searchableContent.includes(word.replace(/i/g, '1')) ||
+                           searchableContent.includes(word.replace(/1/g, 'i'));
+                });
+                
+                // Use AND logic for multiple words, OR logic for single word
+                isMatch = searchWords.length > 1 ? allWordsMatch : anyWordMatch;
+                
+                if (isMatch) {
                     orderCard.show();
+                    matchedCount++;
                 }
             });
             
-            // Show message if no results found
-            if ($('.order-card:visible').length === 0) {
-                if ($('#no-results-message').length === 0) {
-                    $('.order-history-container').append(
-                        '<div id="no-results-message" class="alert mt-3">' +
-                        '<i class="fas fa-search me-2"></i>No orders found matching your search for "' + searchTerm + '".' +
-                        '<br><small class="text-muted">Try searching by order ID, date, product name, or order status.</small>' +
-                        '<br><small class="text-muted"><strong>Examples:</strong> "cola", "pizza", "burger", "drink", "food"</small>' +
-                        '</div>'
-                    );
-                }
-            } else {
-                $('#no-results-message').remove();
-                // Initialize pagination with filtered results
-                initPagination();
+            // Show enhanced message if no results found
+            if (matchedCount === 0) {
+                const noResultsHtml = `
+                    <div id="no-results-message" class="alert mt-4 text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                            <h5>No orders found</h5>
+                        </div>
+                        <p class="mb-2">No orders match your search for <strong>"${searchTerm}"</strong></p>
+                        <div class="small text-muted">
+                            <p class="mb-2"><strong>Search tips:</strong></p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><i class="fas fa-lightbulb me-1"></i> <strong>Try searching by:</strong></p>
+                                    <ul class="list-unstyled small">
+                                        <li>• Order ID (e.g., "123", "#456")</li>
+                                        <li>• Product name (e.g., "pizza", "burger")</li>
+                                        <li>• Order status (e.g., "delivered", "pending")</li>
+                                        <li>• Date (e.g., "jan", "2024", "today")</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><i class="fas fa-magic me-1"></i> <strong>Search features:</strong></p>
+                                    <ul class="list-unstyled small">
+                                        <li>• Partial word matching</li>
+                                        <li>• Multiple word search</li>
+                                        <li>• Case-insensitive search</li>
+                                        <li>• Typo tolerance</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="$('#searchInput').val('').focus(); performSearch();">
+                            <i class="fas fa-times me-1"></i> Clear Search
+                
+                // No auto-scrolling when paginating - let users stay where they are
+                        <i class="fas fa-check-circle me-2"></i>
+                        Found <strong>${matchedCount}</strong> order${matchedCount !== 1 ? 's' : ''} matching <strong>"${searchTerm}"</strong>
+                        <button class="btn btn-outline-success btn-sm ms-2" onclick="$('#searchInput').val(''); performSearch(); $('#search-results-info').remove();">
+                            <i class="fas fa-times me-1"></i> Clear
+                        </button>
+                    </div>
+                `;
+                $('#orderListingContainer').prepend(resultsInfo);
+                
+                // Remove results info after 5 seconds
+                setTimeout(() => {
+                    $('#search-results-info').fadeOut(() => {
+                        $('#search-results-info').remove();
+                    });
+                }, 5000);
             }
+        }
+        
+        // Function to filter orders by status
+        function filterOrdersByStatus(status) {
+            // Remove any existing search results info
+            $('#search-results-info').remove();
+            $('#no-results-message').remove();
+            
+            if (!status) {
+                // Show all orders if no status selected
+                $('.order-card').show();
+            } else {
+                // Hide all orders first
+                $('.order-card').hide();
+                
+                // Show orders matching the selected status
+                $('.order-card').each(function() {
+                    const orderStatus = $(this).data('order-status');
+                    if (orderStatus === status) {
+                        $(this).show();
+                    }
+                });
+            }
+            
+            // Check if any orders are visible after filtering
+            const visibleOrders = $('.order-card:visible').length;
+            
+            if (visibleOrders === 0 && status) {
+                // Show no results message for status filter
+                const noResultsHtml = `
+                    <div id="no-results-message" class="alert mt-4 text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-filter fa-2x text-muted mb-2"></i>
+                            <h5>No orders found</h5>
+                        </div>
+                        <p class="mb-2">No orders found with status: <strong>"${status}"</strong></p>
+                        <div class="small text-muted">
+                            <p class="mb-2">Try selecting a different status or clear the filter to see all orders.</p>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="$('#statusFilter').val('').trigger('change');">
+                            <i class="fas fa-times me-1"></i> Clear Filter
+                        </button>
+                    </div>
+                `;
+                $('#orderListingContainer').append(noResultsHtml);
+            }
+            
+            // Reinitialize pagination with filtered results
+            initPagination();
         }
         
         // Function to load chart data from the server
@@ -804,22 +917,37 @@
             background: linear-gradient(135deg, #ffc107, #ffb300);
             color: white;
         }
-        
-        .status-served {
+
+        .status-paid {
             background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
         }
-        
-        .status-cancelled {
-            background: linear-gradient(135deg, #dc3545, #c82333);
+
+        .status-preparing {
+            background: linear-gradient(135deg, #17a2b8, #138496);
             color: white;
         }
-        
+
+        .status-ready {
+            background: linear-gradient(135deg, #fd7e14, #e83e8c);
+            color: white;
+        }
+
+        .status-delivered {
+            background: linear-gradient(135deg, #6f42c1, #5a32a3);
+            color: white;
+        }
+
         .status-refunded {
             background: linear-gradient(135deg, #fd7e14, #e83e8c);
             color: white;
         }
-        
+
+        .status-declined {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+
         .status-other {
             background: linear-gradient(135deg, #6c757d, #495057);
             color: white;
@@ -1048,8 +1176,9 @@
         }
         
         .action-btn.btn-warning {
-            background: linear-gradient(135deg, #ffc107, #e0a800);
-            color: #212529;
+            color: #fff;
+            background: #ffc107;
+            border-color: #ffc107;
         }
         .order-card .card-header {
             font-size: 1.1rem;
@@ -1142,10 +1271,6 @@
             color: #fff;
             background: #ffc107;
             border-color: #ffc107;
-        }
-        .order-card .btn-warning:hover {
-            background: #ffb300;
-            color: #fff;
         }
         .order-card .btn-secondary {
             color: #fff;
@@ -1257,7 +1382,6 @@
         #no-results-message {
             border-radius: 0.5rem;
             border: none;
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
@@ -1374,44 +1498,49 @@
              display: flex;
              justify-content: center;
              align-items: center;
-             margin-top: 30px;
-             margin-bottom: 20px;
-             gap: 8px;
-             background-color: #f8f9fa;
-             padding: 12px 20px;
-             border-radius: 50px;
-             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+             margin: 30px auto 20px auto;
+             gap: 6px;
+             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+             padding: 15px 25px;
+             border-radius: 25px;
+             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
              flex-wrap: wrap;
+             max-width: 800px;
+             border: 1px solid rgba(0,0,0,0.05);
          }
          
          .pagination-controls .page-btn {
-             min-width: 40px;
-             height: 40px;
-             border-radius: 50%;
+             min-width: 44px;
+             height: 44px;
+             border-radius: 12px;
              display: flex;
              align-items: center;
              justify-content: center;
-             border: 2px solid #e9ecef;
-             background-color: white;
+             border: 2px solid #dee2e6;
+             background: white;
              color: #495057;
-             font-weight: 500;
-             transition: all 0.3s ease;
+             transition: all 0.2s ease;
              cursor: pointer;
-             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-             margin: 0 2px;
+             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+             margin: 0 3px;
+             font-weight: 500;
+             font-size: 0.9rem;
          }
          
-         .pagination-controls .page-btn:hover {
-             background-color: #e9ecef;
-             transform: translateY(-2px);
-             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+         .pagination-controls .page-btn:hover:not(:disabled) {
+             background: linear-gradient(135deg, #007bff, #0056b3);
+             color: white;
+             border-color: #007bff;
+             transform: translateY(-1px);
+             box-shadow: 0 4px 12px rgba(0,123,255,0.25);
          }
          
          .pagination-controls .page-btn.active {
-             background-color: #007bff;
+             background: linear-gradient(135deg, #007bff, #0056b3);
              border-color: #007bff;
              color: white;
-             box-shadow: 0 4px 8px rgba(0,123,255,0.25);
+             box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+             transform: scale(1.05);
          }
          
          .pagination-controls .page-btn:disabled {
@@ -1422,23 +1551,29 @@
          }
          
          .pagination-controls .prev-btn,
-         .pagination-controls .next-btn {
-             font-size: 0.9rem;
-             padding: 0 15px;
-             border-radius: 20px;
+         .pagination-controls .next-btn,
+         .pagination-controls .first-btn,
+         .pagination-controls .last-btn {
+             font-size: 0.85rem;
+             padding: 0 16px;
+             border-radius: 12px;
              width: auto;
+             min-width: 80px;
+             font-weight: 600;
          }
          
          .pagination-controls .page-info {
-             font-size: 0.9rem;
+             font-size: 0.85rem;
              color: #6c757d;
-             background-color: white;
-             padding: 8px 15px;
-             border-radius: 20px;
-             margin-left: 10px;
-             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+             background: rgba(255,255,255,0.9);
+             padding: 10px 18px;
+             border-radius: 12px;
+             margin-left: 15px;
+             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
              display: flex;
              align-items: center;
+             border: 1px solid #e9ecef;
+             font-weight: 500;
          }
          
          .pagination-controls .page-ellipsis {
@@ -1535,10 +1670,12 @@
                             <i class="fas fa-filter me-2"></i>All Statuses
                         </option>
                         <option value="Pending" selected="@(selectedStatus == "Pending")">🟡 Pending</option>
+                        <option value="Paid" selected="@(selectedStatus == "Paid")">🟢 Paid</option>
                         <option value="Preparing" selected="@(selectedStatus == "Preparing")">🔵 Preparing</option>
-                        <option value="Served" selected="@(selectedStatus == "Served")">🟢 Served</option>
-                        <option value="Cancelled" selected="@(selectedStatus == "Cancelled")">🔴 Cancelled</option>
+                        <option value="Ready for Pickup" selected="@(selectedStatus == "Ready for Pickup")">🟠 Ready for Pickup</option>
+                        <option value="Delivered" selected="@(selectedStatus == "Delivered")">🟣 Delivered</option>
                         <option value="Refunded" selected="@(selectedStatus == "Refunded")">🟠 Refunded</option>
+                        <option value="Declined" selected="@(selectedStatus == "Declined")">🔴 Declined</option>
                     </select>
                 </div>
                 <div class="col-lg-3">
@@ -1547,6 +1684,10 @@
                         <option value="date-oldest">📅 Oldest First</option>
                         <option value="price-highest">💰 Highest Amount</option>
                         <option value="price-lowest">💰 Lowest Amount</option>
+                        <option value="status-asc">📊 Status A-Z</option>
+                        <option value="status-desc">📊 Status Z-A</option>
+                        <option value="id-asc">🔢 Order ID (Low-High)</option>
+                        <option value="id-desc">🔢 Order ID (High-Low)</option>
                     </select>
                 </div>
             </div>
@@ -1627,28 +1768,46 @@
                                     </div>
                                 </div>
                                 <div class="order-status">
-                                    @if (order.Status == "Pending" || order.Status == "Preparing")
+                                    @if (order.Status == "Pending")
                                     {
                                         <span class="status-badge status-pending">
                                             <i class="fas fa-clock me-1"></i>@order.Status
                                         </span>
                                     }
-                                    else if (order.Status == "Served")
+                                    else if (order.Status == "Paid")
                                     {
-                                        <span class="status-badge status-served">
+                                        <span class="status-badge status-paid">
                                             <i class="fas fa-check-circle me-1"></i>@order.Status
                                         </span>
                                     }
-                                    else if (order.Status == "Cancelled")
+                                    else if (order.Status == "Preparing")
                                     {
-                                        <span class="status-badge status-cancelled">
-                                            <i class="fas fa-times-circle me-1"></i>@order.Status
+                                        <span class="status-badge status-preparing">
+                                            <i class="fas fa-cog me-1"></i>@order.Status
+                                        </span>
+                                    }
+                                    else if (order.Status == "Ready for Pickup")
+                                    {
+                                        <span class="status-badge status-ready">
+                                            <i class="fas fa-box-open me-1"></i>@order.Status
+                                        </span>
+                                    }
+                                    else if (order.Status == "Delivered")
+                                    {
+                                        <span class="status-badge status-delivered">
+                                            <i class="fas fa-truck me-1"></i>@order.Status
                                         </span>
                                     }
                                     else if (order.Status == "Refunded")
                                     {
                                         <span class="status-badge status-refunded">
                                             <i class="fas fa-undo me-1"></i>@order.Status
+                                        </span>
+                                    }
+                                    else if (order.Status == "Declined")
+                                    {
+                                        <span class="status-badge status-declined">
+                                            <i class="fas fa-times-circle me-1"></i>@order.Status
                                         </span>
                                     }
                                     else
@@ -1770,22 +1929,7 @@
                 }
             </div>
             
-            <!-- Pagination controls -->
-            <div class="d-flex justify-content-center mt-4">
-                <nav aria-label="Order history pagination">
-                    <ul class="pagination" id="orderPagination">
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
-                        </li>
-                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
-                        <li class="page-item">
-                            <a class="page-link" href="#">Next</a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
+            <!-- Custom pagination controls will be dynamically generated here -->
         }
     </div>
 

@@ -157,6 +157,7 @@ public class OrderDetailsVM
     public DateTime OrderDate { get; set; }
     public string Status { get; set; }
     public string DeliveryOption { get; set; } // Add delivery option for tracking
+    public List<OrderItemVM> Items { get; set; } = new List<OrderItemVM>(); // Add items for tracking view
 }
 
 public class PaymentVM

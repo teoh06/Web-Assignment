@@ -45,7 +45,7 @@ namespace WebApplication2.Controllers
                 // Fallback to form data if not JSON
                 return AddFromForm(Request.Form["menuItemId"].ToString(), Request.Form["quantity"].ToString(), Request.Form["SelectedPersonalizations"].ToString());
             }
-            
+
             if (!User.IsInRole("Member"))
                 return Json(new { success = false, message = "Unauthorized access." });
 
@@ -363,7 +363,7 @@ namespace WebApplication2.Controllers
                     MemberName = member.Name,
                     MemberPhone = !string.IsNullOrWhiteSpace(vm.PhoneNumber) ? vm.PhoneNumber : (member?.PhoneNumber ?? ""),
                     OrderDate = DateTime.Now,
-                    Status = "Paid",
+                    Status = "Paid", // Always start as Paid after successful payment processing
                     PaymentMethod = vm.PaymentMethod,
                     DeliveryAddress = vm.DeliveryOption == "Pickup" ? string.Empty : vm.DeliveryAddress,
                     DeliveryOption = vm.DeliveryOption,
@@ -652,7 +652,7 @@ namespace WebApplication2.Controllers
                     {
                         OrderNumber = o.OrderId.ToString(),
                         OrderDate = o.OrderDate,
-                        Status = o.Status,
+                        Status = MapToSimplifiedStatus(o.Status),
                         DeliveryOption = o.DeliveryOption // Pass delivery option
                     }).ToListAsync();
                 return PartialView("TrackResult", vm); // Return partial for AJAX
@@ -661,17 +661,34 @@ namespace WebApplication2.Controllers
             {
                 if (int.TryParse(vm.OrderNumber, out int orderId))
                 {
-                    var orders = await _db.Orders
-                        .Where(o => o.OrderId == orderId && o.MemberEmail == User.Identity.Name)
-                        .Select(o => new OrderDetailsVM
+                    var order = await _db.Orders
+                        .Include(o => o.OrderItems)
+                        .ThenInclude(oi => oi.MenuItem)
+                        .FirstOrDefaultAsync(o => o.OrderId == orderId && o.MemberEmail == User.Identity.Name);
+
+                    if (order != null)
+                    {
+                        var orderDetails = new OrderDetailsVM
                         {
-                            OrderNumber = o.OrderId.ToString(),
-                            OrderDate = o.OrderDate,
-                            Status = o.Status,
-                            DeliveryOption = o.DeliveryOption // Pass delivery option
-                        })
-                        .ToListAsync();
-                    vm.Orders = orders;
+                            OrderNumber = order.OrderId.ToString(),
+                            OrderDate = order.OrderDate,
+                            Status = MapToSimplifiedStatus(order.Status),
+                            DeliveryOption = order.DeliveryOption,
+                            Items = order.OrderItems.Select(oi => new OrderItemVM
+                            {
+                                MenuItemName = oi.MenuItem?.Name ?? "Unknown Item",
+                                Quantity = oi.Quantity,
+                                UnitPrice = oi.UnitPrice,
+                                PhotoURL = oi.MenuItem?.PhotoURL ?? "/images/default-item.png",
+                                SelectedPersonalizations = oi.SelectedPersonalizations
+                            }).ToList()
+                        };
+                        vm.Orders = new List<OrderDetailsVM> { orderDetails };
+                    }
+                    else
+                    {
+                        vm.Orders = new List<OrderDetailsVM>();
+                    }
                 }
                 else
                 {
@@ -706,7 +723,7 @@ namespace WebApplication2.Controllers
                 {
                     OrderId = order.OrderId,
                     OrderDate = order.OrderDate,
-                    Status = order.Status,
+                    Status = MapToSimplifiedStatus(order.Status),
                     Items = order.OrderItems.Select(oi => new OrderItemVM
                     {
                         MenuItemName = oi.MenuItem?.Name,
@@ -931,61 +948,53 @@ namespace WebApplication2.Controllers
         {
             try
             {
-                // Get all orders for the current member
                 var memberEmail = User.Identity.Name;
                 var orders = await _db.Orders
                     .Include(o => o.OrderItems)
-                    .ThenInclude(oi => oi.MenuItem)
-                    .ThenInclude(mi => mi.Category)
+                        .ThenInclude(oi => oi.MenuItem)
+                        .ThenInclude(mi => mi.Category)
                     .Where(o => o.MemberEmail == memberEmail)
                     .OrderByDescending(o => o.OrderDate)
                     .ToListAsync();
-                
+
                 // Monthly spending data (last 6 months)
                 var today = DateTime.Today;
-                var sixMonthsAgo = today.AddMonths(-6);
-                
+                var sixMonthsAgo = today.AddMonths(-5); // Show 6 months including current
                 var monthlyLabels = new List<string>();
                 var monthlyData = new List<decimal>();
-                
                 for (int i = 0; i < 6; i++)
                 {
-                    var month = today.AddMonths(-i);
+                    var month = sixMonthsAgo.AddMonths(i);
                     var monthName = month.ToString("MMM yyyy");
-                    monthlyLabels.Insert(0, monthName);
-                    
+                    monthlyLabels.Add(monthName);
                     var monthlyTotal = orders
                         .Where(o => o.OrderDate.Year == month.Year && o.OrderDate.Month == month.Month)
                         .SelectMany(o => o.OrderItems)
                         .Sum(oi => oi.UnitPrice * oi.Quantity);
-                    
-                    monthlyData.Insert(0, monthlyTotal);
+                    monthlyData.Add(monthlyTotal);
                 }
-                
+
                 // Order categories data
-                var categoryData = new List<int>();
                 var categoryLabels = new List<string>();
-                
+                var categoryData = new List<int>();
                 var categories = orders
                     .SelectMany(o => o.OrderItems)
-                    .Select(oi => oi.MenuItem.Category)
-                    .GroupBy(c => c.Name)
+                    .Where(oi => oi.MenuItem != null && oi.MenuItem.Category != null)
+                    .GroupBy(oi => oi.MenuItem.Category.Name)
                     .Select(g => new { CategoryName = g.Key, Count = g.Count() })
                     .OrderByDescending(x => x.Count)
                     .Take(5)
                     .ToList();
-                
                 foreach (var category in categories)
                 {
                     categoryLabels.Add(category.CategoryName);
                     categoryData.Add(category.Count);
                 }
-                
-                return Json(new { 
-                    monthlyLabels, 
-                    monthlyData, 
-                    categoryLabels, 
-                    categoryData 
+                return Json(new {
+                    monthlyLabels,
+                    monthlyData,
+                    categoryLabels,
+                    categoryData
                 });
             }
             catch (Exception ex)
@@ -1001,11 +1010,6 @@ namespace WebApplication2.Controllers
         {
             try
             {
-                if (orderId <= 0)
-                {
-                    return Json(new { success = false, message = "Invalid order ID" });
-                }
-
                 var order = await _db.Orders
                     .Include(o => o.OrderItems)
                         .ThenInclude(oi => oi.MenuItem) // Load menu item details
@@ -1016,44 +1020,125 @@ namespace WebApplication2.Controllers
                     return Json(new { success = false, message = "Order not found" });
                 }
 
-                // Security check
-                var currentUserEmail = User.Identity?.Name;
-                var isAdmin = User.IsInRole("Admin");
+                // Determine payment status based on order status and payment method
+                bool paymentMade = DeterminePaymentStatus(order);
+                
+                // Determine if this is a manual refund (only show refunded if manually refunded)
+                bool manualRefund = order.Status == "Refunded";
 
-                if (!isAdmin && order.MemberEmail != currentUserEmail)
+                // Auto-progress order status for demo purposes (only if payment is made)
+                if (paymentMade)
                 {
-                    return Json(new { success = false, message = "You are not authorized to view this order" });
+                    await AutoProgressOrderStatus(order);
                 }
 
-                // Calculate totals
-                var items = order.OrderItems.Select(i => new {
-                    productName = i.MenuItem?.Name ?? "Unknown Item",
-                    quantity = i.Quantity,
-                    unitPrice = i.UnitPrice,
-                    lineTotal = i.Quantity * i.UnitPrice,
-                    personalizations = i.SelectedPersonalizations
-                }).ToList();
-
-                var orderTotal = items.Sum(i => i.lineTotal);
+                // Map status to simplified set
+                var displayStatus = MapToSimplifiedStatus(order.Status);
 
                 return Json(new
                 {
                     success = true,
                     orderId = order.OrderId,
-                    status = order.Status ?? "Unknown",
+                    status = displayStatus,
                     orderDate = order.OrderDate.ToString("yyyy-MM-dd HH:mm:ss"),
-                    deliveryOption = order.DeliveryOption ?? "Standard",
+                    deliveryOption = order.DeliveryOption,
                     deliveryAddress = order.DeliveryAddress,
                     paymentMethod = order.PaymentMethod,
-                    items,
-                    orderTotal
+                    paymentMade = paymentMade,
+                    manualRefund = manualRefund,
+                    items = order.OrderItems.Select(i => new {
+                        name = i.MenuItem?.Name ?? "Unknown Item",
+                        quantity = i.Quantity,
+                        price = i.UnitPrice,
+                        imageUrl = i.MenuItem?.PhotoURL ?? "/images/default-item.png",
+                        personalization = i.SelectedPersonalizations
+                    }).ToList(),
+                    orderTotal = order.OrderItems.Sum(i => i.Quantity * i.UnitPrice)
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting order status: {ex.Message}");
                 return Json(new { success = false, message = "An error occurred while retrieving order status" });
             }
+        }
+
+        // Determine if payment has been made based on order status and payment method
+        private bool DeterminePaymentStatus(Order order)
+        {
+            // For card payments, payment is made immediately when order is created (status becomes "Paid")
+            if (order.PaymentMethod == "Card")
+            {
+                return order.Status != "Pending";
+            }
+            
+            // For cash payments, payment is made when status moves to "Paid" or beyond
+            if (order.PaymentMethod == "Cash")
+            {
+                return order.Status == "Paid" || order.Status == "Preparing" || 
+                       order.Status == "Ready for Pickup" || order.Status == "Delivered";
+            }
+            
+            // Default: if not pending, payment is made
+            return order.Status != "Pending";
+        }
+
+        // Auto-progress order status for demo purposes (15 seconds total)
+        private async Task AutoProgressOrderStatus(Order order)
+        {
+            // Only progress orders that are in progress (not final status)
+            if (order.Status == "Refunded" || order.Status == "Declined" || order.Status == "Delivered")
+            {
+                return;
+            }
+
+            var timeSinceOrder = DateTime.Now - order.OrderDate;
+            var totalSeconds = timeSinceOrder.TotalSeconds;
+
+            string newStatus = order.Status;
+
+            // Progress through statuses within 15 seconds, but respect delivery option
+            if (totalSeconds >= 15)
+            {
+                // Final status depends on delivery option
+                newStatus = order.DeliveryOption == "Pickup" ? "Ready for Pickup" : "Delivered";
+            }
+            else if (totalSeconds >= 10)
+            {
+                newStatus = "Preparing";
+            }
+            else if (totalSeconds >= 5)
+            {
+                newStatus = "Preparing";
+            }
+            else if (totalSeconds >= 0)
+            {
+                newStatus = "Paid"; // Keep as Paid initially
+            }
+
+            // Only update if status has changed
+            if (newStatus != order.Status)
+            {
+                order.Status = newStatus;
+                await _db.SaveChangesAsync();
+            }
+        }
+
+        // Helper method to map status to simplified set
+        private string MapToSimplifiedStatus(string status)
+        {
+            return status switch
+            {
+                "Pending" => "Pending",
+                "Paid" => "Paid",
+                "Preparing" => "Preparing",
+                "Ready for Pickup" => "Ready for Pickup",
+                "Delivered" => "Delivered",
+                "Refunded" => "Refunded",
+                "Declined" => "Declined",
+                "Out for Delivery" => "Preparing", // Map to Preparing
+                "Cancelled" => "Declined", // Map to Declined
+                _ => "Pending" // Default to Pending
+            };
         }
 
 
@@ -1073,11 +1158,12 @@ namespace WebApplication2.Controllers
                 ModelState.AddModelError("OrderId", "Order not found or you do not have access.");
                 return View(vm);
             }
-            if (order.Status == "Refunded" || order.Status == "Cancelled")
+            if (order.Status == "Refunded" || order.Status == "Declined")
             {
-                ModelState.AddModelError("OrderId", "Order is already refunded or cancelled.");
+                ModelState.AddModelError("OrderId", "Order is already refunded or declined.");
                 return View(vm);
             }
+            // Set status to 'Refunded' (pending admin review)
             order.Status = "Refunded";
             await _db.SaveChangesAsync();
             TempData["Success"] = $"Refund request for Order #{order.OrderId} submitted. Reason: {vm.Reason}";
