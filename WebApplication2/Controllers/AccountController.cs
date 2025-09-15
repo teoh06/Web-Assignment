@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PdfSharp.Quality;
 using System; // Make sure this is included for Guid and DateTime
 using System.Diagnostics;
 using System.Linq; // Make sure this is included for Any and Where
@@ -857,22 +858,15 @@ public class AccountController : Controller
             user.DeletionToken = Guid.NewGuid().ToString("n");
             db.SaveChanges();
 
-            string subject = "Account Pending Deletion";
-            string body = $@"
-            <div style='font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 8px #0001;'>
-                <div style='background:linear-gradient(90deg,#E53E3E 60%,#F56565 100%);color:#fff;padding:28px 20px;border-radius:12px 12px 0 0;text-align:center;'>
-                    <h2 style='margin:0;font-size:22px;'>Account Pending Deletion</h2>
-                </div>
-                <div style='padding:24px 20px;'>
-                    <p style='font-size:16px;color:#333;'>Hello <b>{user.Name}</b>,</p>
-                    <p style='font-size:16px;color:#333;'>Your account has been <b>marked for deletion</b> by admin. If this was not intended, please contact support or your admin immediately.</p>
-                    <div style='background:#FFF5F5;border-left:4px solid #E53E3E;padding:16px 18px;margin:18px 0;border-radius:8px;'>
-                        <span style='color:#E53E3E;font-weight:600;'>Your account will be permanently deleted unless restored.</span>
-                    </div>
-                    <p style='font-size:14px;color:#888;margin-top:24px;'>If you have questions, please contact our support team.</p>
-                </div>
-            </div>";
-            _emailService.SendEmailAsync(user.Email, subject, body);
+            var mail = new MailMessage
+            {
+                Subject = "Account Pending Deletion",
+                Body = $"<p>Hello {user.Name},</p><p>Your account has been marked for deletion by admin. Please contact admin for more details.</p>",
+                IsBodyHtml = true
+            };
+            mail.To.Add(user.Email);
+
+            hp.SendEmail(mail);
 
             TempData["Info"] = "User marked for deletion.";
         }
@@ -890,22 +884,15 @@ public class AccountController : Controller
             user.DeletionToken = null;
             db.SaveChanges();
 
-            string subject = "Account Restored";
-            string body = $@"
-            <div style='font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 8px #0001;'>
-                <div style='background:linear-gradient(90deg,#38A169 60%,#48BB78 100%);color:#fff;padding:28px 20px;border-radius:12px 12px 0 0;text-align:center;'>
-                    <h2 style='margin:0;font-size:22px;'>Account Restored</h2>
-                </div>
-                <div style='padding:24px 20px;'>
-                    <p style='font-size:16px;color:#333;'>Hello <b>{user.Name}</b>,</p>
-                    <p style='font-size:16px;color:#333;'>Your account has been <b>successfully restored</b>. You can now continue using all services as usual.</p>
-                    <div style='background:#F0FFF4;border-left:4px solid #38A169;padding:16px 18px;margin:18px 0;border-radius:8px;'>
-                        <span style='color:#38A169;font-weight:600;'>If you did not request this, please contact support immediately.</span>
-                    </div>
-                    <p style='font-size:14px;color:#888;margin-top:24px;'>If you have questions, please contact our support team.</p>
-                </div>
-            </div>";
-            _emailService.SendEmailAsync(user.Email, subject, body);
+            var mail = new MailMessage
+            {
+                Subject = "Account Restored",
+                Body = $"<p>Hello {user.Name},</p><p>Your account has been successfully restored.</p>",
+                IsBodyHtml = true
+            };
+            mail.To.Add(user.Email);
+
+            hp.SendEmail(mail);
 
             TempData["Info"] = "User restored.";
         }
