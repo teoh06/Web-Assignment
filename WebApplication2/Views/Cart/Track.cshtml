@@ -6,260 +6,958 @@
     ViewBag.Title = "Track Your Order";
 }
 
-<div class="container py-4">
-    <div class="card mb-4">
-        <div class="card-body">
-            <form id="trackOrderForm" method="post" onsubmit="return false;">
-                <div class="field-row">
-                    <label asp-for="OrderNumber">Order Number</label>
-                    <input asp-for="OrderNumber" id="orderNumberInput" class="form-input" placeholder="Enter your order number (or select below)" autofocus>
-
-                    <span asp-validation-for="OrderNumber" class="field-validation-error"></span>
-                </div>
-                <div class="field-row">
-                    <label asp-for="Address">Shipping Address</label>
-                    <div class="address-input-container">
-                        <input asp-for="Address" id="addressInput" class="form-input address-input" placeholder="Enter your address" autocomplete="address-line1">
-                        @if (!string.IsNullOrEmpty(Model.Address))
-                        {
-                            <button type="button" id="useMyAddressBtn" class="use-address-btn" onclick="useMyAddress()" title="Use my profile address">
-                                📍 Use My Address
-                            </button>
-                        }
-                    </div>
-                    <span asp-validation-for="Address" class="field-validation-error"></span>
-                    @if (!string.IsNullOrEmpty(Model.Address))
-                    {
-                        <div class="mt-2">
-                            <small class="text-muted profile-address-info">💡 Your profile address: <strong>@Model.Address</strong></small>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="mt-2">
-                            <small class="text-warning">⚠️ No address in your profile. Please add one in your profile settings.</small>
-                        </div>
-                    }
-                </div>
-                <div class="form-buttons">
-                    <button type="button" class="btn-primary" onclick="trackOrderAjax()">Track Order</button>
-                </div>
-            </form>
-            <div id="orderTrackingResult" style="display:none; margin-top: 30px;">
-                <div class="progress" style="height: 25px; border-radius: 12px; overflow: hidden; background-color: #e9ecef;">
-                    <div id="orderProgressBar" class="progress-bar" role="progressbar" style="width: 0%; background: linear-gradient(90deg, #4CAF50, #8BC34A);" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                        <span id="orderProgressText" style="color: white; font-weight: bold;">0%</span>
-                    </div>
-                </div>
-                <div id="orderStatusSteps" class="d-flex justify-content-between mt-2" style="font-weight: 600; color: #555;">
-                    <span class="status-step">Pending</span>
-                    <span class="status-step">Paid</span>
-                    <span class="status-step">Preparing</span>
-                    <span class="status-step" id="finalStatusStep">Ready for Pickup</span>
-                    <span class="status-step refunded-step" id="refundedStatusStep" style="display: none; background: linear-gradient(45deg, #ff4444, #ffffff, #ff4444); color: #000; border-radius: 4px; padding: 2px 8px; font-weight: bold; border: 2px solid #ff4444;">Refunded</span>
-                </div>
-                <div id="purchasedItems" class="mt-4">
-                    <h5>Purchased Items</h5>
-                    <ul class="list-group" style="max-height: 200px; overflow-y: auto;">
-                        <!-- Items will be dynamically inserted here -->
-                    </ul>
-                </div>
-                <div id="orderResultMessage" class="mt-3"></div>
+<!-- Modern Track Order Container -->
+<div class="track-page-container">
+    <div class="track-hero-section">
+        <div class="track-hero-content">
+            <div class="track-icon-container">
+                <div class="track-icon">📦</div>
             </div>
-            <div id="orderResult"></div>
+            <h1 class="track-title">Track Your Order</h1>
+            <p class="track-subtitle">Enter your order details to see real-time tracking information</p>
         </div>
     </div>
 
+    <div class="track-form-container">
+        <div class="track-form-card">
+            <form id="trackOrderForm" method="post" onsubmit="return false;">
+                <div class="input-group-modern">
+                    <div class="input-wrapper">
+                        <label asp-for="OrderNumber" class="input-label">
+                            <span class="label-icon">🔢</span>
+                            Order Number
+                        </label>
+                        <input asp-for="OrderNumber" id="orderNumberInput" class="input-modern" 
+                               placeholder="Enter your order number" autofocus>
+                        <div class="input-focus-line"></div>
+                        <span asp-validation-for="OrderNumber" class="validation-error"></span>
+                    </div>
+                </div>
+
+                <div class="input-group-modern">
+                    <div class="input-wrapper">
+                        <label asp-for="Address" class="input-label">
+                            <span class="label-icon">📍</span>
+                            Delivery Address
+                        </label>
+                        <div class="address-input-modern">
+                            <input asp-for="Address" id="addressInput" class="input-modern address-input" 
+                                   placeholder="Enter your delivery address" autocomplete="address-line1">
+                            @if (!string.IsNullOrEmpty(Model.Address))
+                            {
+                                <button type="button" id="useMyAddressBtn" class="address-quick-btn" 
+                                        onclick="useMyAddress()" title="Use my profile address">
+                                    <span class="btn-icon">📍</span>
+                                    <span class="btn-text">Use My Address</span>
+                                </button>
+                            }
+                        </div>
+                        <div class="input-focus-line"></div>
+                        <span asp-validation-for="Address" class="validation-error"></span>
+                        
+                        @if (!string.IsNullOrEmpty(Model.Address))
+                        {
+                            <div class="address-info-card">
+                                <div class="info-icon">💡</div>
+                                <div class="info-content">
+                                    <span class="info-label">Your profile address:</span>
+                                    <span class="info-value">@Model.Address</span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="address-warning-card">
+                                <div class="warning-icon">⚠️</div>
+                                <div class="warning-content">
+                                    No address in your profile. Please add one in your profile settings.
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="track-submit-btn" onclick="trackOrderAjax()">
+                        <span class="btn-icon">🔍</span>
+                        <span class="btn-text">Track Order</span>
+                        <div class="btn-ripple"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modern Tracking Result Container -->
+    <div id="orderTrackingResult" class="tracking-result-container" style="display:none;">
+        <div class="tracking-card">
+            <div class="tracking-header">
+                <h3 class="tracking-title">Order Status</h3>
+                <div class="tracking-live-indicator">
+                    <div class="live-dot"></div>
+                    <span>Live Tracking</span>
+                </div>
+            </div>
+
+            <!-- Modern Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-track">
+                    <div id="orderProgressBar" class="progress-fill" role="progressbar" 
+                         style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-glow"></div>
+                    </div>
+                </div>
+                <div id="orderProgressText" class="progress-percentage">0%</div>
+            </div>
+
+            <!-- Status Steps -->
+            <div id="orderStatusSteps" class="status-steps-container">
+                <div class="status-step" data-step="pending">
+                    <div class="step-icon">⏳</div>
+                    <span class="step-label">Pending</span>
+                </div>
+                <div class="status-step" data-step="paid">
+                    <div class="step-icon">💳</div>
+                    <span class="step-label">Paid</span>
+                </div>
+                <div class="status-step" data-step="preparing">
+                    <div class="step-icon">👨‍🍳</div>
+                    <span class="step-label">Preparing</span>
+                </div>
+                <div class="status-step" id="finalStatusStep" data-step="ready">
+                    <div class="step-icon ready-pickup-icon">✅</div>
+                    <span class="step-label ready-pickup-label">Ready for Pickup</span>
+                </div>
+                <div class="status-step refunded-step" id="refundedStatusStep" data-step="refunded" style="display: none;">
+                    <div class="step-icon">💸</div>
+                    <span class="step-label">Refunded</span>
+                </div>
+            </div>
+
+            <!-- Purchased Items Section -->
+            <div id="purchasedItems" class="purchased-items-section">
+                <h4 class="section-title">
+                    <span class="title-icon">🛍️</span>
+                    Purchased Items
+                </h4>
+                <div class="items-container">
+                    <ul class="items-list">
+                        <!-- Items will be dynamically inserted here -->
+                    </ul>
+                </div>
+            </div>
+
+            <div id="orderResultMessage" class="order-details-section"></div>
+        </div>
+    </div>
+
+    <div id="orderResult"></div>
+
+    <!-- Recent Orders Section -->
     @if (Model.Orders != null && Model.Orders.Any())
     {
-        <h2 class="mb-4">Your Recent Orders</h2>
-        <ul class="list-group mb-4">
-            @foreach (var order in Model.Orders)
-            {
-                <li class="list-group-item">
-                    <strong>Order #: </strong>@order.OrderNumber<br />
-                    <strong>Date: </strong>@order.OrderDate<br />
-                    <strong>Status: </strong>@order.Status<br />
-
-                    <button type="button" onclick="document.getElementById('orderNumberInput').value='@order.OrderNumber'; trackOrderAjax();" class="btn btn-sm btn-outline-primary mt-2">Track This Order</button>
-                </li>
-            }
-        </ul>
+        <div class="recent-orders-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="title-icon">📋</span>
+                    Your Recent Orders
+                </h2>
+            </div>
+            <div class="orders-grid">
+                @foreach (var order in Model.Orders)
+                {
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div class="order-number">Order #@order.OrderNumber</div>
+                            <div class="order-status status-@order.Status.ToLower().Replace(" ", "-")">@order.Status</div>
+                        </div>
+                        <div class="order-details">
+                            <div class="order-date">
+                                <span class="detail-icon">📅</span>
+                                @order.OrderDate
+                            </div>
+                        </div>
+                        <div class="order-actions">
+                            <button type="button" onclick="document.getElementById('orderNumberInput').value='@order.OrderNumber'; trackOrderAjax();" 
+                                    class="quick-track-btn">
+                                <span class="btn-icon">🔍</span>
+                                <span class="btn-text">Track This Order</span>
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
     }
     else if (Model.IsPostBack)
     {
-        <p>No orders found with the given information.</p>
+        <div class="no-orders-message">
+            <div class="message-icon">📦</div>
+            <p>No orders found with the given information.</p>
+        </div>
     }
 </div>
 
 <style>
-    @@keyframes wheelRotate {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+    /* =============================================================================
+       MODERN TRACK ORDER PAGE - USING APP.CSS COLOR SCHEME
+       ============================================================================= */
+    
+    /* CSS Variables from app.css for consistency */
+    :root {
+        --track-primary: var(--primary-brand, #FF6B35);
+        --track-secondary: var(--secondary-brand, #F7931E);
+        --track-accent: var(--accent-green, #4CAF50);
+        --track-bg-primary: var(--bg-primary, #FEFEFE);
+        --track-bg-secondary: var(--bg-secondary, #F8F9FA);
+        --track-bg-accent: var(--bg-accent, #FFF5F2);
+        --track-text-primary: var(--text-primary, #2D3748);
+        --track-text-secondary: var(--text-secondary, #718096);
+        --track-border: var(--border-light, #E2E8F0);
+        --track-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
     }
 
-    @@keyframes roadLine {
-        0% { transform: translateX(-250px); }
-        100% { transform: translateX(250px); }
+    /* Keyframe Animations */
+    @@keyframes trackPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
     }
 
-    @@keyframes smoke {
-        0% {
-            opacity: 0.6;
-            transform: translateX(0) scale(1);
-        }
-        100% {
-            opacity: 0;
-            transform: translateX(-20px) scale(0.5);
-        }
+    @@keyframes liveDot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.3; transform: scale(0.8); }
     }
 
-    @@keyframes packagePulse {
+    @@keyframes progressGlow {
+        0%, 100% { box-shadow: 0 0 5px var(--track-accent); }
+        50% { box-shadow: 0 0 20px var(--track-accent), 0 0 30px var(--track-accent); }
+    }
+
+    @@keyframes slideInUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes ripple {
+        0% { transform: scale(0); opacity: 1; }
+        100% { transform: scale(4); opacity: 0; }
+    }
+
+    @@keyframes stepActivate {
         0% { transform: scale(1); }
         50% { transform: scale(1.1); }
         100% { transform: scale(1); }
     }
 
-    @@keyframes chefCooking {
-        0% { transform: translateX(0); }
-        25% { transform: translateX(2px); }
-        50% { transform: translateX(0); }
-        75% { transform: translateX(-2px); }
-        100% { transform: translateX(0); }
+    @@keyframes fadeInScale {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
     }
 
-    @@keyframes customerWaiting {
-        0% { transform: translateY(0); }
-        50% { transform: translateY(2px); }
-        100% { transform: translateY(0); }
+    /* Main Container */
+    .track-page-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        background: var(--track-bg-primary);
+        min-height: 100vh;
     }
 
-    .wheel {
-        animation: wheelRotate 0.2s infinite linear;
+    /* Hero Section */
+    .track-hero-section {
+        background: linear-gradient(135deg, var(--track-primary), var(--track-secondary));
+        border-radius: 24px;
+        padding: 60px 40px;
+        text-align: center;
+        margin-bottom: 40px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--track-shadow);
     }
 
-    .smoke {
-        animation: smoke 0.8s infinite;
+    .track-hero-content {
+        position: relative;
+        z-index: 2;
     }
 
-    #chef {
-        animation: chefCooking 1s infinite ease-in-out;
+    .track-icon-container {
+        position: relative;
+        display: inline-block;
+        margin-bottom: 20px;
     }
 
-    #customer {
-        animation: customerWaiting 2s infinite ease-in-out;
+    .track-icon {
+        font-size: 4rem;
+        animation: trackPulse 2s infinite ease-in-out;
     }
 
-    .field-row {
-        margin-bottom: 1rem;
-    }
-
-    .form-input {
-        width: 100%;
-        padding: 0.75rem;
-        border: 2px solid #ddd;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-    }
-
-    .form-input:focus {
-        border-color: #4CAF50;
-        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
-        outline: none;
-    }
-
-    .btn-primary {
-        background: linear-gradient(135deg, #4CAF50, #45a049);
+    .track-title {
+        font-size: 3rem;
+        font-weight: 700;
         color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
+        margin: 0 0 10px 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    .track-subtitle {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.9);
+        margin: 0;
     }
 
-    /* Address input container styling */
-    .address-input-container {
+    /* Form Container */
+    .track-form-container {
+        margin-bottom: 40px;
+    }
+
+    .track-form-card {
+        background: var(--track-bg-primary);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: var(--track-shadow);
+        border: 1px solid var(--track-border);
+        animation: slideInUp 0.6s ease-out;
+    }
+
+    /* Modern Input Groups */
+    .input-group-modern {
+        margin-bottom: 30px;
+    }
+
+    .input-wrapper {
+        position: relative;
+    }
+
+    .input-label {
         display: flex;
-        gap: 10px;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: var(--track-text-primary);
+        margin-bottom: 12px;
+        font-size: 1.1rem;
+    }
+
+    .label-icon {
+        font-size: 1.2rem;
+    }
+
+    .input-modern {
+        width: 100%;
+        padding: 16px 20px;
+        border: 2px solid var(--track-border);
+        border-radius: 12px;
+        font-size: 1rem;
+        background: var(--track-bg-primary);
+        color: var(--track-text-primary);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .input-modern:focus {
+        outline: none;
+        border-color: var(--track-accent);
+        box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .input-focus-line {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 3px;
+        background: var(--track-accent);
+        transition: all 0.3s ease;
+        transform: translateX(-50%);
+        border-radius: 2px;
+    }
+
+    .input-modern:focus + .input-focus-line {
+        width: 100%;
+    }
+
+    /* Address Input */
+    .address-input-modern {
+        display: flex;
+        gap: 12px;
         align-items: stretch;
     }
 
     .address-input {
         flex: 1;
-        margin-right: 0;
     }
 
-    .use-address-btn {
-        background: linear-gradient(135deg, #2196F3, #1976D2);
+    .address-quick-btn {
+        background: linear-gradient(135deg, var(--track-primary), var(--track-secondary));
         color: white;
         border: none;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        font-size: 0.85rem;
+        padding: 16px 24px;
+        border-radius: 12px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
-        white-space: nowrap;
-        min-width: 140px;
         display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 8px;
+        white-space: nowrap;
+        position: relative;
+        overflow: hidden;
     }
 
-    .use-address-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-        background: linear-gradient(135deg, #1976D2, #1565C0);
+    .address-quick-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+        filter: brightness(1.1);
     }
 
-    .profile-address-info {
-        display: block;
-        padding: 8px;
-        border-radius: 4px;
-        border-left: 4px solid #4CAF50;
+    .address-quick-btn:active {
+        transform: translateY(0);
     }
 
-    @@media (max-width: 768px) {
-        .address-input-container {
-            flex-direction: column;
-            gap: 8px;
-        }
+    /* Info Cards */
+    .address-info-card, .address-warning-card {
+        margin-top: 12px;
+        padding: 16px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: fadeInScale 0.4s ease-out;
+    }
 
-        .use-address-btn {
-            min-width: auto;
-            width: 100%;
-        }
+    .address-info-card {
+        background: #FFC107;
+        border: 1px solid var(--track-accent);
+        border-left: 4px solid var(--track-accent);
+    }
+
+    .address-warning-card {
+        background: #FFB300; /* Deeper yellow gradient */
+        border: 1px solid #FFC107;
+        border-left: 4px solid #FFC107;
+    }
+
+    .info-icon, .warning-icon {
+        font-size: 1.5rem;
+    }
+
+    .info-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .info-label {
+        font-size: 0.9rem;
+        color: var(--track-text-secondary);
+    }
+
+    .info-value {
+        font-weight: 600;
+        color: var(--track-text-primary);
+    }
+
+    .warning-content {
+        font-weight: 500;
+    }
+
+    /* Submit Button */
+    .form-actions {
+        text-align: center;
+        margin-top: 40px;
+    }
+
+    .track-submit-btn {
+        background: linear-gradient(135deg, var(--track-accent), #66BB6A);
+        color: white;
+        border: none;
+        padding: 18px 40px;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    }
+
+    .track-submit-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+        filter: brightness(1.1);
+    }
+
+    .btn-ripple {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(0);
+        animation: ripple 0.6s linear;
+        pointer-events: none;
+    }
+
+    /* Tracking Result Container */
+    .tracking-result-container {
+        animation: slideInUp 0.6s ease-out;
+    }
+
+    .tracking-card {
+        background: var(--track-bg-primary);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: var(--track-shadow);
+        border: 1px solid var(--track-border);
+        margin-bottom: 30px;
+    }
+
+    .tracking-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .tracking-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--track-text-primary);
+        margin: 0;
+    }
+
+    .tracking-live-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--track-accent);
+        font-weight: 600;
+    }
+
+    .live-dot {
+        width: 12px;
+        height: 12px;
+        background: var(--track-accent);
+        border-radius: 50%;
+        animation: liveDot 1.5s infinite ease-in-out;
+    }
+
+    /* Modern Progress Bar */
+    .progress-container {
+        position: relative;
+        margin-bottom: 30px;
+    }
+
+    .progress-track {
+        width: 100%;
+        height: 12px;
+        background: var(--track-bg-secondary);
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--track-accent), #66BB6A);
+        border-radius: 6px;
+        transition: width 0.8s ease-in-out;
+        position: relative;
+        animation: progressGlow 2s infinite ease-in-out;
+    }
+
+    .progress-glow {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: progressGlow 1.5s infinite ease-in-out;
+    }
+
+    .progress-percentage {
+        position: absolute;
+        top: -35px;
+        right: 0;
+        font-weight: 700;
+        color: var(--track-text-primary);
+        font-size: 1.1rem;
+    }
+
+    /* Status Steps */
+    .status-steps-container {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 40px;
+        position: relative;
+    }
+
+    .status-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        position: relative;
+        opacity: 0.5;
+        transition: all 0.3s ease;
     }
 
     .status-step.active {
-        color: #4CAF50;
-        font-weight: bold;
+        opacity: 1;
+        animation: stepActivate 0.6s ease-out;
     }
-    
-    .refunded-step.active { 
-        color:#000 !important; 
-        background: linear-gradient(45deg, #ff4444, #ffffff, #ff4444) !important;
+
+    .step-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--track-bg-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        border: 3px solid var(--track-border);
+        transition: all 0.3s ease;
+        z-index: 1;
+    }
+
+    /* Specific styles for Ready for Pickup status */
+    .ready-pickup-icon {
+        background: var(--track-bg-secondary) !important;
+        border: 3px solid var(--track-border) !important;
+        z-index: 2;
+    }
+
+    .status-step.active .ready-pickup-icon {
+        background: var(--track-accent) !important;
+        border-color: var(--track-accent) !important;
+        color: white !important;
+    }
+
+    .ready-pickup-label {
+        color: var(--track-text-secondary);
+        font-weight: 600;
+        z-index: 2;
+    }
+
+    .status-step.active .ready-pickup-label {
+        color: var(--track-text-primary);
+    }
+
+    .refunded-step {
+        display: none;
+    }
+
+    .refunded-step.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .refunded-step.active .step-icon {
+        background: linear-gradient(45deg, #ff4444, #ffffff, #ff4444);
+        border-color: #ff4444;
+        color: #000;
         animation: refundPulse 2s infinite;
     }
-    
+
     @@keyframes refundPulse {
         0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
         70% { box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); }
         100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
     }
-    
-    .btn-warning:hover {
+
+    /* Purchased Items Section */
+    .purchased-items-section {
+        margin-bottom: 30px;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--track-text-primary);
+        margin-bottom: 20px;
+    }
+
+    .title-icon {
+        font-size: 1.5rem;
+    }
+
+    .items-container {
+        background: var(--track-bg-secondary);
+        border-radius: 16px;
+        padding: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .items-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .items-list li {
+        background: var(--track-bg-primary);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease;
+    }
+
+    .items-list li:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(255, 193, 7, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .items-list img {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        object-fit: cover;
+        border: 2px solid var(--track-border);
+    }
+
+    /* Recent Orders Section */
+    .recent-orders-section {
+        margin-top: 40px;
+        animation: slideInUp 0.6s ease-out 0.2s both;
+    }
+
+    .orders-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .order-card {
+        background: var(--track-bg-primary);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: var(--track-shadow);
+        border: 1px solid var(--track-border);
+        transition: all 0.3s ease;
+    }
+
+    .order-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .order-number {
+        font-weight: 700;
+        color: var(--track-text-primary);
+        font-size: 1.1rem;
+    }
+
+    .order-status {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-pending {
+        background: #856404;
+    }
+
+    .status-paid {
+        background: #0C5460;
+    }
+
+    .status-preparing {
+        background: #C6D156;
+    }
+
+    .status-ready-for-pickup { 
+        background: #73BA6E;
+    }
+
+    .status-delivered {
+        background: #73BA6E;
+    }
+
+    .status-refunded { 
+        background: #721C24; 
+    }
+
+    .status-declined {
+        background: #721C24;
+    }
+
+    .order-details {
+        margin-bottom: 20px;
+    }
+
+    .order-date {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--track-text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .detail-icon {
+        font-size: 1rem;
+    }
+
+    .order-actions {
+        text-align: center;
+    }
+
+    .quick-track-btn {
+        background: linear-gradient(135deg, var(--track-primary), var(--track-secondary));
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+
+    .quick-track-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
+        filter: brightness(1.1);
+    }
+
+    /* No Orders Message */
+    .no-orders-message {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--track-text-secondary);
+    }
+
+    .message-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    /* Validation Errors */
+    .validation-error {
+        color: #E53E3E;
+        font-size: 0.85rem;
+        margin-top: 8px;
+        display: block;
+    }
+
+    /* Order Details Section */
+    .order-details-section {
+        background: var(--track-bg-secondary);
+        border-radius: 16px;
+        padding: 24px;
+        margin-top: 20px;
+    }
+
+    .order-details-section .alert {
+        background: var(--track-bg-primary);
+        border: 1px solid var(--track-border);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 0;
+    }
+
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .track-page-container {
+            padding: 15px;
+        }
+
+        .track-hero-section {
+            padding: 40px 20px;
+        }
+
+        .track-title {
+            font-size: 2.2rem;
+        }
+
+        .track-form-card {
+            padding: 30px 20px;
+        }
+
+        .address-input-modern {
+            flex-direction: column;
+        }
+
+        .address-quick-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .tracking-header {
+            flex-direction: column;
+            gap: 15px;
+            text-align: center;
+        }
+
+        .status-steps-container {
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .status-step {
+            flex: 0 0 calc(50% - 10px);
+        }
+
+        .orders-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .track-title {
+            font-size: 1.8rem;
+        }
+
+        .track-subtitle {
+            font-size: 1rem;
+        }
+
+        .track-form-card {
+            padding: 20px 15px;
+        }
+
+        .tracking-card {
+            padding: 20px 15px;
+        }
+
+        .status-step {
+            flex: 0 0 100%;
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+        }
     }
 </style>
 
