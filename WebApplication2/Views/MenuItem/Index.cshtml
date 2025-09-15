@@ -83,13 +83,14 @@
             var ratings = item.MenuItemRatings ?? new List<WebApplication2.Models.MenuItemRating>();
             double avgRating = ratings.Count > 0 ? ratings.Average(r => r.Value) : 0;
             <div class="menu-item-card" data-aos="fade-up">
-                @if (isAdmin)
-                {
-                    <div class="item-select">
-                        <input type="checkbox" class="item-checkbox" data-item-id="@item.MenuItemId" data-item-name="@item.Name" />
-                    </div>
-                }
                 <div class="item-image">
+                    @if (isAdmin)
+                    {
+                        <label class="admin-select-checkbox">
+                            <input type="checkbox" class="item-checkbox" data-item-id="@item.MenuItemId" data-item-name="@item.Name" />
+                            <span class="custom-checkbox"></span>
+                        </label>
+                    }
                     <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
                         <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" loading="lazy" />
                     </a>
@@ -518,6 +519,52 @@
             padding: 8px 4px 6px 4px;
         }
     }
+
+    .admin-select-checkbox {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+    .admin-select-checkbox input[type="checkbox"] {
+        display: none;
+    }
+    .admin-select-checkbox .custom-checkbox {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #1565C0;
+        box-shadow: 0 2px 8px #0002;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.2s, background 0.2s;
+        position: relative;
+        font-size: 20px;
+        color: #1565C0;
+    }
+    .admin-select-checkbox input[type="checkbox"]:checked + .custom-checkbox {
+        background: #1565C0;
+        border-color: #1565C0;
+        color: #fff;
+    }
+    .admin-select-checkbox .custom-checkbox::after {
+        content: '\2713'; /* Unicode checkmark */
+        display: none;
+        font-size: 20px;
+        font-weight: bold;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    .admin-select-checkbox input[type="checkbox"]:checked + .custom-checkbox::after {
+        display: block;
+    }
 </style>
 
 @section Scripts {
@@ -665,6 +712,21 @@
                 }
             });
         }
+
+        window.addEventListener('pageshow', function() {
+    if (typeof selectedItems !== 'undefined') {
+        selectedItems.clear();
+    }
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        cb.checked = false;
+        if (cb.closest('.menu-item-card')) {
+            cb.closest('.menu-item-card').classList.remove('selected');
+        }
+    });
+    if (typeof updateBulkDeleteUI === 'function') {
+        updateBulkDeleteUI();
+    }
+});
 
         document.getElementById('filterForm').addEventListener('submit', function(e) {
             e.preventDefault();

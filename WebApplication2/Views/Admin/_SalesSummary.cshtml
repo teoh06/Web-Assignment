@@ -1,10 +1,12 @@
 @model IEnumerable<dynamic>
 @using System.Globalization
 
-<div class="sales-summary-container">
+<div class="admin-sales-summary theme-aware">
     @if (Model != null && Model.Any())
     {
         var totalQuantity = 0;
+        var totalRevenue = (decimal)Model.Sum(x => (decimal)x.Total);
+        var avgDailyRevenue = totalRevenue / Model.Count();
         foreach (var day in Model)
         {
             foreach (var item in day.Items)
@@ -13,138 +15,112 @@
             }
         }
 
-        <div class="sales-header mb-4">
-            <h3 class="text-primary" style="margin-bottom: 15px; text-align: center;">Sales Summary</h3>
-            <div class="summary-cards row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="card bg-primary text-white glowing">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2">Total Revenue</h6>
-                            <h4 class="card-title">@(((decimal)Model.Sum(x => (decimal)x.Total)).ToString("C", new CultureInfo("en-MY")))</h4>
-                        </div>
+        <div class="sales-summary-header">
+            <div class="section-title">
+                <h2 class="admin-subtitle"><i class="fas fa-chart-bar"></i> Sales Analytics</h2>
+                <p class="section-description">Comprehensive overview of sales performance and trends</p>
+            </div>
+            
+            <div class="sales-metrics-grid">
+                <div class="metric-card revenue">
+                    <div class="metric-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="metric-content">
+                        <span class="metric-value">@totalRevenue.ToString("C", new CultureInfo("en-MY"))</span>
+                        <span class="metric-label">Total Revenue</span>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card bg-success text-white glowing">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2">Total Orders</h6>
-                            <h4 class="card-title">@totalQuantity</h4>
-                        </div>
+                
+                <div class="metric-card orders">
+                    <div class="metric-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="metric-content">
+                        <span class="metric-value">@totalQuantity</span>
+                        <span class="metric-label">Total Items Sold</span>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card bg-info text-white glowing">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2">Date Range</h6>
-                            <h4 class="card-title">@Model.Count() Days</h4>
-                        </div>
+                
+                <div class="metric-card average">
+                    <div class="metric-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="metric-content">
+                        <span class="metric-value">@avgDailyRevenue.ToString("C", new CultureInfo("en-MY"))</span>
+                        <span class="metric-label">Avg Daily Revenue</span>
+                    </div>
+                </div>
+                
+                <div class="metric-card period">
+                    <div class="metric-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="metric-content">
+                        <span class="metric-value">@Model.Count()</span>
+                        <span class="metric-label">Days Tracked</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="sales-content">
+        <div class="sales-timeline">
             @foreach (var day in Model)
             {
-                <div class="day-section mb-4">
-                    <div class="day-header glowing d-flex justify-content-between align-items-center p-3 rounded darknest">
-                        <h4 class="m-0">@(((DateTime)day.Date).ToString("MMMM dd, yyyy"))</h4>
-                        <h5 class="m-0 text-success">@day.Total.ToString("C", new CultureInfo("en-MY"))</h5>
+                <div class="day-card">
+                    <div class="day-card-header">
+                        <div class="date-section">
+                            <div class="date-primary">@(((DateTime)day.Date).ToString("dd"))</div>
+                            <div class="date-secondary">
+                                <span class="month">@(((DateTime)day.Date).ToString("MMM"))</span>
+                                <span class="year">@(((DateTime)day.Date).ToString("yyyy"))</span>
+                            </div>
+                        </div>
+                        <div class="daily-summary">
+                            <div class="daily-total">@day.Total.ToString("C", new CultureInfo("en-MY"))</div>
+                            @{
+                                var items = (IEnumerable<dynamic>)day.Items;
+                                var dailyItemsSold = items.Sum(i => (int)i.Quantity);
+                            }
+                            <div class="daily-items">@dailyItemsSold items sold</div>
+                        </div>
                     </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered glowing">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Product</th>
-                                    <th class="text-center">Quantity</th>
-                                    <th class="text-end">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in day.Items)
-                                {
-                                    <tr>
-                                        <td>@item.Product</td>
-                                        <td class="text-center">@item.Quantity</td>
-                                        <td class="text-end">@item.Amount.ToString("C", new CultureInfo("en-MY"))</td>
-                                    </tr>
-                                }
-                                <tr class="table-secondary">
-                                    <td colspan="2" class="text-end fw-bold">Daily Total:</td>
-                                    <td class="text-end fw-bold">@day.Total.ToString("C", new CultureInfo("en-MY"))</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    
+                    <div class="day-card-body">
+                        <div class="products-grid">
+                            @foreach (var item in day.Items)
+                            {
+                                <div class="product-item">
+                                    <div class="product-info">
+                                        <span class="product-name">@item.Product</span>
+                                        <span class="product-quantity">×@item.Quantity</span>
+                                    </div>
+                                    <div class="product-amount">@item.Amount.ToString("C", new CultureInfo("en-MY"))</div>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
             }
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <a asp-action="SalesReport" class="btn btn-primary">
-                <i class="bi bi-download"></i> Download Sales Report (PDF)
+        <div class="sales-actions">
+            <a asp-action="SalesReport" class="btn btn-primary action-btn">
+                <i class="fas fa-download"></i> Download PDF Report
             </a>
+            <button class="btn btn-info action-btn" onclick="window.print()">
+                <i class="fas fa-print"></i> Print Summary
+            </button>
         </div>
     }
     else
     {
-        <div class="alert">
-            <i class="bi bi-info-circle me-2"></i>
-            No sales data available for the selected period.
+        <div class="no-data-message theme-aware">
+            <div class="no-data-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h3>No Sales Data Available</h3>
+            <p>There are no sales records for the selected period. Sales data will appear here once orders are processed.</p>
         </div>
     }
 </div>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
-
-<style>
-    .sales-summary-container {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
-    .day-section {
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    .day-header {
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    .summary-cards .card {
-        transition: transform 0.2s;
-    }
-
-    .summary-cards .card:hover {
-        transform: translateY(-5px);
-    }
-
-    .table-responsive {
-        margin: 0;
-    }
-
-    .table {
-        margin-bottom: 0;
-    }
-
-    .table th {
-        background-color: #f8f9fa;
-    }
-
-    .sales-content{
-        border-radius: 8px;
-    }
-</style>
-
-<style type="text/css">
-    @@media screen and (max-width: 768px) {
-        .day-header {
-            flex-direction: column;
-            text-align: center;
-            gap: 0.5rem;
-        }
-    }
-</style>

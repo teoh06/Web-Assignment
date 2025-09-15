@@ -2,34 +2,247 @@
 @{
     ViewBag.Title = "Order Detail";
 }
-<div class="container py-4">
-    <h2>Order Detail - #@Model.OrderId</h2>
-    <div class="mb-3"><b>Date:</b> @Model.OrderDate.ToString("yyyy-MM-dd HH:mm")</div>
-    <div class="mb-3"><b>Member:</b> @Model.MemberEmail</div>
-    <div class="mb-3"><b>Status:</b> @Model.Status</div>
-    <div class="mb-3"><b>Delivery Address:</b> @Model.DeliveryAddress</div>
-    <div class="mb-3"><b>Delivery Option:</b> @Model.DeliveryOption</div>
-    <h4>Items</h4>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Menu Item</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var item in Model.OrderItems)
-        {
-            <tr>
-                <td>@item.MenuItem.Name</td>
-                <td>@item.Quantity</td>
-                <td>@item.UnitPrice.ToString("C", new System.Globalization.CultureInfo("en-MY"))</td>
-                <td>@((item.UnitPrice * item.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY")))</td>
-            </tr>
-        }
-        </tbody>
-    </table>
-    <a asp-action="Orders" class="btn btn-secondary">Back to Orders</a>
+
+@Html.AntiForgeryToken()
+
+<div class="order-detail-page">
+    <div class="order-detail-header">
+        <div class="header-content">
+            <div class="order-title-section">
+                <h1 class="order-title">
+                    <i class="fas fa-receipt"></i> Order #@Model.OrderId
+                </h1>
+                <div class="order-status-badge">
+                    <span class="status-badge status-@Model.Status.Replace(" ", "-").ToLower()">
+                        @Model.Status
+                    </span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-warning" onclick="openStatusModal()">
+                    <i class="fas fa-edit"></i> Update Status
+                </button>
+                <a asp-action="Orders" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Orders
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="order-detail-content">
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Order Information Card -->
+                <div class="detail-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-info-circle"></i> Order Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label"><i class="fas fa-calendar"></i> Order Date</span>
+                                <span class="info-value">@Model.OrderDate.ToString("MMMM dd, yyyy")</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label"><i class="fas fa-clock"></i> Order Time</span>
+                                <span class="info-value">@Model.OrderDate.ToString("HH:mm")</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label"><i class="fas fa-user"></i> Customer</span>
+                                <span class="info-value">@Model.MemberEmail</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label"><i class="fas fa-credit-card"></i> Payment Method</span>
+                                <span class="info-value">@(Model.PaymentMethod ?? "Not specified")</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label"><i class="fas fa-truck"></i> Delivery Option</span>
+                                <span class="info-value">@(Model.DeliveryOption ?? "Standard")</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <span class="info-label"><i class="fas fa-map-marker-alt"></i> Delivery Address</span>
+                                <span class="info-value">@(Model.DeliveryAddress ?? "Not specified")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items Card -->
+                <div class="detail-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-shopping-bag"></i> Order Items</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="items-table-container">
+                            @foreach (var item in Model.OrderItems)
+                            {
+                                <div class="item-row">
+                                    <div class="item-info">
+                                        <div class="item-name">@item.MenuItem.Name</div>
+                                        <div class="item-details">
+                                            <span class="quantity">Qty: @item.Quantity</span>
+                                            <span class="unit-price">@item.UnitPrice.ToString("C", new System.Globalization.CultureInfo("en-MY")) each</span>
+                                        </div>
+                                    </div>
+                                    <div class="item-total">
+                                        @((item.UnitPrice * item.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY")))
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Order Summary Card -->
+                <div class="detail-card summary-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-calculator"></i> Order Summary</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="summary-items">
+                            <div class="summary-row">
+                                <span class="summary-label">Items Count</span>
+                                <span class="summary-value">@Model.OrderItems.Sum(i => i.Quantity)</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label">Subtotal</span>
+                                <span class="summary-value">@Model.OrderItems.Sum(i => i.UnitPrice * i.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY"))</span>
+                            </div>
+                            <div class="summary-row total-row">
+                                <span class="summary-label">Total Amount</span>
+                                <span class="summary-value total-amount">@Model.OrderItems.Sum(i => i.UnitPrice * i.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY"))</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Card -->
+                <div class="detail-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions">
+                            <button class="btn btn-success btn-block" onclick="updateStatus('Delivered')">
+                                <i class="fas fa-check"></i> Mark as Delivered
+                            </button>
+                            <button class="btn btn-warning btn-block" onclick="updateStatus('Preparing')">
+                                <i class="fas fa-utensils"></i> Mark as Preparing
+                            </button>
+                            <button class="btn btn-info btn-block" onclick="updateStatus('Ready for Pickup')">
+                                <i class="fas fa-box"></i> Ready for Pickup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Order Status</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="statusSelect">Select New Status:</label>
+                        <select id="statusSelect" class="form-select">
+                            @{
+                                var statuses = new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered", "Refunded", "Declined" };
+                            }
+                            @foreach (var status in statuses)
+                            {
+                                if (Model.Status == status)
+                                {
+                                    <option value="@status" selected>@status</option>
+                                }
+                                else
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmStatusUpdate()">Update Status</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openStatusModal() {
+    $('#statusModal').modal('show');
+}
+
+function updateStatus(status) {
+    $('#statusSelect').val(status);
+    confirmStatusUpdate();
+}
+
+function confirmStatusUpdate() {
+    const newStatus = $('#statusSelect').val();
+    const orderId = @Model.OrderId;
+    
+    // Add CSRF token for security
+    var token = $('input[name="__RequestVerificationToken"]').val();
+    
+    $.ajax({
+        url: '/Admin/UpdateOrderStatusAjax',
+        type: 'POST',
+        data: { 
+            orderId: orderId, 
+            status: newStatus,
+            __RequestVerificationToken: token
+        },
+        success: function(response) {
+            if (response.success) {
+                // Update the status badge in the UI
+                $('.status-badge').removeClass().addClass('status-badge status-' + newStatus.replace(' ', '-').toLowerCase());
+                $('.status-badge').text(newStatus);
+                
+                // Show success notification
+                showNotification('Order status updated successfully!', 'success');
+            } else {
+                showNotification('Error: ' + response.message, 'error');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', error);
+            showNotification('Error updating order status. Please try again.', 'error');
+        }
+    });
+    
+    $('#statusModal').modal('hide');
+}
+
+function showNotification(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+    const notification = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show notification-alert" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            <i class="${icon}"></i> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `);
+    
+    $('body').append(notification);
+    
+    setTimeout(() => {
+        notification.alert('close');
+    }, 5000);
+}
+</script>

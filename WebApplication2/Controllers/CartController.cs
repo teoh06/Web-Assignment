@@ -367,6 +367,10 @@ namespace WebApplication2.Controllers
                     PaymentMethod = vm.PaymentMethod,
                     DeliveryAddress = vm.DeliveryOption == "Pickup" ? string.Empty : vm.DeliveryAddress,
                     DeliveryOption = vm.DeliveryOption,
+                    DeliveryInstructions = vm.DeliveryInstructions,
+                    CardNumber = vm.PaymentMethod == "Card" && !string.IsNullOrEmpty(vm.CardNumber)
+                        ? vm.CardNumber.Substring(Math.Max(0, vm.CardNumber.Length - 4))
+                        : null,
                     OrderHash = cartHash
                 };
                 _db.Orders.Add(order);
@@ -568,12 +572,12 @@ namespace WebApplication2.Controllers
 
             // Get member information to ensure we have the correct phone number
             var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
-            
+
             string paymentMethod = order.PaymentMethod ?? TempData["LastPaymentMethod"] as string ?? "-";
-            string phoneNumber = TempData["LastPhoneNumber"] as string ?? member?.PhoneNumber;
-            string deliveryInstructions = TempData["LastDeliveryInstructions"] as string;
-            string cardNumber = TempData["LastCardNumber"] as string;
-            string deliveryOption = TempData["LastDeliveryOption"] as string;
+            string phoneNumber = order.MemberPhone ?? TempData["LastPhoneNumber"] as string ?? member?.PhoneNumber;
+            string deliveryInstructions = order.DeliveryInstructions ?? TempData["LastDeliveryInstructions"] as string;
+            string cardNumber = order.CardNumber ?? TempData["LastCardNumber"] as string;
+            string deliveryOption = order.DeliveryOption ?? TempData["LastDeliveryOption"] as string;
             string deliveryAddress = order.DeliveryAddress ?? TempData["LastDeliveryAddress"] as string;
 
             var receiptItems = order.OrderItems.Select(oi => new CartItemVM

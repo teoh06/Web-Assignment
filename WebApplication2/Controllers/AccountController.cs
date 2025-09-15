@@ -1,15 +1,16 @@
-﻿using WebApplication2.Models;
-using WebApplication2.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System; // Make sure this is included for Guid and DateTime
 using System.Diagnostics;
 using System.Linq; // Make sure this is included for Any and Where
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Net.Mail;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using WebApplication2.Models;
+using WebApplication2.Services;
 
 namespace WebApplication2.Controllers;
 
@@ -522,7 +523,7 @@ public class AccountController : Controller
                     <p style='font-size: 16px; color: #333; margin-bottom: 25px;'>A password reset was requested for your account. Please use the temporary password below to log in. For security, change your password after logging in.</p>
                     <div style='background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px dashed #6c757d; padding: 25px; text-align: center; margin: 25px 0; border-radius: 8px;'>
                         <p style='margin: 0 0 10px 0; font-size: 14px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;'>Temporary Password</p>
-                        <div style='font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #495057; font-family: monospace;'>
+                        <div style='font-size: 32px, font-weight: bold, letter-spacing: 4px; color: #495057; font-family: monospace;'>
                             {password}
                         </div>
                     </div>
@@ -856,6 +857,23 @@ public class AccountController : Controller
             user.DeletionToken = Guid.NewGuid().ToString("n");
             db.SaveChanges();
 
+            string subject = "Account Pending Deletion";
+            string body = $@"
+            <div style='font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 8px #0001;'>
+                <div style='background:linear-gradient(90deg,#E53E3E 60%,#F56565 100%);color:#fff;padding:28px 20px;border-radius:12px 12px 0 0;text-align:center;'>
+                    <h2 style='margin:0;font-size:22px;'>Account Pending Deletion</h2>
+                </div>
+                <div style='padding:24px 20px;'>
+                    <p style='font-size:16px;color:#333;'>Hello <b>{user.Name}</b>,</p>
+                    <p style='font-size:16px;color:#333;'>Your account has been <b>marked for deletion</b> by admin. If this was not intended, please contact support or your admin immediately.</p>
+                    <div style='background:#FFF5F5;border-left:4px solid #E53E3E;padding:16px 18px;margin:18px 0;border-radius:8px;'>
+                        <span style='color:#E53E3E;font-weight:600;'>Your account will be permanently deleted unless restored.</span>
+                    </div>
+                    <p style='font-size:14px;color:#888;margin-top:24px;'>If you have questions, please contact our support team.</p>
+                </div>
+            </div>";
+            _emailService.SendEmailAsync(user.Email, subject, body);
+
             TempData["Info"] = "User marked for deletion.";
         }
         return RedirectToAction("", "Admin");
@@ -872,6 +890,23 @@ public class AccountController : Controller
             user.DeletionToken = null;
             db.SaveChanges();
 
+            string subject = "Account Restored";
+            string body = $@"
+            <div style='font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 8px #0001;'>
+                <div style='background:linear-gradient(90deg,#38A169 60%,#48BB78 100%);color:#fff;padding:28px 20px;border-radius:12px 12px 0 0;text-align:center;'>
+                    <h2 style='margin:0;font-size:22px;'>Account Restored</h2>
+                </div>
+                <div style='padding:24px 20px;'>
+                    <p style='font-size:16px;color:#333;'>Hello <b>{user.Name}</b>,</p>
+                    <p style='font-size:16px;color:#333;'>Your account has been <b>successfully restored</b>. You can now continue using all services as usual.</p>
+                    <div style='background:#F0FFF4;border-left:4px solid #38A169;padding:16px 18px;margin:18px 0;border-radius:8px;'>
+                        <span style='color:#38A169;font-weight:600;'>If you did not request this, please contact support immediately.</span>
+                    </div>
+                    <p style='font-size:14px;color:#888;margin-top:24px;'>If you have questions, please contact our support team.</p>
+                </div>
+            </div>";
+            _emailService.SendEmailAsync(user.Email, subject, body);
+
             TempData["Info"] = "User restored.";
         }
         return RedirectToAction("", "Admin");
@@ -884,7 +919,6 @@ public class AccountController : Controller
         try
         {
             var addressService = HttpContext.RequestServices.GetService<Services.IAddressService>();
-
             if (addressService == null)
             {
                 return Json(new

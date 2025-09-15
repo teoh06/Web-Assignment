@@ -1,28 +1,436 @@
 @model WebApplication2.Models.Order
 @{
     ViewBag.Title = "Update Order Status";
+    var totalAmount = Model.OrderItems.Sum(i => i.UnitPrice * i.Quantity);
 }
-<div class="container py-4">
-    <h2>Update Status for Order #@Model.OrderId</h2>
-    <form asp-action="UpdateOrderStatus" method="post">
-        <input type="hidden" asp-for="OrderId" />
-        <div class="mb-3">
-            <label for="Status" class="form-label">Status</label>
-            <select asp-for="Status" class="form-select">
-                <option value="Pending">Pending</option>
-                <option value="Paid">Paid</option>
-                <option value="Preparing">Preparing</option>
-                <option value="Ready for Pickup">Ready for Pickup</option>
-                <option value="Delivered">Delivered</option>
-                <option value="Refunded">Refunded</option>
-                <option value="Declined">Declined</option>
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Update Status</button>
-        <a asp-action="Orders" class="btn btn-secondary ms-2">Back to Orders</a>
-    </form>
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success mt-3">@TempData["Success"]</div>
+
+<style>
+    .order-update-page {
+        background: var(--background-primary);
+        min-height: calc(100vh - 200px);
     }
+
+    .page-header {
+        background: var(--primary-brand);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+
+    .order-card {
+        background: var(--background-secondary);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .order-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+
+    .card-header {
+        background: var(--primary-brand);
+        color: white;
+        padding: 1.5rem;
+        border-bottom: none;
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background: var(--background-hover);
+        border-radius: 12px;
+        border-left: 4px solid var(--primary-brand);
+    }
+
+    .info-icon {
+        font-size: 1.5rem;
+        color: var(--primary-brand);
+        margin-right: 1rem;
+        width: 40px;
+        text-align: center;
+    }
+
+    .info-content {
+        flex: 1;
+    }
+
+    .info-label {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+    }
+
+    .info-value {
+        display: block;
+        font-size: 1rem;
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-pending { background: #856404; }
+    .status-paid { background:  #0c5460; }
+    .status-preparing { background: #721c24; }
+    .status-ready-for-pickup { background: #155724; }
+    .status-out-for-delivery { background: #004085; }
+    .status-delivered { background: #155724; }
+    .status-refunded { background:  #383d41; }
+    .status-declined { background: #721c24; }
+
+    .order-items-section {
+        margin-top: 2rem;
+    }
+
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        background: var(--background-secondary);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    .items-table th {
+        background: var(--primary-brand);
+        color: white;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .items-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .items-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .items-table tr:nth-child(even) {
+        background: var(--background-hover);
+    }
+
+    .total-section {
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin: 2rem 0;
+        text-align: center;
+    }
+
+    .total-amount {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-top: 0.5rem;
+    }
+
+    .status-update-form {
+        background: var(--background-secondary);
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color);
+    }
+
+    .form-section-title {
+        color: var(--primary-brand);
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-section-title i {
+        margin-right: 0.5rem;
+    }
+
+    .status-select {
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: silver;
+    }
+
+    .status-select:focus {
+        border-color: var(--primary-brand);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-update {
+        background: var(--background-primary);
+        border: 2px solid var(--primary-brand);
+        color: var(--text-primary);
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-update:hover {
+        transform: translateY(-2px);
+        color: darkorange;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-back {
+        background: var(--background-hover);
+        border: 2px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-back:hover {
+        background: var(--primary-brand);
+        color: darkorange;
+        border-color: var(--primary-brand);
+        text-decoration: none;
+    }
+
+    @@media (max-width: 768px) {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .items-table {
+            font-size: 0.875rem;
+        }
+        
+        .items-table th,
+        .items-table td {
+            padding: 0.75rem 0.5rem;
+        }
+    }
+</style>
+
+<div class="order-update-page">
+    <div class="container py-4">
+        <!-- Page Header -->
+        <div class="page-header text-center">
+            <h1><i class="fas fa-edit"></i> Update Order Status</h1>
+            <p class="mb-0">Manage and update the status of Order #@Model.OrderId</p>
+        </div>
+
+        <!-- Order Details Card -->
+        <div class="order-card">
+            <div class="card-header">
+                <h3 class="mb-0"><i class="fas fa-receipt"></i> Order #@Model.OrderId Details</h3>
+            </div>
+            <div class="card-body">
+                <!-- Order Information Grid -->
+                <div class="info-grid">
+                    <div class="info-item">
+                        <i class="fas fa-user info-icon"></i>
+                        <div class="info-content">
+                            <span class="info-label">Customer Email</span>
+                            <span class="info-value">@Model.MemberEmail</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <i class="fas fa-calendar-alt info-icon"></i>
+                        <div class="info-content">
+                            <span class="info-label">Order Date</span>
+                            <span class="info-value">@Model.OrderDate.ToString("MMMM dd, yyyy")</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <i class="fas fa-clock info-icon"></i>
+                        <div class="info-content">
+                            <span class="info-label">Order Time</span>
+                            <span class="info-value">@Model.OrderDate.ToString("hh:mm tt")</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <i class="fas fa-info-circle info-icon"></i>
+                        <div class="info-content">
+                            <span class="info-label">Current Status</span>
+                            <span class="status-badge status-@Model.Status.Replace(" ", "-").ToLower()">
+                                @Model.Status
+                            </span>
+                        </div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(Model.PaymentMethod))
+                    {
+                        <div class="info-item">
+                            <i class="fas fa-credit-card info-icon"></i>
+                            <div class="info-content">
+                                <span class="info-label">Payment Method</span>
+                                <span class="info-value">@Model.PaymentMethod</span>
+                            </div>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(Model.DeliveryOption))
+                    {
+                        <div class="info-item">
+                            <i class="fas fa-truck info-icon"></i>
+                            <div class="info-content">
+                                <span class="info-label">Delivery Option</span>
+                                <span class="info-value">@Model.DeliveryOption</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.DeliveryAddress))
+                {
+                    <div class="info-item">
+                        <i class="fas fa-map-marker-alt info-icon"></i>
+                        <div class="info-content">
+                            <span class="info-label">Delivery Address</span>
+                            <span class="info-value">@Model.DeliveryAddress</span>
+                        </div>
+                    </div>
+                }
+
+                <!-- Order Items Section -->
+                <div class="order-items-section">
+                    <h4><i class="fas fa-shopping-bag"></i> Order Items</h4>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.OrderItems)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@item.MenuItem.Name</strong>
+                                        @if (!string.IsNullOrEmpty(item.MenuItem.Category?.Name))
+                                        {
+                                            <br><small class="text-muted">@item.MenuItem.Category.Name</small>
+                                        }
+                                    </td>
+                                    <td>@item.Quantity</td>
+                                    <td>@item.UnitPrice.ToString("C", new System.Globalization.CultureInfo("en-MY"))</td>
+                                    <td><strong>@((item.UnitPrice * item.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY")))</strong></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Total Section -->
+                <div class="total-section">
+                    <div>
+                        <i class="fas fa-calculator"></i>
+                        <strong>Order Total</strong>
+                    </div>
+                    <div class="total-amount">@totalAmount.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Update Form -->
+        <div class="status-update-form">
+            <h3 class="form-section-title">
+                <i class="fas fa-edit"></i>
+                Update Order Status
+            </h3>
+            
+            <form asp-action="UpdateOrderStatus" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="OrderId" />
+                
+                <div class="mb-4">
+                    <label for="Status" class="form-label">
+                        <i class="fas fa-flag"></i> Select New Status
+                    </label>
+                    <select asp-for="Status" class="form-select status-select">
+                        <option value="Pending">🕐 Pending</option>
+                        <option value="Paid">💳 Paid</option>
+                        <option value="Preparing">👨‍🍳 Preparing</option>
+                        <option value="Ready for Pickup">✅ Ready for Pickup</option>
+                        <option value="Delivered">📦 Delivered</option>
+                        <option value="Refunded">💰 Refunded</option>
+                        <option value="Declined">⛔ Declined</option>
+                    </select>
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="submit" class="btn-update">
+                        <i class="fas fa-save"></i>
+                        Update Status
+                    </button>
+                    <a asp-action="Orders" class="btn-back">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Orders
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Success Message -->
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success mt-4 d-flex align-items-center" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                @TempData["Success"]
+            </div>
+        }
+    </div>
 </div>
