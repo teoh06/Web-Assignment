@@ -620,25 +620,38 @@
             grid.innerHTML = items.map(item => `
                 <div class="menu-item-card${selectedItems.has(item.menuItemId.toString()) ? ' selected' : ''}">
                     ${isAdmin ? `
-                        <div class="item-select">
-                            <input type="checkbox" class="item-checkbox"
-                                data-item-id="${item.menuItemId}"
-                                data-item-name="${item.name}"
-                                ${selectedItems.has(item.menuItemId.toString()) ? 'checked' : ''} />
+                        <div class="item-image">
+                            <label class="admin-select-checkbox">
+                                <input type="checkbox" class="item-checkbox"
+                                    data-item-id="${item.menuItemId}"
+                                    data-item-name="${item.name}"
+                                    ${selectedItems.has(item.menuItemId.toString()) ? 'checked' : ''} />
+                                <span class="custom-checkbox"></span>
+                            </label>
+                            <a href="/MenuItem/Details/${item.menuItemId}">
+                                <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
+                            </a>
+                            <div class="item-badges">
+                                <span class="item-price">${item.price}</span>
+                                <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
+                            </div>
+                            ${!item.isActive ? '<span class="status-badge inactive-badge">Inactive</span>' : ''}
+                            ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
+                            ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
                         </div>
-                    ` : ''}
-                    <div class="item-image">
-                        <a href="/MenuItem/Details/${item.menuItemId}">
-                            <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
-                        </a>
-                        <div class="item-badges">
-                            <span class="item-price">${item.price}</span>
-                            <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
+                    ` : `
+                        <div class="item-image">
+                            <a href="/MenuItem/Details/${item.menuItemId}">
+                                <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
+                            </a>
+                            <div class="item-badges">
+                                <span class="item-price">${item.price}</span>
+                                <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
+                            </div>
+                            ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
+                            ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
                         </div>
-                        ${isAdmin && !item.isActive ? '<span class="status-badge inactive-badge">Inactive</span>' : ''}
-                        ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
-                        ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
-                    </div>
+                    `}
                     <div class="item-info">
                         <h3 class="item-name">${item.name}</h3>
                         <p class="item-category">${item.categoryName}</p>
