@@ -1,11 +1,22 @@
-﻿@{
+@{
     ViewData["Title"] = "Admin Dashboard";
 }
-<p>Welcome, @User.Identity.Name!</p>
-<div class="mb-4">
-    <button class="btn btn-primary" onclick="showSection('users')">Manage Users</button>
-    <button class="btn btn-success ms-3" onclick="showSection('sales')">Sales Summary</button>
-</div>
+
+<div class="admin-dashboard">
+    <div class="dashboard-header">
+        <div class="welcome-section">
+            <h1 class="dashboard-title"><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+            <p class="welcome-text">Welcome back, <strong>@User.Identity.Name</strong>!</p>
+        </div>
+        <div class="dashboard-actions">
+            <button class="btn btn-primary dashboard-btn" onclick="showSection('users')">
+                <i class="fas fa-users"></i> Manage Users
+            </button>
+            <button class="btn btn-info dashboard-btn" onclick="showSection('sales')">
+                <i class="fas fa-chart-line"></i> Sales Summary
+            </button>
+        </div>
+    </div>
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card p-3 mb-3 chart-card-flex glowing">
@@ -26,15 +37,32 @@
         </div>
     </div>
 </div>
-<div id="section-users" class="admin-section" style="display:none;"></div>
-<div id="section-sales" class="admin-section" style="display:none;"></div>
+    <div id="section-users" class="admin-section" style="display:none;"></div>
+    <div id="section-orders" class="admin-section" style="display:none;"></div>
+    <div id="section-sales" class="admin-section" style="display:none;"></div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 function showSection(section) {
-    document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
-    document.getElementById('section-' + section).style.display = 'block';
+    // Update active button
+    document.querySelectorAll('.dashboard-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Hide all sections
+    document.querySelectorAll('.admin-section').forEach(s => {
+        s.style.display = 'none';
+        s.classList.remove('section-active');
+    });
+    
+    // Show selected section with animation
+    const targetSection = document.getElementById('section-' + section);
+    targetSection.style.display = 'block';
+    setTimeout(() => targetSection.classList.add('section-active'), 10);
+    
+    // Load section content
     if (section === 'users') loadSection('/Admin/ManageUsers', 'section-users');
+    if (section === 'orders') loadSection('/Admin/ManageOrdersPartial', 'section-orders');
     if (section === 'sales') loadSection('/Admin/SalesSummary', 'section-sales');
 }
 function loadSection(url, target) {
@@ -43,7 +71,9 @@ function loadSection(url, target) {
         .then(html => { document.getElementById(target).innerHTML = html; });
 }
 // Show sales by default
-showSection('sales');
+setTimeout(() => {
+    document.querySelector('[onclick="showSection(\'sales\')"]').click();
+}, 100);
 const salesColors = [
     '#FF6B35', '#F7931E', '#4CAF50', '#E53E3E', '#4299E1', '#ED8936', '#48BB78', '#A0AEC0'
 ];

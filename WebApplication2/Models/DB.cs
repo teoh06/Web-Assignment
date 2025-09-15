@@ -180,7 +180,13 @@ public class Order
     public string MemberName { get; set; } // Store member name at time of order
     [MaxLength(15)]
     public string MemberPhone { get; set; } // Store member phone at time of order
-    
+
+    // --- Store delivery instructions and card number for receipt display ---
+    [MaxLength(500)]
+    public string? DeliveryInstructions { get; set; } // Store delivery instructions
+    [MaxLength(16)]
+    public string? CardNumber { get; set; } // Store last 4 digits of card number
+
     // --- Anti-duplicate order protection ---
     [MaxLength(64)]
     public string? OrderHash { get; set; } // Hash of cart contents for duplicate detection

@@ -3,47 +3,176 @@
     ViewBag.Title = "Order Maintenance";
     var selectedStatus = Context.Request.Query["status"].ToString();
 }
-<div class="container py-4">
-    <h2>Order Listing & Maintenance</h2>
-    <form method="get" class="mb-3">
-        <label for="statusFilter">Filter by Status:</label>
-        <select name="status" id="statusFilter" onchange="this.form.submit()" class="form-select w-auto d-inline-block ms-2">
-            <option value="" selected="@(string.IsNullOrEmpty(selectedStatus))">All</option>
-            <option value="Pending" selected="@(selectedStatus == "Pending")">Pending</option>
-            <option value="Preparing" selected="@(selectedStatus == "Preparing")">Preparing</option>
-            <option value="Ready for Pickup" selected="@(selectedStatus == "Ready for Pickup")">Ready for Pickup</option>
-            <option value="Out for Delivery" selected="@(selectedStatus == "Out for Delivery")">Out for Delivery</option>
-            <option value="Delivered" selected="@(selectedStatus == "Delivered")">Delivered</option>
-            <option value="Cancelled" selected="@(selectedStatus == "Cancelled")">Cancelled</option>
-            <option value="Refunded" selected="@(selectedStatus == "Refunded")">Refunded</option>
-        </select>
-    </form>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Order #</th>
-                <th>Date</th>
-                <th>Member</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var order in Model)
+
+@Html.AntiForgeryToken()
+
+<div class="admin-orders-page">
+    <div class="orders-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="fas fa-clipboard-list"></i> Order Management</h1>
+            <p class="page-subtitle">Manage and track all customer orders</p>
+        </div>
+        
+        <div class="orders-stats">
+            <div class="stat-card pending">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-info">
+                    <span class="stat-number">@Model.Count(o => o.Status == "Pending")</span>
+                    <span class="stat-label">Pending</span>
+                </div>
+            </div>
+            <div class="stat-card preparing">
+                <div class="stat-icon"><i class="fas fa-utensils"></i></div>
+                <div class="stat-info">
+                    <span class="stat-number">@Model.Count(o => o.Status == "Preparing")</span>
+                    <span class="stat-label">Preparing</span>
+                </div>
+            </div>
+            <div class="stat-card ready">
+                <div class="stat-icon"><i class="fas fa-check"></i></div>
+                <div class="stat-info">
+                    <span class="stat-number">@Model.Count(o => o.Status == "Ready for Pickup")</span>
+                    <span class="stat-label">Ready</span>
+                </div>
+            </div>
+            <div class="stat-card delivered">
+                <div class="stat-icon"><i class="fas fa-truck"></i></div>
+                <div class="stat-info">
+                    <span class="stat-number">@Model.Count(o => o.Status == "Delivered")</span>
+                    <span class="stat-label">Delivered</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="orders-controls">
+        <div class="filter-section">
+            <form method="get" class="filter-form">
+                <div class="form-group">
+                    <label for="statusFilter"><i class="fas fa-filter"></i> Filter by Status:</label>
+                    <select name="status" id="statusFilter" onchange="this.form.submit()" class="form-select">
+                        @if (string.IsNullOrEmpty(selectedStatus))
+                        {
+                            <option value="" selected>All Orders</option>
+                        }
+                        else
+                        {
+                            <option value="">All Orders</option>
+                        }
+                        @{
+                            var statuses = new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered", "Refunded", "Declined" };
+                        }
+                        @foreach (var status in statuses)
+                        {
+                            if (selectedStatus == status)
+                            {
+                                <option value="@status" selected>@status</option>
+                            }
+                            else
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </form>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-info" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <a href="/Admin" class="btn btn-secondary in-the-middle">
+                <i class="fas fa-arrow-left"></i>  Back to Dashboard
+            </a>
+        </div>
+    </div>
+    <div class="orders-table-container">
+        @if (Model.Any())
         {
-            <tr>
-                <td>@order.OrderId</td>
-                <td>@order.OrderDate.ToString("yyyy-MM-dd HH:mm")</td>
-                <td>@order.MemberEmail</td>
-                <td>@order.Status</td>
-                <td>@order.OrderItems.Sum(i => i.UnitPrice * i.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY"))</td>
-                <td>
-                    <a asp-action="OrderDetail" asp-route-id="@order.OrderId" class="btn btn-sm btn-info">Detail</a>
-                    <a asp-action="UpdateOrderStatus" asp-route-id="@order.OrderId" class="btn btn-sm btn-warning">Update Status</a>
-                </td>
-            </tr>
+            <div class="orders-grid">
+                @foreach (var order in Model)
+                {
+                    <div class="order-card enhanced" data-order-id="@order.OrderId">
+                        <div class="order-card-header">
+                            <div class="order-number">
+                                <span class="order-label">Order</span>
+                                <span class="order-id">#@order.OrderId</span>
+                            </div>
+                            <div class="order-status-container">
+                                <span class="order-status status-@order.Status.Replace(" ", "-").ToLower()">
+                                    @order.Status
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="order-card-body">
+                            <div class="order-info-grid">
+                                <div class="info-item">
+                                    <i class="fas fa-user"></i>
+                                    <div class="info-content">
+                                        <span class="info-label">Customer</span>
+                                        <span class="info-value">@order.MemberEmail</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <div class="info-content">
+                                        <span class="info-label">Date</span>
+                                        <span class="info-value">@order.OrderDate.ToString("MMM dd, yyyy")</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <i class="fas fa-clock"></i>
+                                    <div class="info-content">
+                                        <span class="info-label">Time</span>
+                                        <span class="info-value">@order.OrderDate.ToString("HH:mm")</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <i class="fas fa-dollar-sign"></i>
+                                    <div class="info-content">
+                                        <span class="info-label">Total</span>
+                                        <span class="info-value total-amount">@order.OrderItems.Sum(i => i.UnitPrice * i.Quantity).ToString("C", new System.Globalization.CultureInfo("en-MY"))</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="order-items-preview">
+                                <span class="items-label">Items:</span>
+                                <span class="items-count">@order.OrderItems.Sum(i => i.Quantity) items</span>
+                            </div>
+                        </div>
+                        
+                        <div class="order-card-footer">
+                            <div class="order-actions">
+                                <a asp-action="OrderDetail" asp-route-id="@order.OrderId" class="btn btn-info btn-sm action-btn">
+                                    <i class="fas fa-eye"></i> Details
+                                </a>
+                                <a asp-action="UpdateOrderStatus" asp-route-id="@order.OrderId" class="btn btn-warning btn-sm action-btn">
+                                    <i class="fas fa-edit"></i> Update Status
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
         }
-        </tbody>
-    </table>
+        else
+        {
+            <div class="no-orders-message">
+                <i class="fas fa-inbox"></i>
+                <h3>No Orders Found</h3>
+                <p>@(string.IsNullOrEmpty(selectedStatus) ? "There are no orders to display." : $"No orders found with status '{selectedStatus}'.")</p>
+                @if (!string.IsNullOrEmpty(selectedStatus))
+                {
+                    <a href="/Admin/Orders" class="btn btn-primary">View All Orders</a>
+                }
+            </div>
+        }
+    </div>
 </div>
+

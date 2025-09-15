@@ -1,21 +1,23 @@
-using System.IO;
-using System.Text;
-using Microsoft.AspNetCore.Http;
-using System.Linq;
-using System.Globalization;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using System;
-using WebApplication2.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using WebApplication2.Models;
+using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using QuestPDF.Previewer;
 using System.Net.Mail;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net.Mail;
+using System.Text;
+using System.Threading.Tasks;
+using WebApplication2.Models;
+using WebApplication2.Models;
+using WebApplication2.Services;
 
 namespace WebApplication2.Controllers;
 
@@ -24,10 +26,14 @@ public class AdminController : Controller
 {
     private readonly DB _context;
     private readonly Helper hp;
+    private readonly Helper hp;
+    private readonly IEmailService _emailService;
 
-    public AdminController(DB _context)
+    public AdminController(DB _context, Helper hp, IEmailService emailService)
     {
-        this._context = _context ;
+        this._context = _context;
+        this.hp = hp;
+        this._emailService = emailService;
     }
 
     public IActionResult Index() => View();
@@ -231,7 +237,8 @@ public class AdminController : Controller
             })
             .OrderByDescending(x => x.Total)
             .ToList();
-        return Json(new {
+        return Json(new
+        {
             labels = data.Select(x => x.Category).ToArray(),
             values = data.Select(x => (double)x.Total).ToArray()
         });
@@ -242,7 +249,8 @@ public class AdminController : Controller
         var adminCount = _context.Admins.Count();
         var memberCount = _context.Members.Count();
         var total = adminCount + memberCount;
-        return Json(new {
+        return Json(new
+        {
             labels = new[] { "Admins", "Members" },
             values = new[] { adminCount, memberCount }
         });
@@ -260,7 +268,8 @@ public class AdminController : Controller
             .OrderByDescending(x => x.Quantity)
             .Take(8)
             .ToList();
-        return Json(new {
+        return Json(new
+        {
             labels = data.Select(x => x.Name).ToArray(),
             values = data.Select(x => x.Quantity).ToArray()
         });
@@ -287,7 +296,7 @@ public class AdminController : Controller
     // GET: /Admin/UpdateOrderStatus/{id}
     public async Task<IActionResult> UpdateOrderStatus(int id)
     {
-        var order = await _context.Orders.FindAsync(id);
+        var order = await _context.Orders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).ThenInclude(mi => mi.Category).FirstOrDefaultAsync(o => o.OrderId == id);
         if (order == null) return NotFound();
         return View(order);
     }
@@ -297,15 +306,47 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateOrderStatus(Order model)
     {
-        var order = await _context.Orders.FindAsync(model.OrderId);
+        var order = await _context.Orders
+            .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.MenuItem)
+            .FirstOrDefaultAsync(o => o.OrderId == model.OrderId);
         if (order == null) return NotFound();
+
         order.Status = model.Status;
         await _context.SaveChangesAsync();
-        // --- SMS/Message notification stub ---
+
+        // --- Send email to member about status change ---
+        var memberEmail = order.MemberEmail;
+        if (!string.IsNullOrEmpty(memberEmail))
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"<h2>Your Order #{order.OrderId} Status Has Changed</h2>");
+            sb.AppendLine($"<p><b>Order Date:</b> {order.OrderDate:yyyy-MM-dd HH:mm}</p>");
+            sb.AppendLine($"<p><b>New Status:</b> {order.Status}</p>");
+            sb.AppendLine("<h3>Order Details:</h3>");
+            sb.AppendLine("<ul>");
+            foreach (var item in order.OrderItems)
+            {
+                sb.AppendLine($"<li>{item.MenuItem?.Name ?? "Item"} x {item.Quantity} @ RM{item.UnitPrice:F2}</li>");
+            }
+            sb.AppendLine("</ul>");
+            sb.AppendLine($"<p><b>Total:</b> RM{order.OrderItems.Sum(i => i.UnitPrice * i.Quantity):F2}</p>");
+            sb.AppendLine("<p>Thank you for ordering with us!</p>");
+
+            var mail = new MailMessage
+            {
+                Subject = $"Order #{order.OrderId} Status Update: {order.Status}",
+                Body = sb.ToString(),
+                IsBodyHtml = true
+            };
+            mail.To.Add(memberEmail);
+            await _emailService.SendEmailAsync(mail.To[0].Address, mail.Subject, mail.Body);
+        }
+
         TempData["Success"] = $"Order status updated to {model.Status}. (Notification sent to customer)";
         return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
     }
-    
+
     // POST: /Admin/UpdateOrderStatusAjax
     [HttpPost]
     [Authorize(Roles = "Admin")]
@@ -315,25 +356,26 @@ public class AdminController : Controller
         {
             var order = await _context.Orders.FindAsync(orderId);
             if (order == null) return Json(new { success = false, message = "Order not found" });
-            
+
             // Validate status
-            var validStatuses = new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Out for Delivery", "Delivered", "Cancelled", "Refunded" };
+            var validStatuses = new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered", "Refunded" };
             if (string.IsNullOrEmpty(status) || !validStatuses.Contains(status))
             {
                 return Json(new { success = false, message = "Invalid status" });
             }
-            
+
             order.Status = status;
             await _context.SaveChangesAsync();
-            
+
             // Get member email for notification
             var memberEmail = order.MemberEmail ?? string.Empty;
-            
+
             // TODO: Send notification to member (SMS or email)
             // This would be implemented with a real notification service in production
-            
-            return Json(new { 
-                success = true, 
+
+            return Json(new
+            {
+                success = true,
                 message = $"Order status updated to {status}",
                 orderId = orderId,
                 status = status
@@ -344,7 +386,7 @@ public class AdminController : Controller
             return Json(new { success = false, message = $"Error updating order status: {ex.Message}" });
         }
     }
-    
+
     // GET: /Admin/GetOrderDetails
     [HttpGet]
     [Authorize(Roles = "Admin")]
@@ -356,9 +398,9 @@ public class AdminController : Controller
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.MenuItem)
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
-                
+
             if (order == null) return Json(new { success = false, message = "Order not found" });
-            
+
             // Format order details for JSON response
             var orderDetails = new
             {
@@ -378,7 +420,7 @@ public class AdminController : Controller
                 }).ToList(),
                 totalAmount = order.OrderItems.Sum(oi => oi.Quantity * oi.UnitPrice)
             };
-            
+
             return Json(new { success = true, order = orderDetails });
         }
         catch (Exception ex)
@@ -386,7 +428,7 @@ public class AdminController : Controller
             return Json(new { success = false, message = $"Error retrieving order details: {ex.Message}" });
         }
     }
-    
+
     // Example of using OTP for a sensitive admin action
     [HttpPost]
     [Authorize(Roles = "Admin")]
@@ -394,10 +436,11 @@ public class AdminController : Controller
     {
         // Instead of directly deleting, redirect to OTP verification
         string returnUrl = Url.Action("ConfirmDeleteUser", "Admin", new { id });
-        return RedirectToAction("RequestOtp", "Account", new { 
-            email = User.Identity?.Name ?? string.Empty, 
-            action = "delete a user account", 
-            returnUrl 
+        return RedirectToAction("RequestOtp", "Account", new
+        {
+            email = User.Identity?.Name ?? string.Empty,
+            action = "delete a user account",
+            returnUrl
         });
     }
 
@@ -410,11 +453,11 @@ public class AdminController : Controller
         {
             return NotFound();
         }
-        
+
         // Now perform the actual deletion
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
-        
+
         TempData["Success"] = "User deleted successfully.";
         return RedirectToAction("_ManageUsers");
     }
@@ -455,9 +498,16 @@ public class AdminController : Controller
         mail.To.Add(admin.Email);
         hp.SendEmail(mail);
 
+        var mail = new MailMessage
+        {
+            Subject = "You have been Promote to Admin!!!",
+            Body = $"<p>Hello {admin.Name},</p><p>You have been promote to <b>Admin</b> sucessfully.</p>",
+            IsBodyHtml = true
+        };
+        mail.To.Add(admin.Email);
+        await _emailService.SendEmailAsync(mail.To[0].Address, mail.Subject, mail.Body);
+
         TempData["Message"] = $"{admin.Name} already update to Admin";
-        return RedirectToAction("Index", "Admin"); 
+        return RedirectToAction("Index", "Admin");
     }
 }
-
-

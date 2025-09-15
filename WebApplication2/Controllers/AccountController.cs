@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -524,7 +524,7 @@ public class AccountController : Controller
                     <p style='font-size: 16px; color: #333; margin-bottom: 25px;'>A password reset was requested for your account. Please use the temporary password below to log in. For security, change your password after logging in.</p>
                     <div style='background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px dashed #6c757d; padding: 25px; text-align: center; margin: 25px 0; border-radius: 8px;'>
                         <p style='margin: 0 0 10px 0; font-size: 14px; color: #6c757d; text-transform: uppercase; letter-spacing: 1px;'>Temporary Password</p>
-                        <div style='font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #495057; font-family: monospace;'>
+                        <div style='font-size: 32px, font-weight: bold, letter-spacing: 4px; color: #495057; font-family: monospace;'>
                             {password}
                         </div>
                     </div>
@@ -906,7 +906,6 @@ public class AccountController : Controller
         try
         {
             var addressService = HttpContext.RequestServices.GetService<Services.IAddressService>();
-
             if (addressService == null)
             {
                 return Json(new
