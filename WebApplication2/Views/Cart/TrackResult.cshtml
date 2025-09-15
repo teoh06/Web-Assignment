@@ -4,83 +4,185 @@
 }
 @if (order == null)
 {
-    <p>No orders found with the given information.</p>
+    <div class="track-result-empty">
+        <div class="empty-icon">📦</div>
+        <h3 class="empty-title">No Order Found</h3>
+        <p class="empty-message">No orders found with the given information. Please check your order number and address.</p>
+    </div>
 }
 else
 {
-    <div class="card p-4 mb-3" style="max-width:560px;margin:auto;">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h4 class="mb-0">Order #@order.OrderNumber</h4>
-            <span class="badge bg-secondary">@order.DeliveryOption</span>
-        </div>
-        <div class="small text-muted mb-3">@order.OrderDate</div>
-
-        <div class="progress mb-2" style="height:25px;background:#e9ecef;border-radius:12px;overflow:hidden;">
-            <div id="progressBar" class="progress-bar" role="progressbar" style="height:100%;width:0;background:linear-gradient(90deg,#4CAF50,#8BC34A);transition:width .4s ease;position:relative;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                <span id="progressText" style="position:absolute;right:8px;top:0;color:#fff;font-weight:bold;line-height:25px;">0%</span>
+    <!-- Modern Track Result Card -->
+    <div class="track-result-card">
+        <!-- Header Section -->
+        <div class="result-header">
+            <div class="order-info">
+                <h3 class="order-title">Order #@order.OrderNumber</h3>
+                <div class="order-meta">
+                    <span class="order-date">
+                        <span class="meta-icon">📅</span>
+                        @order.OrderDate.ToString("MMM dd, yyyy")
+                    </span>
+                    <span class="delivery-badge delivery-@order.DeliveryOption.ToLower()">
+                        <span class="badge-icon">@(order.DeliveryOption == "Pickup" ? "🏪" : "🚚")</span>
+                        @order.DeliveryOption
+                    </span>
+                </div>
+            </div>
+            <div class="live-status">
+                <div class="status-dot"></div>
+                <span class="status-text">Live Tracking</span>
             </div>
         </div>
 
-            <div class="d-flex justify-content-between mb-2" id="steps">
-                <span class="step">Pending</span>
-                <span class="step">Paid</span>
-                <span class="step">Preparing</span>
-                <span class="step" id="finalStep">Ready for Pickup</span>
-                <span class="step refunded-step" id="refundedStep" style="display: none; background: linear-gradient(45deg, #ff4444, #ffffff, #ff4444); color: #000; border-radius: 4px; padding: 2px 8px; font-weight: bold; border: 2px solid #ff4444;">Refunded</span>
+        <!-- Modern Progress Section -->
+        <div class="progress-section">
+            <div class="progress-wrapper">
+                <div class="progress-track-modern">
+                    <div id="progressBar" class="progress-fill-modern" role="progressbar" 
+                         style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-shine"></div>
+                    </div>
+                </div>
+                <div id="progressText" class="progress-label">0%</div>
             </div>
-
-        <div id="animBox" style="width:240px;height:80px;margin:10px auto;position:relative;border-radius:12px;overflow:hidden;background:linear-gradient(90deg,#e8f5e9,#c8e6c9);">
-            <div id="pkg" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:18px;height:14px;background:#FFECB3;border:1px solid #FFC107;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.15);"></div>
         </div>
 
-        <div class="mt-2" id="statusText" style="font-weight:bold;color:#333;">@order.Status</div>
-        <div class="small mt-1">ETA: <span id="etaText"></span></div>
+        <!-- Status Steps with Modern Design -->
+        <div class="status-timeline" id="steps">
+            <div class="timeline-step step-pending">
+                <div class="step-circle">
+                    <span class="step-icon">⏳</span>
+                </div>
+                <span class="step-text">Pending</span>
+            </div>
+            <div class="timeline-step step-paid">
+                <div class="step-circle">
+                    <span class="step-icon">💳</span>
+                </div>
+                <span class="step-text">Paid</span>
+            </div>
+            <div class="timeline-step step-preparing">
+                <div class="step-circle">
+                    <span class="step-icon">👨‍🍳</span>
+                </div>
+                <span class="step-text">Preparing</span>
+            </div>
+            <div class="timeline-step step-final" id="finalStep">
+                <div class="step-circle">
+                    <span class="step-icon">✅</span>
+                </div>
+                <span class="step-text">Ready for Pickup</span>
+            </div>
+            <div class="timeline-step step-refunded" id="refundedStep" style="display: none;">
+                <div class="step-circle refunded-circle">
+                    <span class="step-icon">💸</span>
+                </div>
+                <span class="step-text">Refunded</span>
+            </div>
+        </div>
+
+        <!-- Animated Package Tracking -->
+        <div class="package-animation-container">
+            <div class="package-track">
+                <div id="animatedPackage" class="package-icon">📦</div>
+                <div class="track-line"></div>
+                <div class="destination-marker">🏪</div>
+            </div>
+        </div>
+
+        <!-- Status Information -->
+        <div class="status-info-section">
+            <div class="current-status">
+                <h4 id="statusText" class="status-title">@order.Status</h4>
+                <p class="status-description" id="statusDescription">Processing your order...</p>
+            </div>
+            <div class="eta-info">
+                <span class="eta-label">Estimated Time:</span>
+                <span id="etaText" class="eta-value">Calculating...</span>
+            </div>
+        </div>
         
-        <!-- Payment Button - Only show if payment is pending -->
-        <div id="paymentButtonContainer" style="display: none; margin-top: 15px;">
-            <button id="proceedPaymentBtn" class="btn btn-warning btn-lg" onclick="proceedToPayment('@order.OrderNumber')" style="width: 100%; padding: 12px; font-weight: bold; border-radius: 8px; box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);">
-                💳 Proceed to Payment
+        <!-- Payment Button - Modern Design -->
+        <div id="paymentButtonContainer" class="payment-section" style="display: none;">
+            <button id="proceedPaymentBtn" class="payment-btn-modern" onclick="proceedToPayment('@order.OrderNumber')">
+                <span class="btn-icon">💳</span>
+                <span class="btn-text">Proceed to Payment</span>
+                <div class="btn-glow"></div>
             </button>
         </div>
-        @if (order.DeliveryOption == "Pickup")
-        {
-            <div class="alert mt-3">
-                <strong>Pickup Information:</strong> Please pick up your order at the store counter. Estimated pickup time: within 15 minutes after order is ready.
-            </div>
-        }
-        else
-        {
-            <div class="alert mt-3">
-                <strong>Delivery Information:</strong> Your order will be delivered to the address on file. Estimated delivery time: 30-45 minutes depending on location.
-            </div>
-        }
 
-        <div id="purchasedItems" class="mt-4">
-            <h5>Purchased Items</h5>
-            <ul class="list-group" style="max-height: 200px; overflow-y: auto;">
+        <!-- Delivery Information Card -->
+        <div class="delivery-info-card">
+            @if (order.DeliveryOption == "Pickup")
+            {
+                <div class="info-header">
+                    <span class="info-icon">🏪</span>
+                    <h5 class="info-title">Pickup Information</h5>
+                </div>
+                <div class="info-content">
+                    <p><strong>Location:</strong> Store Counter</p>
+                    <p><strong>Estimated Time:</strong> Within 15 minutes after order is ready</p>
+                    <p class="info-note">Please bring your order confirmation when picking up</p>
+                </div>
+            }
+            else
+            {
+                <div class="info-header">
+                    <span class="info-icon">🚚</span>
+                    <h5 class="info-title">Delivery Information</h5>
+                </div>
+                <div class="info-content">
+                    <p><strong>Address:</strong> Delivery to address on file</p>
+                    <p><strong>Estimated Time:</strong> 30-45 minutes depending on location</p>
+                    <p class="info-note">Our delivery partner will contact you before arrival</p>
+                </div>
+            }
+        </div>
+
+        <!-- Purchased Items Section -->
+        <div class="items-section">
+            <div class="items-header">
+                <h5 class="items-title">
+                    <span class="title-icon">🛍️</span>
+                    Purchased Items
+                </h5>
+                <span class="items-count">@(order.Items?.Count() ?? 0) items</span>
+            </div>
+            <div class="items-container-modern">
                 @if (order.Items != null && order.Items.Any())
                 {
                     @foreach (var item in order.Items)
                     {
-                        <li class="list-group-item d-flex align-items-center">
-                            <img src="@(item.PhotoURL ?? "/images/default-item.png")" alt="@item.MenuItemName" style="width: 50px; height: 50px; margin-right: 10px; border-radius: 5px;">
-                            <div>
-                                <strong>@item.MenuItemName</strong><br>
-                                Quantity: @item.Quantity<br>
-                                Price: RM$@item.UnitPrice
+                        <div class="item-card-modern">
+                            <div class="item-image">
+                                <img src="@(item.PhotoURL ?? "/images/default-item.png")" alt="@item.MenuItemName">
+                            </div>
+                            <div class="item-details">
+                                <h6 class="item-name">@item.MenuItemName</h6>
+                                <div class="item-meta">
+                                    <span class="item-quantity">Qty: @item.Quantity</span>
+                                    <span class="item-price">RM @item.UnitPrice.ToString("F2")</span>
+                                </div>
                                 @if (!string.IsNullOrEmpty(item.SelectedPersonalizations))
                                 {
-                                    <text><br />Personalization: @item.SelectedPersonalizations</text>
+                                    <div class="item-personalization">
+                                        <span class="personalization-icon">✨</span>
+                                        <span class="personalization-text">@item.SelectedPersonalizations</span>
+                                    </div>
                                 }
                             </div>
-                        </li>
+                        </div>
                     }
                 }
                 else
                 {
-                    <li class="list-group-item">No items found.</li>
+                    <div class="no-items-message">
+                        <span class="no-items-icon">📦</span>
+                        <span class="no-items-text">No items found</span>
+                    </div>
                 }
-            </ul>
+            </div>
         </div>
     </div>
 

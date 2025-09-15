@@ -1203,7 +1203,7 @@ namespace WebApplication2.Controllers
                 // Log cancellation with reason
                 Console.WriteLine($"Order #{orderId} cancelled by {User.Identity.Name}. Reason: {reason}");
                 
-                // TODO: Implement actual SMS notification here
+                // Implement actual SMS notification here
                 // For now, we'll just log that we would send an SMS
                 if (!string.IsNullOrEmpty(phoneNumber))
                 {
@@ -1321,10 +1321,4 @@ namespace WebApplication2.Controllers
             return Json(new { success = true });
         }
     }
-
-    // =======================
-    // ViewModels
-    // =======================
-
-
 }
