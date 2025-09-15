@@ -1,15 +1,17 @@
-﻿using WebApplication2.Models;
-using WebApplication2.Services;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PdfSharp.Quality;
 using System; // Make sure this is included for Guid and DateTime
 using System.Diagnostics;
 using System.Linq; // Make sure this is included for Any and Where
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Net.Mail;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using WebApplication2.Models;
+using WebApplication2.Services;
 
 namespace WebApplication2.Controllers;
 
@@ -856,6 +858,16 @@ public class AccountController : Controller
             user.DeletionToken = Guid.NewGuid().ToString("n");
             db.SaveChanges();
 
+            var mail = new MailMessage
+            {
+                Subject = "Account Pending Deletion",
+                Body = $"<p>Hello {user.Name},</p><p>Your account has been marked for deletion by admin. Please contact admin for more details.</p>",
+                IsBodyHtml = true
+            };
+            mail.To.Add(user.Email);
+
+            hp.SendEmail(mail);
+
             TempData["Info"] = "User marked for deletion.";
         }
         return RedirectToAction("", "Admin");
@@ -871,6 +883,16 @@ public class AccountController : Controller
             user.DeletionRequestDate = null;
             user.DeletionToken = null;
             db.SaveChanges();
+
+            var mail = new MailMessage
+            {
+                Subject = "Account Restored",
+                Body = $"<p>Hello {user.Name},</p><p>Your account has been successfully restored.</p>",
+                IsBodyHtml = true
+            };
+            mail.To.Add(user.Email);
+
+            hp.SendEmail(mail);
 
             TempData["Info"] = "User restored.";
         }
