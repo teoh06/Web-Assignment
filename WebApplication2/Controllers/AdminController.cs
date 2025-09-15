@@ -26,7 +26,6 @@ public class AdminController : Controller
 {
     private readonly DB _context;
     private readonly Helper hp;
-    private readonly Helper hp;
     private readonly IEmailService _emailService;
 
     public AdminController(DB _context, Helper hp, IEmailService emailService)
@@ -495,15 +494,7 @@ public class AdminController : Controller
             Body = $"<p>Hello {admin.Name},</p><p>You have been promote to <b>Admin</b> sucessfully.</p>",
             IsBodyHtml = true
         };
-        mail.To.Add(admin.Email);
-        hp.SendEmail(mail);
 
-        var mail = new MailMessage
-        {
-            Subject = "You have been Promote to Admin!!!",
-            Body = $"<p>Hello {admin.Name},</p><p>You have been promote to <b>Admin</b> sucessfully.</p>",
-            IsBodyHtml = true
-        };
         mail.To.Add(admin.Email);
         await _emailService.SendEmailAsync(mail.To[0].Address, mail.Subject, mail.Body);
 
