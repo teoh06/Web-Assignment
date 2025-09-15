@@ -15,6 +15,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using QuestPDF.Previewer;
+using System.Net.Mail;
 
 namespace WebApplication2.Controllers;
 
@@ -22,6 +23,7 @@ namespace WebApplication2.Controllers;
 public class AdminController : Controller
 {
     private readonly DB _context;
+    private readonly Helper hp;
 
     public AdminController(DB _context)
     {
@@ -443,6 +445,15 @@ public class AdminController : Controller
 
         _context.Admins.Add(admin);
         await _context.SaveChangesAsync();
+
+        var mail = new MailMessage
+        {
+            Subject = "You have been Promote to Admin!!!",
+            Body = $"<p>Hello {admin.Name},</p><p>You have been promote to <b>Admin</b> sucessfully.</p>",
+            IsBodyHtml = true
+        };
+        mail.To.Add(admin.Email);
+        hp.SendEmail(mail);
 
         TempData["Message"] = $"{admin.Name} already update to Admin";
         return RedirectToAction("Index", "Admin"); 
