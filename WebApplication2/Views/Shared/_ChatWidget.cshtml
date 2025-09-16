@@ -631,7 +631,7 @@
                 items: ['Caesar Salad', 'Garden Salad']
             },
             {
-                message: "🍟 Craving crispy goodness? Our Fish and Chips are so flaky, even the fish is jealous of the batter! And don’t worry, no fishy business here—just deliciousness! 🐟",
+                message: "🍟 Craving crispy goodness? Our Fish and Chip are so flaky, even the fish is jealous of the batter! And don’t worry, no fishy business here—just deliciousness! 🐟",
                 items: ['Fish and Chip']
             },
             {
@@ -666,37 +666,6 @@
         }
         
         showSuggestions(suggestions);
-    }
-    
-    // --- Enhanced Admin Actions ---
-    function showAdminQuickActions() {
-        addSupportMessage(`⚡ <strong>Quick Admin Actions</strong> - Choose from these common administrative tasks:`);
-        showSuggestions(['Add Menu Item', 'Modify Prices', 'View Orders', 'Manage Users', 'System Status', 'Back to Main']);
-    }
-    
-    function showAdminMenuManagement() {
-        addSupportMessage(`🍽️ <strong>Menu Management Hub</strong> - Control your restaurant's menu:`);
-        showSuggestions(['Add New Item', 'Edit Existing Item', 'Remove Item', 'Category Management', 'Bulk Price Update', 'Back to Main']);
-    }
-    
-    function showAdminUserManagement() {
-        addSupportMessage(`👥 <strong>User Management Center</strong> - Manage customer accounts and permissions:`);
-        showSuggestions(['View All Users', 'Search User', 'User Statistics', 'Account Status', 'Role Management', 'Back to Main']);
-    }
-    
-    function showAdminAnalytics() {
-        addSupportMessage(`📊 <strong>Order Analytics Dashboard</strong> - View business insights and statistics:`);
-        showSuggestions(['Daily Sales', 'Popular Items', 'Customer Analytics', 'Revenue Reports', 'Order Trends', 'Back to Main']);
-    }
-    
-    function showAdminSystemSettings() {
-        addSupportMessage(`⚙️ <strong>System Settings</strong> - Configure application settings:`);
-        showSuggestions(['App Settings', 'Email Configuration', 'Payment Settings', 'Backup Data', 'System Logs', 'Back to Main']);
-    }
-    
-    function showAdminBulkOperations() {
-        addSupportMessage(`🔄 <strong>Bulk Operations</strong> - Perform batch operations efficiently:`);
-        showSuggestions(['Bulk Price Update', 'Mass Email', 'Batch Order Status', 'Data Export', 'Import Menu', 'Back to Main']);
     }
     
     function handleSuggestionClick(suggestion) {
@@ -1328,4 +1297,30 @@
             addSupportMessage('No problem! What else can I help you with?');
         });
     }
+
+    connection.on("ShowItemSelection", (items) => {
+        removeTypingIndicator();
+        // Show suggestion buttons for each item
+        const suggestions = items.map(item => `Select ${item.name}`);
+        showSuggestions(suggestions);
+        // Attach click handler to send selection to backend
+        document.querySelectorAll('.suggestion-btn').forEach((btn, idx) => {
+            btn.onclick = function() {
+                // Send selected item id and quantity to backend
+                connection.invoke("SelectMenuItem", items[idx].menuItemId, items[idx].quantity || 1);
+            };
+        });
+    });
+
+    connection.on("ShowQuantitySelection", (item) => {
+        removeTypingIndicator();
+        // Show quantity selection buttons (1-5)
+        const suggestions = [1,2,3,4,5].map(q => `Add ${q} ${item.name}`);
+        showSuggestions(suggestions);
+        document.querySelectorAll('.suggestion-btn').forEach((btn, idx) => {
+            btn.onclick = function() {
+                handleUserInput(`Add ${idx+1} ${item.name}`);
+            };
+        });
+    });
 </script>
