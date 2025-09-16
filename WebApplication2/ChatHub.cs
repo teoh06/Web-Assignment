@@ -89,7 +89,6 @@ namespace WebApplication2
 
         private async Task ProcessMemberMessage(string userIdentifier, string message)
         {
-            // Check for interactive messages first
             var interactiveResponse = GetInteractiveResponse(message, "Member");
             if (!string.IsNullOrEmpty(interactiveResponse))
             {
@@ -98,65 +97,111 @@ namespace WebApplication2
                 return;
             }
 
-            // Check if message contains order request
-            if (ContainsOrderRequest(message))
+            var orderItems = ExtractOrderItems(message);
+            if (orderItems.Count > 0)
             {
-                // Extract order details
-                var orderItems = ExtractOrderItems(message);
-
-                if (orderItems.Count > 0)
+                foreach (var item in orderItems)
                 {
-                    // Prepare cart items
-                    var cartItems = new List<object>();
-
-                    foreach (var item in orderItems)
+                    string singularName = item.Name.Trim();
+                    if (singularName.EndsWith("s") && singularName.Length > 3)
                     {
-                        // Find menu item in database - exact match first, then partial match
-                        var menuItem = _db.MenuItems.FirstOrDefault(m =>
-                            m.Name.ToLower() == item.Name.ToLower());
-
-                        // If no exact match, try partial match
-                        if (menuItem == null)
+                        if (!singularName.EndsWith("ss") && !singularName.EndsWith("ies"))
                         {
-                            menuItem = _db.MenuItems.FirstOrDefault(m =>
-                                m.Name.ToLower().Contains(item.Name.ToLower()) ||
-                                item.Name.ToLower().Contains(m.Name.ToLower()));
+                            singularName = singularName.Substring(0, singularName.Length - 1);
                         }
-
-                        if (menuItem != null)
+                    }
+                    var menuItem = _db.MenuItems.FirstOrDefault(m => m.Name.ToLower() == item.Name.ToLower() || m.Name.ToLower() == singularName.ToLower());
+                    if (menuItem != null)
+                    {
+                        if (item.Quantity < 1)
                         {
-                            cartItems.Add(new
-                            {
+                            await Clients.Caller.SendAsync("ShowQuantitySelection", new { name = menuItem.Name, menuItemId = menuItem.MenuItemId });
+                            await Clients.Caller.SendAsync("ReceiveResponse", $"How many '{menuItem.Name}' would you like to add to your cart?");
+                            return;
+                        }
+                        else
+                        {
+                            var cartItem = new {
                                 menuItemId = menuItem.MenuItemId,
                                 name = menuItem.Name,
                                 quantity = item.Quantity,
                                 selectedPersonalizations = ""
-                            });
+                            };
+                            await Clients.Caller.SendAsync("AddToCart", new[] { cartItem });
+                            await Clients.Caller.SendAsync("ReceiveResponse", $"Added {item.Quantity} x {menuItem.Name} to your cart. Anything else?");
+                            await Clients.Caller.SendAsync("ShowSuggestions", new[] { "View cart", "Checkout", "Add more items", "Menu recommendations" });
+                            return;
                         }
                     }
-
-                    if (cartItems.Count > 0)
+                    // Try partial match
+                    var matches = _db.MenuItems.Where(m => m.Name.ToLower().Contains(item.Name.ToLower()) || m.Name.ToLower().Contains(singularName.ToLower())).ToList();
+                    if (matches.Count > 1)
                     {
-                        // Calculate total quantity
-                        int totalQuantity = orderItems.Sum(x => x.Quantity);
-                        // Send items to client to add to cart
-                        await Clients.Caller.SendAsync("AddToCart", cartItems);
-
-                        // Confirm order with personalized message
-                        string confirmationMessage = totalQuantity == 1
-                            ? $"Perfect! I've added {orderItems[0].Name} to your cart. Anything else to make your meal complete?"
-                            : $"Great choice! I've added {totalQuantity} delicious items to your cart. Ready to satisfy that craving!";
-
-                        await Clients.Caller.SendAsync("ReceiveResponse", confirmationMessage);
-                        await Clients.Caller.SendAsync("ShowSuggestions", new[] { "View cart", "Checkout", "Add more items", "Menu recommendations" });
+                        // Store quantity in Context.Items for this connection/session
+                        Context.Items["pendingQuantity"] = item.Quantity;
+                        await Clients.Caller.SendAsync("ShowItemSelection", matches.Select(m => new { name = m.Name, menuItemId = m.MenuItemId, quantity = item.Quantity }));
+                        await Clients.Caller.SendAsync("ReceiveResponse", $"I found multiple items for '{item.Name}'. Which one would you like?");
                         return;
                     }
-                    else
+                    else if (matches.Count == 1)
                     {
-                        await Clients.Caller.SendAsync("ReceiveResponse", "Hmm, I couldn't find those specific items on our menu. Could you help me by being more specific? For example, try 'Classic Burger' or 'Margherita Pizza'.");
-                        await Clients.Caller.SendAsync("ShowSuggestions", new[] { "Show menu", "Menu recommendations", "Order help", "Contact support" });
+                        if (item.Quantity < 1)
+                        {
+                            await Clients.Caller.SendAsync("ShowQuantitySelection", new { name = matches[0].Name, menuItemId = matches[0].MenuItemId });
+                            await Clients.Caller.SendAsync("ReceiveResponse", $"How many '{matches[0].Name}' would you like to add to your cart?");
+                            return;
+                        }
+                        else
+                        {
+                            var cartItem = new {
+                                menuItemId = matches[0].MenuItemId,
+                                name = matches[0].Name,
+                                quantity = item.Quantity,
+                                selectedPersonalizations = ""
+                            };
+                            await Clients.Caller.SendAsync("AddToCart", new[] { cartItem });
+                            await Clients.Caller.SendAsync("ReceiveResponse", $"Added {item.Quantity} x {matches[0].Name} to your cart. Anything else?");
+                            await Clients.Caller.SendAsync("ShowSuggestions", new[] { "View cart", "Checkout", "Add more items", "Menu recommendations" });
+                            return;
+                        }
+                    }
+                    // Fuzzy match: try matching any word in item.Name to menu items (handle plural)
+                    var words = item.Name.ToLower().Split(' ');
+                    var singularWords = words.Select(w => w.EndsWith("s") && w.Length > 3 && !w.EndsWith("ss") && !w.EndsWith("ies") ? w.Substring(0, w.Length - 1) : w).ToList();
+                    var fuzzyMatches = _db.MenuItems.Where(m => words.Any(w => m.Name.ToLower().Contains(w)) || singularWords.Any(sw => m.Name.ToLower().Contains(sw))).ToList();
+                    if (fuzzyMatches.Count > 1)
+                    {
+                        Context.Items["pendingQuantity"] = item.Quantity;
+                        await Clients.Caller.SendAsync("ShowItemSelection", fuzzyMatches.Select(m => new { name = m.Name, menuItemId = m.MenuItemId, quantity = item.Quantity }));
+                        await Clients.Caller.SendAsync("ReceiveResponse", $"I found multiple items for '{item.Name}'. Which one would you like?");
                         return;
                     }
+                    else if (fuzzyMatches.Count == 1)
+                    {
+                        if (item.Quantity < 1)
+                        {
+                            await Clients.Caller.SendAsync("ShowQuantitySelection", new { name = fuzzyMatches[0].Name, menuItemId = fuzzyMatches[0].MenuItemId });
+                            await Clients.Caller.SendAsync("ReceiveResponse", $"How many '{fuzzyMatches[0].Name}' would you like to add to your cart?");
+                            return;
+                        }
+                        else
+                        {
+                            var cartItem = new {
+                                menuItemId = fuzzyMatches[0].MenuItemId,
+                                name = fuzzyMatches[0].Name,
+                                quantity = item.Quantity,
+                                selectedPersonalizations = ""
+                            };
+                            await Clients.Caller.SendAsync("AddToCart", new[] { cartItem });
+                            await Clients.Caller.SendAsync("ReceiveResponse", $"Added {item.Quantity} x {fuzzyMatches[0].Name} to your cart. Anything else?");
+                            await Clients.Caller.SendAsync("ShowSuggestions", new[] { "View cart", "Checkout", "Add more items", "Menu recommendations" });
+                            return;
+                        }
+                    }
+                    // No match, ask for clarification
+                    await Clients.Caller.SendAsync("ReceiveResponse", $"I couldn't find any items matching '{item.Name}'. Could you be more specific?");
+                    await Clients.Caller.SendAsync("ShowSuggestions", new[] { "Show menu", "Menu recommendations", "Order help", "Contact support" });
+                    return;
                 }
             }
 
@@ -252,48 +297,13 @@ namespace WebApplication2
                     }
                     else
                     {
-                        await Clients.Caller.SendAsync("ReceiveResponse", $"Error: Unable to find menu item '{itemName}' in the database. Please try again.");
+                        await Clients.Caller.SendAsync("ReceiveResponse", $"Menu item '{itemName}' not found. Price not updated.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                await Clients.Caller.SendAsync("ReceiveResponse", $"Oops! Something went wrong while updating the price: {ex.Message}. Please try again or contact technical support.");
-            }
-        }
-
-        public async Task ProcessImageUpload(string userRole, string userIdentifier, string imageUrl)
-        {
-            try
-            {
-                // Use Azure Computer Vision to get tags/labels
-                var tags = await GetImageTagsFromAzure(imageUrl);
-                var recognizedItems = RecognizeMenuItemsFromTags(tags);
-
-                if (recognizedItems.Count > 0)
-                {
-                    await Clients.Caller.SendAsync("ShowImageRecognitionResults", new { items = recognizedItems });
-                    if (userRole == "Guest")
-                    {
-                        await Clients.Caller.SendAsync("ReceiveResponse", "Great photo! I can see some delicious items there. Please create an account or login to order these tasty treats!");
-                    }
-                    else
-                    {
-                        await Clients.Caller.SendAsync("ReceiveResponse", "Wow, that looks delicious! I've identified some menu items from your photo. Click on any item above to add it to your cart!");
-                    }
-                }
-                else
-                {
-                    string reply = tags.Count > 0
-                        ? $"I can see '{string.Join(", ", tags)}' in your image, but I couldn't match them to our current menu items. Would you like to <a href='/MenuItem' target='_blank'>browse our full menu</a> instead?"
-                        : "I'm having trouble identifying food items in this image. Could you try uploading a clearer photo or tell me what you're craving instead?";
-                    await Clients.Caller.SendAsync("ReceiveResponse", reply);
-                    await Clients.Caller.SendAsync("ShowSuggestions", new[] { "Menu recommendations", "Upload another image", "Search by name", "Contact support" });
-                }
-            }
-            catch (Exception ex)
-            {
-                await Clients.Caller.SendAsync("ReceiveResponse", $"Oops! I encountered an issue processing your image: {ex.Message}. Please try again or describe what you're looking for instead.");
+                await Clients.Caller.SendAsync("ReceiveResponse", $"Error processing admin action: {ex.Message}");
             }
         }
 
@@ -382,7 +392,7 @@ namespace WebApplication2
                 var jokes = new[]
                 {
                     "Why don't eggs tell jokes? Because they'd crack each other up! Speaking of eggs, have you tried our breakfast items?",
-                    "What do you call a nosy pepper? Jalape�o business! Just like how we mind our business of making great food!",
+                    "What do you call a nosy pepper? Jalapeño business! Just like how we mind our business of making great food!",
                     "Why did the tomato turn red? Because it saw the salad dressing! Speaking of salads, our Caesar Salad is amazing!",
                     "What do you call a fake noodle? An impasta! But our pasta dishes are 100% authentic and delicious!",
                     "Why don't burgers ever get cold? Because they're always between buns! Try our Classic Burger - it's always hot and fresh!"
@@ -559,89 +569,7 @@ namespace WebApplication2
 
         #endregion
 
-        // --- Azure Computer Vision integration ---
-        private async Task<List<string>> GetImageTagsFromAzure(string imageUrl)
-        {
-            var endpoint = _config["AzureVision:Endpoint"];
-            var key = _config["AzureVision:Key"];
-            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(key))
-                return new List<string>();
-
-            var requestUrl = $"{endpoint}/vision/v3.2/analyze?visualFeatures=Tags,Description";
-            var requestBody = new { url = imageUrl };
-            var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", key);
-
-            // If imageUrl is base64, use the image binary endpoint
-            if (imageUrl.StartsWith("data:image/"))
-            {
-                var base64Data = imageUrl.Substring(imageUrl.IndexOf(",") + 1);
-                var imageBytes = Convert.FromBase64String(base64Data);
-                var byteContent = new ByteArrayContent(imageBytes);
-                byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                var resp = await _httpClient.PostAsync($"{endpoint}/vision/v3.2/analyze?visualFeatures=Tags,Description", byteContent);
-                var json = await resp.Content.ReadAsStringAsync();
-                return ParseTagsFromAzureResponse(json);
-            }
-            else
-            {
-                var resp = await _httpClient.PostAsync(requestUrl, content);
-                var json = await resp.Content.ReadAsStringAsync();
-                return ParseTagsFromAzureResponse(json);
-            }
-        }
-
-        private List<string> ParseTagsFromAzureResponse(string json)
-        {
-            var tags = new List<string>();
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("tags", out var tagsElem))
-                {
-                    foreach (var tag in tagsElem.EnumerateArray())
-                    {
-                        if (tag.TryGetProperty("name", out var nameElem))
-                            tags.Add(nameElem.GetString());
-                    }
-                }
-                if (doc.RootElement.TryGetProperty("description", out var descElem))
-                {
-                    if (descElem.TryGetProperty("tags", out var descTagsElem))
-                    {
-                        foreach (var tag in descTagsElem.EnumerateArray())
-                            tags.Add(tag.GetString());
-                    }
-                }
-            }
-            catch { }
-            return tags.Distinct().ToList();
-        }
-
-        private List<object> RecognizeMenuItemsFromTags(List<string> tags)
-        {
-            var results = new List<object>();
-            if (tags == null || tags.Count == 0) return results;
-            var menuItems = _db.MenuItems.ToList();
-            foreach (var item in menuItems)
-            {
-                foreach (var tag in tags)
-                {
-                    if (item.Name.Contains(tag, StringComparison.OrdinalIgnoreCase) ||
-                        item.Description.Contains(tag, StringComparison.OrdinalIgnoreCase) ||
-                        (item.PhotoURL != null && item.PhotoURL.Contains(tag, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        results.Add(new { name = item.Name });
-                        break;
-                    }
-                }
-            }
-            return results;
-        }
-
-        #region Existing Helper Methods
-
+        // --- Menu item and order processing ---
         private bool ContainsOrderRequest(string message)
         {
             string lowerMessage = message.ToLower();
@@ -707,7 +635,7 @@ namespace WebApplication2
                 {"eleven", 11}, {"twelve", 12}
             };
 
-            // Pattern for numeric quantity: "3 caesar salad"
+            // Pattern for numeric quantity: "3 caesar salad" (with or without 'order')
             var pattern1 = new Regex(@"(?:order|get|add|buy|want)?\s*(\d+)\s+([\w\s]+?)(?:\s+to\s+(?:my\s+)?cart|\s*$)", RegexOptions.IgnoreCase);
             var matches1 = pattern1.Matches(lowerMessage);
             foreach (Match match in matches1)
@@ -720,7 +648,7 @@ namespace WebApplication2
                 }
             }
 
-            // Pattern for word-based quantity: "three caesar salad"
+            // Pattern for word-based quantity: "three caesar salad" (with or without 'order')
             var pattern2 = new Regex(@"(?:order|get|add|buy|want)?\s*(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+([\w\s]+?)(?:\s+to\s+(?:my\s+)?cart|\s*$)", RegexOptions.IgnoreCase);
             var matches2 = pattern2.Matches(lowerMessage);
             foreach (Match match in matches2)
@@ -731,12 +659,34 @@ namespace WebApplication2
                 items.Add((itemName, quantity));
             }
 
+            // Pattern for direct quantity + item (no 'order' keyword): e.g. "3 burger", "three burger"
+            var pattern3 = new Regex(@"^(\d+)\s+([\w\s]+)$", RegexOptions.IgnoreCase);
+            var match3 = pattern3.Match(lowerMessage);
+            if (match3.Success)
+            {
+                int quantity;
+                if (int.TryParse(match3.Groups[1].Value, out quantity))
+                {
+                    string itemName = match3.Groups[2].Value.Trim();
+                    items.Add((itemName, quantity));
+                }
+            }
+            var pattern4 = new Regex(@"^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+([\w\s]+)$", RegexOptions.IgnoreCase);
+            var match4 = pattern4.Match(lowerMessage);
+            if (match4.Success)
+            {
+                string word = match4.Groups[1].Value.Trim();
+                int quantity = numberWords.ContainsKey(word) ? numberWords[word] : 1;
+                string itemName = match4.Groups[2].Value.Trim();
+                items.Add((itemName, quantity));
+            }
+
             // Pattern for "[item]" without explicit quantity
             if (items.Count == 0)
             {
-                var pattern3 = new Regex(@"(?:order|get|add|buy|want)\s+([\w\s]+?)(?:\s+to\s+(?:my\s+)?cart|\s*$)", RegexOptions.IgnoreCase);
-                var matches3 = pattern3.Matches(lowerMessage);
-                foreach (Match match in matches3)
+                var pattern5 = new Regex(@"(?:order|get|add|buy|want)\s+([\w\s]+?)(?:\s+to\s+(?:my\s+)?cart|\s*$)", RegexOptions.IgnoreCase);
+                var matches5 = pattern5.Matches(lowerMessage);
+                foreach (Match match in matches5)
                 {
                     string itemName = match.Groups[1].Value.Trim();
                     if (!string.IsNullOrWhiteSpace(itemName) && !itemName.Contains("order") && !itemName.Contains("cart"))
@@ -750,7 +700,7 @@ namespace WebApplication2
             if (items.Count == 0)
             {
                 // Check for our actual menu items
-                string[] menuItems = new[] { "Classic Burger", "Margherita Pizza", "Caesar Salad", "Tiramisu", "Coca-Cola", "Fish and Chip", "Pudding", "Iced Latte" };
+                string[] menuItems = _db.MenuItems.Select(mi => mi.Name).ToArray();
                 foreach (var item in menuItems)
                 {
                     if (lowerMessage.Contains(item.ToLower()))
@@ -857,8 +807,6 @@ namespace WebApplication2
             return defaultResponses[new Random().Next(defaultResponses.Length)];
         }
 
-        #endregion
-
         public async Task ModifyMenuItem(string itemName, string field, string newValue)
         {
             try
@@ -936,7 +884,7 @@ namespace WebApplication2
                 await Clients.Caller.SendAsync("LiveOrderStatus", new { message = $"Order #{orderNumber} not found." });
                 return;
             }
-            // Build timeline/status HTML
+            // Build timeline/status
             var timeline = $@"<div><b>Order #{order.OrderId}</b><br>Status: <b>{order.Status}</b><br>Placed: {order.OrderDate:yyyy-MM-dd HH:mm}</div>";
             // Estimate time (simple logic: 1 min for Paid, 5 min for Preparing, 10 min for Out for Delivery)
             string estimated = order.Status switch {
@@ -998,6 +946,28 @@ namespace WebApplication2
             await Clients.Caller.SendAsync("ReceiveResponse", $"Feedback received: {rating} star(s). Thank you!");
             // Optionally, show suggestions after feedback
             await Clients.Caller.SendAsync("ShowSuggestions", new[] { "Order food", "Show menu", "Track my order", "Contact support" });
+        }
+
+        // Add a new method to handle item selection and use the stored quantity
+        public async Task SelectMenuItem(int menuItemId, int quantity = 1)
+        {
+            var menuItem = _db.MenuItems.FirstOrDefault(m => m.MenuItemId == menuItemId);
+            if (menuItem != null)
+            {
+                var cartItem = new {
+                    menuItemId = menuItem.MenuItemId,
+                    name = menuItem.Name,
+                    quantity = quantity,
+                    selectedPersonalizations = ""
+                };
+                await Clients.Caller.SendAsync("AddToCart", new[] { cartItem });
+                await Clients.Caller.SendAsync("ReceiveResponse", $"Added {quantity} x {menuItem.Name} to your cart. Anything else?");
+                await Clients.Caller.SendAsync("ShowSuggestions", new[] { "View cart", "Checkout", "Add more items", "Menu recommendations" });
+            }
+            else
+            {
+                await Clients.Caller.SendAsync("ReceiveResponse", "Sorry, I couldn't find that menu item. Please try again.");
+            }
         }
     }
 }
