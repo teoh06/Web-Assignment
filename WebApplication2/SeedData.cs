@@ -1,4 +1,4 @@
-﻿using WebApplication2;
+using WebApplication2;
 using WebApplication2.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +13,7 @@ public static class SeedData
         context.Database.EnsureCreated();
 
         SeedAdmins(context, serviceProvider);
+        SeedMembers(context, serviceProvider);
         SeedCategories(context);
         SeedMenuItems(context);
         SeedPersonalizationOptions(context);
@@ -36,6 +37,37 @@ public static class SeedData
             }
         };
         context.Admins.AddRange(defaultAdmins);
+        context.SaveChanges();
+    }
+
+    // --- Seed Members ---
+    private static void SeedMembers(DB context, IServiceProvider serviceProvider)
+    {
+        if (context.Members.Any()) return;
+        var helper = new Helper(
+            serviceProvider.GetRequiredService<IWebHostEnvironment>(),
+            serviceProvider.GetRequiredService<IHttpContextAccessor>(),
+            serviceProvider.GetRequiredService<IConfiguration>());
+        var defaultMembers = new[]
+        {
+            new Member
+            {
+                Email = "yaphb-wm24@student.tarc.edu.my",
+                Name = "TARC Student",
+                Hash = helper.HashPassword("123456"),
+                Address = "TARC University College, Setapak",
+                PhoneNumber = "0123456789",
+                PhotoURL = "default.png",  // Set default photo
+                OtpCode = null,            // Ensure no pending OTP
+                OtpExpiry = null,          // Ensure no OTP expiry
+                IsPendingDeletion = false, // Not pending deletion
+                DeletionRequestDate = null,
+                DeletionToken = null,
+                MemberPhotos = new List<MemberPhoto>(), // Initialize empty photo collection
+                Orders = new List<Order>() // Initialize empty orders collection
+            }
+        };
+        context.Members.AddRange(defaultMembers);
         context.SaveChanges();
     }
 
