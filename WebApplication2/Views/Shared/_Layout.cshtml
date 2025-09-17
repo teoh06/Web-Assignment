@@ -36,6 +36,14 @@
         })();
     </script>
 
+    <script>
+        // Expose authentication state and user email for client-side personalization gating and namespacing
+        window.isAuthenticated = @(User?.Identity?.IsAuthenticated == true ? "true" : "false");
+        // Convert string to real boolean
+        window.isAuthenticated = (window.isAuthenticated === true || window.isAuthenticated === 'true');
+        window.userEmail = @(User?.Identity?.IsAuthenticated == true ? $"'" + (User.Identity?.Name ?? "") + "'" : "null");
+    </script>
+
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -229,7 +237,7 @@
     @RenderSection("head", false)
 </head>
 
-<body>
+<body data-auth="@(User?.Identity?.IsAuthenticated == true ? "true" : "false")">
     @if (TempData["Info"] != null && !string.IsNullOrWhiteSpace(TempData["Info"].ToString()))
     {
         <div class="info">
@@ -251,9 +259,9 @@
                         @(User.IsInRole("Admin") ? "Admin" : "")
                         @(User.IsInRole("Member") ? "Member" : "")
                     </div>
-                    @if (User.IsInRole("Member") && member != null && !string.IsNullOrEmpty(member.PhotoURL))
+                    @if (User.IsInRole("Member") && member != null)
                     {
-                        <img src="/photos/@member.PhotoURL" alt="Profile Photo" />
+                        <img src="/photos/@(string.IsNullOrEmpty(member.PhotoURL) ? "default.png" : member.PhotoURL)" alt="Profile Photo" />
                     }
                 </div>
             }
@@ -364,7 +372,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/app.js" asp-append-version="true"></script>
-    <script src="/js/personalization.js"></script>
+    <script src="/js/personalization.js" asp-append-version="true"></script>
 
     <!-- Original scripts -->
     <script>

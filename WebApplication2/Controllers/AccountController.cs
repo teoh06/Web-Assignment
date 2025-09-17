@@ -134,13 +134,14 @@ public class AccountController : Controller
         return View(vm);
     }
 
-    // GET: Account/Logout
-    public IActionResult Logout(string? returnURL)
+    // POST: Account/Logout
+    [HttpPost]
+    public async Task<IActionResult> Logout(string? returnURL)
     {
         TempData["Info"] = "Logout successfully.";
 
-        // Sign out
-        hp.SignOut();
+        // Sign out (await to ensure cookie cleared before redirect)
+        await hp.SignOutAsync();
 
         return RedirectToAction("Index", "Home");
     }
@@ -277,6 +278,12 @@ public class AccountController : Controller
                       .FirstOrDefault(x => x.Email == User.Identity!.Name);
         if (m == null) return RedirectToAction("Index", "Home");
 
+        // Debug logging for GET method
+        System.Diagnostics.Debug.WriteLine($"GET UpdateProfile - User: {User.Identity!.Name}");
+        System.Diagnostics.Debug.WriteLine($"Current PhotoURL: '{m.PhotoURL}'");
+        System.Diagnostics.Debug.WriteLine($"PhotoURL is null or empty: {string.IsNullOrEmpty(m.PhotoURL)}");
+        System.Diagnostics.Debug.WriteLine($"MemberPhotos count: {m.MemberPhotos?.Count ?? 0}");
+
         // The photo history should include all unique, non-default photos associated with the member
         var photoHistory = m.MemberPhotos
             .OrderByDescending(p => p.UploadDate)
@@ -298,6 +305,28 @@ public class AccountController : Controller
             PhotoHistory = photoHistory
         };
 
+        System.Diagnostics.Debug.WriteLine($"ViewModel PhotoURL: '{vm.PhotoURL}'");
+        System.Diagnostics.Debug.WriteLine($"Photo history count: {photoHistory.Count}");
+        foreach (var photo in photoHistory)
+        {
+            System.Diagnostics.Debug.WriteLine($"History photo: {photo.FileName} (ID: {photo.Id})");
+        }
+
+        // Check if the photo file actually exists on disk
+        if (!string.IsNullOrEmpty(m.PhotoURL) && m.PhotoURL != "default.png")
+        {
+            var photoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "photos", m.PhotoURL);
+            var fileExists = System.IO.File.Exists(photoPath);
+            System.Diagnostics.Debug.WriteLine($"Photo file path: {photoPath}");
+            System.Diagnostics.Debug.WriteLine($"Photo file exists: {fileExists}");
+            if (fileExists)
+            {
+                var fileInfo = new FileInfo(photoPath);
+                System.Diagnostics.Debug.WriteLine($"Photo file size: {fileInfo.Length} bytes");
+                System.Diagnostics.Debug.WriteLine($"Photo file created: {fileInfo.CreationTime}");
+            }
+        }
+
         return View(vm);
     }
 
@@ -310,14 +339,31 @@ public class AccountController : Controller
                           .FirstOrDefault(x => x.Email == User.Identity!.Name);
         if (m == null) return RedirectToAction("Index", "Home");
 
+        // Debug logging for seeded account
+        System.Diagnostics.Debug.WriteLine($"UpdateProfile - User: {User.Identity!.Name}");
+        System.Diagnostics.Debug.WriteLine($"Member found: {m != null}, PhotoURL: {m?.PhotoURL}");
+        System.Diagnostics.Debug.WriteLine($"MemberPhotos count: {m?.MemberPhotos?.Count ?? 0}");
+        System.Diagnostics.Debug.WriteLine($"ProfilePicture: {vm.ProfilePicture != null}");
+        System.Diagnostics.Debug.WriteLine($"ProcessedImageData: {!string.IsNullOrEmpty(vm.ProcessedImageData)}");
+        System.Diagnostics.Debug.WriteLine($"SelectedPhotoPath: {vm.SelectedPhotoPath}");
+
         if (vm.ProfilePicture != null)
         {
             var err = hp.ValidatePhoto(vm.ProfilePicture);
-            if (err != "") ModelState.AddModelError("ProfilePicture", err);
+            if (err != "") 
+            {
+                ModelState.AddModelError("ProfilePicture", err);
+                System.Diagnostics.Debug.WriteLine($"Photo validation error: {err}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("Photo validation passed");
+            }
         }
 
         // --- Fix: Always check if any photo update is requested ---
         bool photoChanged = false;
+        bool isNewUpload = false; // true if the new photo comes from file upload or cropper
         string? newPhotoUrl = null;
         string oldPhotoUrl = m.PhotoURL;
 
@@ -326,43 +372,113 @@ public class AccountController : Controller
             if (!string.IsNullOrEmpty(vm.ProcessedImageData))
             {
                 // Case 1: New photo from cropper
+                System.Diagnostics.Debug.WriteLine("Processing cropped image data");
                 newPhotoUrl = SaveBase64Image(vm.ProcessedImageData, "photos");
                 photoChanged = true;
+                isNewUpload = true;
+                System.Diagnostics.Debug.WriteLine($"Cropped image saved: {newPhotoUrl}");
             }
             else if (vm.ProfilePicture != null)
             {
                 // Case 2: New photo from direct upload
+                System.Diagnostics.Debug.WriteLine("Processing direct file upload");
                 newPhotoUrl = hp.SavePhoto(vm.ProfilePicture, "photos");
                 photoChanged = true;
+                isNewUpload = true;
+                System.Diagnostics.Debug.WriteLine($"Direct upload saved: {newPhotoUrl}");
             }
             else if (!string.IsNullOrEmpty(vm.SelectedPhotoPath) && int.TryParse(vm.SelectedPhotoPath, out int selectedPhotoId))
             {
                 // Case 3: Reusing a photo from history
+                System.Diagnostics.Debug.WriteLine($"Selecting photo from history: {selectedPhotoId}");
                 var selectedPhoto = m.MemberPhotos.FirstOrDefault(p => p.Id == selectedPhotoId);
                 if (selectedPhoto != null && selectedPhoto.FileName != oldPhotoUrl)
                 {
                     newPhotoUrl = selectedPhoto.FileName;
                     photoChanged = true;
+                    System.Diagnostics.Debug.WriteLine($"History photo selected: {newPhotoUrl}");
                 }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("No photo change detected");
             }
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"Photo processing exception: {ex.Message}");
             ModelState.AddModelError("", "Error processing photo: " + ex.Message);
+        }
+
+        System.Diagnostics.Debug.WriteLine($"ModelState.IsValid: {ModelState.IsValid}");
+        if (!ModelState.IsValid)
+        {
+            foreach (var error in ModelState)
+            {
+                System.Diagnostics.Debug.WriteLine($"ModelState Error - Key: {error.Key}, Errors: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
+            }
+        }
+
+        // Apply photo change even if other non-photo fields are invalid
+        // This ensures profile picture updates are not blocked by unrelated validation (e.g., Address formatting)
+        bool photoAlreadyApplied = false;
+        var profilePicEntry = ModelState.ContainsKey("ProfilePicture") ? ModelState["ProfilePicture"] : null;
+        bool hasProfilePicErrors = profilePicEntry != null && profilePicEntry.Errors != null && profilePicEntry.Errors.Count > 0;
+        if (photoChanged && !hasProfilePicErrors && newPhotoUrl != null && newPhotoUrl != oldPhotoUrl)
+        {
+            System.Diagnostics.Debug.WriteLine("Applying photo change regardless of other field validation");
+            // Add the previous photo to history if it's not a default one and not already there
+            if (!string.IsNullOrEmpty(oldPhotoUrl) && oldPhotoUrl != "default.png" && !m.MemberPhotos.Any(p => p.FileName == oldPhotoUrl))
+            {
+                System.Diagnostics.Debug.WriteLine($"Adding old photo to history (pre-save path): {oldPhotoUrl}");
+                m.MemberPhotos.Add(new MemberPhoto
+                {
+                    MemberEmail = m.Email,
+                    FileName = oldPhotoUrl,
+                    UploadDate = DateTime.Now
+                });
+            }
+            // If this is a brand-new upload, also record the new file into history (so it appears in the grid immediately)
+            if (isNewUpload && !m.MemberPhotos.Any(p => p.FileName == newPhotoUrl))
+            {
+                System.Diagnostics.Debug.WriteLine($"Recording new uploaded photo into history (pre-save): {newPhotoUrl}");
+                m.MemberPhotos.Add(new MemberPhoto
+                {
+                    MemberEmail = m.Email,
+                    FileName = newPhotoUrl,
+                    UploadDate = DateTime.Now
+                });
+            }
+            m.PhotoURL = newPhotoUrl;
+            try
+            {
+                db.SaveChanges();
+                photoAlreadyApplied = true;
+                System.Diagnostics.Debug.WriteLine("Photo change saved to DB (pre main ModelState block)");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving photo change: {ex.Message}");
+                ModelState.AddModelError("", "Failed to save profile photo: " + ex.Message);
+            }
         }
 
         if (ModelState.IsValid)
         {
+            System.Diagnostics.Debug.WriteLine($"Photo changed: {photoChanged}, New URL: {newPhotoUrl}, Old URL: {oldPhotoUrl}");
+            
             m.Name = vm.Name;
             m.Address = vm.Address;
             m.PhoneNumber = vm.PhoneNumber;
 
             // --- If a photo change occurred, update history and current photo ---
-            if (photoChanged && newPhotoUrl != null && newPhotoUrl != oldPhotoUrl)
+            if (!photoAlreadyApplied && photoChanged && newPhotoUrl != null && newPhotoUrl != oldPhotoUrl)
             {
+                System.Diagnostics.Debug.WriteLine("Updating photo URL and history");
                 // Add the previous photo to history if it's not a default one and not already there
                 if (!string.IsNullOrEmpty(oldPhotoUrl) && oldPhotoUrl != "default.png" && !m.MemberPhotos.Any(p => p.FileName == oldPhotoUrl))
                 {
+                    System.Diagnostics.Debug.WriteLine($"Adding old photo to history: {oldPhotoUrl}");
                     m.MemberPhotos.Add(new MemberPhoto
                     {
                         MemberEmail = m.Email,
@@ -370,10 +486,32 @@ public class AccountController : Controller
                         UploadDate = DateTime.Now
                     });
                 }
+                // Record the new uploaded photo into history if it came from a fresh upload
+                if (isNewUpload && !m.MemberPhotos.Any(p => p.FileName == newPhotoUrl))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Recording new uploaded photo into history: {newPhotoUrl}");
+                    m.MemberPhotos.Add(new MemberPhoto
+                    {
+                        MemberEmail = m.Email,
+                        FileName = newPhotoUrl,
+                        UploadDate = DateTime.Now
+                    });
+                }
                 m.PhotoURL = newPhotoUrl;
+                System.Diagnostics.Debug.WriteLine($"Updated PhotoURL to: {m.PhotoURL}");
             }
 
-            db.SaveChanges();
+            try
+            {
+                db.SaveChanges();
+                System.Diagnostics.Debug.WriteLine("Database changes saved successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Database save error: {ex.Message}");
+                ModelState.AddModelError("", "Error saving changes: " + ex.Message);
+                goto RepopulateAndReturn;
+            }
 
             // --- Prune photo history to keep the 4 most recent ones AFTER saving changes ---
             var allPhotos = db.MemberPhotos.Where(p => p.MemberEmail == m.Email).ToList();
@@ -398,6 +536,8 @@ public class AccountController : Controller
             TempData["Info"] = "Profile updated successfully.";
             return RedirectToAction();
         }
+
+        RepopulateAndReturn:
 
         // Repopulate required VM properties if returning to the view due to an error
         vm.Email = m.Email;

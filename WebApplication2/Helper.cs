@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -113,9 +113,9 @@ public class Helper
     }
 
 
-    public void SignOut()
+    public async Task SignOutAsync()
     {
-        ct.HttpContext!.SignOutAsync();
+        await ct.HttpContext!.SignOutAsync();
     }
 
     public string RandomPassword()
