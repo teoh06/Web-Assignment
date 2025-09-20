@@ -52,9 +52,6 @@
                 <a class="btn btn-success add-product-btn" asp-controller="MenuItem" asp-action="Create">
                     <i class="fas fa-plus"></i> Add New Product
                 </a>
-                <button id="bulkDeleteBtn" class="btn btn-danger ms-2 bulk-delete-btn" style="display:none;">
-                    <i class="fas fa-trash"></i> Delete Selected Items
-                </button>
             </div>
             <div class="selected-count" style="display:none;">
                 <span class="badge bg-danger" id="selectedCount">0 items selected</span>
@@ -84,13 +81,6 @@
             double avgRating = ratings.Count > 0 ? ratings.Average(r => r.Value) : 0;
             <div class="menu-item-card" data-aos="fade-up">
                 <div class="item-image">
-                    @if (isAdmin)
-                    {
-                        <label class="admin-select-checkbox">
-                            <input type="checkbox" class="item-checkbox" data-item-id="@item.MenuItemId" data-item-name="@item.Name" />
-                            <span class="custom-checkbox"></span>
-                        </label>
-                    }
                     <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
                         <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" loading="lazy" />
                     </a>
@@ -131,9 +121,6 @@
                                 </form>
                                 <a class="btn btn-sm btn-warning edit-btn" asp-action="Edit" asp-route-id="@item.MenuItemId">
                                     <i class="fas fa-edit"></i>
-                                </a>
-                                <a class="btn btn-sm btn-danger delete-btn" asp-action="Delete" asp-route-id="@item.MenuItemId">
-                                    <i class="fas fa-trash"></i>
                                 </a>
                             </div>
                         }
