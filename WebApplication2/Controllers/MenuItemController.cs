@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -58,10 +58,16 @@ public class MenuItemController : Controller
 
 
     [Authorize(Roles = "Admin")]
-    public IActionResult Create()
+    public IActionResult Create(int? categoryId)
     {
         ViewBag.Categories = db.Categories.ToList();
-        return View();
+        // If a categoryId is provided, preselect it by setting the model's CategoryId
+        var model = new MenuItem();
+        if (categoryId.HasValue)
+        {
+            model.CategoryId = categoryId.Value;
+        }
+        return View(model);
     }
 
     [HttpPost]
@@ -347,6 +353,16 @@ public class MenuItemController : Controller
             Ratings = ratings,
             Comments = comments
         };
+        // Determine if current user can rate: must be a member and have purchased this item before
+        if (User.Identity?.IsAuthenticated == true && User.IsInRole("Member"))
+        {
+            var email = User.Identity.Name;
+            vm.CanRate = db.Orders
+                .Include(o => o.OrderItems)
+                .Any(o => o.MemberEmail == email
+                          && (o.Status == "Paid" || o.Status == "Delivered" || o.Status == "Preparing" || o.Status == "Ready for Pickup")
+                          && o.OrderItems.Any(oi => oi.MenuItemId == id));
+        }
 
         return View(vm);
     }
@@ -412,12 +428,12 @@ public class MenuItemController : Controller
             logger.LogInformation("Deleted image file: {Path}", filePath);
         }
     }
-    
+
     // Helper method to save processed image data (base64)
     private async Task<string?> SaveProcessedImage(string base64Image)
     {
         logger.LogInformation("SaveProcessedImage called with base64 data");
-        
+
         try
         {
             // Validate the base64 string
@@ -426,34 +442,34 @@ public class MenuItemController : Controller
                 ModelState.AddModelError("processedImageData", "Invalid image data format.");
                 return null;
             }
-            
+
             // Extract the actual base64 data (remove the data:image/xxx;base64, prefix)
             var base64Data = base64Image.Substring(base64Image.IndexOf(',') + 1);
             var imageBytes = Convert.FromBase64String(base64Data);
-            
+
             // Check file size (2MB limit)
             if (imageBytes.Length == 0 || imageBytes.Length > 2 * 1024 * 1024)
             {
                 ModelState.AddModelError("processedImageData", "File size must be between 1 byte and 2MB.");
                 return null;
             }
-            
+
             var uploadsFolder = Path.Combine(env.WebRootPath, "images");
-            
+
             // Ensure the directory exists
             if (!Directory.Exists(uploadsFolder))
             {
                 Directory.CreateDirectory(uploadsFolder);
             }
-            
+
             // Generate a unique filename
             var uniqueFileName = Guid.NewGuid().ToString() + ".jpg";
             var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-            
+
             // Save the file
             await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
             logger.LogInformation("Processed image saved successfully: {FileName}", uniqueFileName);
-            
+
             return uniqueFileName;
         }
         catch (Exception ex)
@@ -469,6 +485,16 @@ public class MenuItemController : Controller
     {
         if (!User.Identity.IsAuthenticated) return Unauthorized();
         var email = User.Identity.Name;
+        // Server-side enforcement: only allow rating if user has purchased this item
+        bool hasPurchased = db.Orders
+            .Include(o => o.OrderItems)
+            .Any(o => o.MemberEmail == email
+                      && (o.Status == "Paid" || o.Status == "Delivered" || o.Status == "Preparing" || o.Status == "Ready for Pickup")
+                      && o.OrderItems.Any(oi => oi.MenuItemId == menuItemId));
+        if (!hasPurchased)
+        {
+            return Forbid();
+        }
         var existing = db.MenuItemRatings.FirstOrDefault(r => r.MenuItemId == menuItemId && r.MemberEmail == email);
         if (existing != null)
         {

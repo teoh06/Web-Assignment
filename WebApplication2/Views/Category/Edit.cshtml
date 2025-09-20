@@ -69,6 +69,125 @@
                     }
                 </div>
             </div>
+            <div class="edit-card assign-items-card">
+                <div class="edit-card-header d-flex align-items-center justify-content-between">
+                    <div><i class="fas fa-plus-square me-2"></i> Assign Existing Items</div>
+                </div>
+                <div class="edit-card-body collapse show" id="assignCollapseEdit">
+                    @{
+                        var availableItems = db.MenuItems.Where(m => m.CategoryId == null).OrderBy(m => m.Name).ToList();
+                    }
+                    @if (availableItems.Any())
+                    {
+                        <form asp-action="AssignItems" asp-controller="Category" method="post" class="assign-items-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="categoryId" value="@Model.CategoryId" />
+                            
+                            <!-- Enhanced Search Section -->
+                            <div class="search-section mb-4">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-12 col-lg-8">
+                                        <div class="search-input-wrapper">
+                                            <i class="fas fa-search search-icon"></i>
+                                            <input type="text" id="assignSearchEdit" class="form-control search-input" placeholder="Search unassigned items..." />
+                                            <button type="button" class="btn btn-sm btn-outline-secondary clear-search" id="clearSearchEdit" style="display: none;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-lg-4">
+                                        <div class="selection-info">
+                                            <span class="badge bg-info" id="itemCount">@availableItems.Count unassigned items</span>
+                                            <span class="badge bg-success ms-2" id="selectedCount" style="display: none;">0 selected</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Enhanced Items Grid -->
+                            <div class="items-grid-container">
+                                <div class="items-grid" id="assignListEdit">
+                                    @foreach (var ai in availableItems)
+                                    {
+                                        <div class="assign-item-wrapper" data-name="@ai.Name.ToLower()" data-price="@ai.Price">
+                                            <div class="assign-item-card">
+                                                <div class="item-checkbox-wrapper">
+                                                    <input class="item-checkbox" type="checkbox" name="menuItemIds" value="@ai.MenuItemId" id="mi_edit_@ai.MenuItemId">
+                                                    <label class="checkbox-label" for="mi_edit_@ai.MenuItemId">
+                                                        <i class="fas fa-check check-icon"></i>
+                                                    </label>
+                                                </div>
+                                                <div class="item-content">
+                                                    @if (!string.IsNullOrEmpty(ai.PhotoURL))
+                                                    {
+                                                        <div class="item-image">
+                                                            <img src="~/images/@ai.PhotoURL" alt="@ai.Name" />
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="item-image placeholder">
+                                                            <i class="fas fa-utensils"></i>
+                                                        </div>
+                                                    }
+                                                    <div class="item-details">
+                                                        <h6 class="item-name">@ai.Name</h6>
+                                                        <p class="item-price">@ai.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</p>
+                                                        @if (ai.StockQuantity <= 5 && ai.StockQuantity > 0)
+                                                        {
+                                                            <span class="badge bg-warning text-dark">Low Stock: @ai.StockQuantity</span>
+                                                        }
+                                                        else if (ai.StockQuantity == 0)
+                                                        {
+                                                            <span class="badge bg-danger">Out of Stock</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <div class="item-overlay">
+                                                    <i class="fas fa-plus-circle"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Enhanced Action Section -->
+                            <div class="action-section mt-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="bulk-actions">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" style="margin-bottom: 10px;" id="selectAllBtn">
+                                            <i class="fas fa-check-square me-1"></i> Select All
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="clearAllBtn">
+                                            <i class="fas fa-square me-1"></i> Clear All
+                                        </button>
+                                    </div>
+                                    <button type="submit" class="btn btn-success btn-lg assign-btn" disabled>
+                                        <i class="fas fa-check me-2"></i> Assign Selected Items
+                                        <span class="selected-count-text"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Unassigned Items</h5>
+                            <p class="text-muted">All menu items are currently assigned to categories. Create new items or unassign items from other categories first.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="edit-card">
+                <div class="edit-card-header"><i class="fas fa-plus me-2"></i> Quick Add New Item</div>
+                <div class="edit-card-body">
+                    <p class="text-muted">Create a new menu item and then assign it to <strong>@Model.Name</strong>.</p>
+                    <a asp-controller="MenuItem" asp-action="Create" asp-route-categoryId="@Model.CategoryId" class="btn btn-primary"><i class="fas fa-plus me-1"></i> Add New Menu Item</a>
+                </div>
+            </div>
         </div>
     </div>
     <style>
@@ -194,7 +313,265 @@
             border-radius: 6px;
             padding: 6px 10px;
         }
-        @@media (max-width: 900px) {
+        /* Enhanced Assign Items Styles */
+        .assign-items-card {
+            border: 1px solid #2d3748;
+        }
+        
+        .search-section {
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2d3748;
+        }
+        
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            color: #a0aec0;
+            z-index: 2;
+        }
+        
+        .search-input {
+            padding-left: 45px;
+            padding-right: 45px;
+            background: var(--bg-primary);
+            border: 2px solid #2d3748;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            border-color: var(--primary-brand);
+            box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
+            background: #1a202c;
+        }
+        
+        .clear-search {
+            position: absolute;
+            right: 10px;
+            border: none;
+            background: transparent;
+            color: #a0aec0;
+            z-index: 2;
+        }
+        
+        .selection-info {
+            text-align: right;
+        }
+        
+        .selection-info .badge {
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+        }
+        
+        .items-grid-container {
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2d3748;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        
+        .assign-item-wrapper {
+            transition: all 0.3s ease;
+        }
+        
+        .assign-item-card {
+            position: relative;
+            border: 2px solid #2d3748;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .assign-item-card:hover {
+            border-color: var(--primary-brand);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .assign-item-card.selected {
+            border-color: var(--accent-green);
+            background: linear-gradient(135deg,rgba(78, 167, 125, 0.62) 0%,rgb(214, 216, 221) 100%);
+        }
+        
+        .item-checkbox-wrapper {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 3;
+        }
+        
+        .item-checkbox {
+            display: none;
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #4a5568;
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .checkbox-label .check-icon {
+            opacity: 0;
+            color: white;
+            font-size: 14px;
+            transition: opacity 0.3s ease;
+        }
+        
+        .item-checkbox:checked + .checkbox-label {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+        
+        .item-checkbox:checked + .checkbox-label .check-icon {
+            opacity: 1;
+        }
+        
+        .item-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #2d3748;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .item-image.placeholder {
+            color: #a0aec0;
+            font-size: 24px;
+        }
+        
+        .item-details {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .item-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 4px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            align-items: center;
+            white-space: nowrap;
+        }
+        
+        .item-price {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--accent-green);
+            margin: 0 0 8px 0;
+        }
+        
+        .item-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(66, 153, 225, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .item-overlay i {
+            font-size: 2rem;
+            color: white;
+        }
+        
+        .assign-item-card:hover .item-overlay {
+            opacity: 1;
+        }
+        
+        .action-section {
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2d3748;
+        }
+        
+        .bulk-actions .btn {
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 500;
+        }
+        
+        .assign-btn {
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .assign-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .assign-btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+        }
+        
+        .selected-count-text {
+            font-weight: normal;
+            opacity: 0.9;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            border-radius: 12px;
+            border: 2px dashed #2d3748;
+        }
+
+        @@media (max-width: 1200px) {
             .form-actions {
                 flex-direction: column;
                 gap: 12px;
@@ -203,8 +580,234 @@
                 min-width: 100%;
                 max-width: 100%;
             }
+            .items-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+        
+        @@media (max-width: 768px) {
+            .search-section .row {
+                flex-direction: column;
+            }
+            .selection-info {
+                text-align: left;
+                margin-top: 10px;
+            }
+            .items-grid {
+                grid-template-columns: 1fr;
+            }
+            .action-section .d-flex {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .bulk-actions {
+                display: flex;
+                gap: 10px;
+            }
+            .assign-btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+        
+        @@media (max-width: 480px) {
+            .assign-item-card {
+                padding: 12px;
+            }
+            .item-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+            }
+            .item-image {
+                width: 50px;
+                height: 50px;
+            }
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Enhanced search functionality
+            const searchInput = document.getElementById('assignSearchEdit');
+            const clearSearchBtn = document.getElementById('clearSearchEdit');
+            const itemCount = document.getElementById('itemCount');
+            const selectedCount = document.getElementById('selectedCount');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const clearAllBtn = document.getElementById('clearAllBtn');
+            const assignBtn = document.querySelector('.assign-btn');
+            const selectedCountText = document.querySelector('.selected-count-text');
+
+            // Search functionality with enhanced features
+            searchInput?.addEventListener('input', function() {
+                const query = this.value.trim().toLowerCase();
+                const items = document.querySelectorAll('#assignListEdit .assign-item-wrapper');
+                let visibleCount = 0;
+
+                items.forEach(item => {
+                    const name = item.getAttribute('data-name') || '';
+                    const price = item.getAttribute('data-price') || '';
+                    const isVisible = name.includes(query) || price.includes(query);
+                    
+                    item.style.display = isVisible ? '' : 'none';
+                    if (isVisible) visibleCount++;
+                });
+
+                // Update item count
+                if (itemCount) {
+                    itemCount.textContent = `${visibleCount} items ${query ? 'found' : 'unassigned'}`;
+                }
+
+                // Show/hide clear button
+                if (clearSearchBtn) {
+                    clearSearchBtn.style.display = query ? 'block' : 'none';
+                }
+            });
+
+            // Clear search functionality
+            clearSearchBtn?.addEventListener('click', function() {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+                searchInput.focus();
+            });
+
+            // Checkbox interaction enhancements
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                const card = checkbox.closest('.assign-item-card');
+                
+                // Card click to toggle checkbox
+                card?.addEventListener('click', function(e) {
+                    if (e.target !== checkbox && !e.target.closest('.checkbox-label')) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+                });
+
+                // Checkbox change event
+                checkbox.addEventListener('change', function() {
+                    updateCardSelection(this);
+                    updateSelectionCount();
+                    updateAssignButton();
+                });
+            });
+
+            // Update card visual state
+            function updateCardSelection(checkbox) {
+                const card = checkbox.closest('.assign-item-card');
+                if (card) {
+                    card.classList.toggle('selected', checkbox.checked);
+                }
+            }
+
+            // Update selection count display
+            function updateSelectionCount() {
+                const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+                const count = checkedBoxes.length;
+                
+                if (selectedCount) {
+                    if (count > 0) {
+                        selectedCount.textContent = `${count} selected`;
+                        selectedCount.style.display = 'inline-block';
+                    } else {
+                        selectedCount.style.display = 'none';
+                    }
+                }
+
+                if (selectedCountText) {
+                    selectedCountText.textContent = count > 0 ? `(${count})` : '';
+                }
+            }
+
+            // Update assign button state
+            function updateAssignButton() {
+                const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+                if (assignBtn) {
+                    assignBtn.disabled = checkedBoxes.length === 0;
+                }
+            }
+
+            // Select all functionality
+            selectAllBtn?.addEventListener('click', function() {
+                const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+                    const wrapper = cb.closest('.assign-item-wrapper');
+                    return wrapper && wrapper.style.display !== 'none';
+                });
+
+                const allChecked = visibleCheckboxes.every(cb => cb.checked);
+                
+                visibleCheckboxes.forEach(checkbox => {
+                    checkbox.checked = !allChecked;
+                    updateCardSelection(checkbox);
+                });
+
+                updateSelectionCount();
+                updateAssignButton();
+                
+                // Update button text
+                this.innerHTML = allChecked 
+                    ? '<i class="fas fa-check-square me-1"></i> Select All'
+                    : '<i class="fas fa-square me-1"></i> Select All';
+            });
+
+            // Clear all functionality
+            clearAllBtn?.addEventListener('click', function() {
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    updateCardSelection(checkbox);
+                });
+
+                updateSelectionCount();
+                updateAssignButton();
+                
+                // Reset select all button
+                if (selectAllBtn) {
+                    selectAllBtn.innerHTML = '<i class="fas fa-check-square me-1"></i> Select All';
+                }
+            });
+
+            // Form submission enhancement
+            const assignForm = document.querySelector('.assign-items-form');
+            assignForm?.addEventListener('submit', function(e) {
+                const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+                if (checkedBoxes.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one item to assign.');
+                    return false;
+                }
+
+                // Add loading state to button
+                if (assignBtn) {
+                    assignBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Assigning...';
+                    assignBtn.disabled = true;
+                }
+            });
+
+            // Initialize states
+            updateSelectionCount();
+            updateAssignButton();
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl/Cmd + A to select all visible items
+                if ((e.ctrlKey || e.metaKey) && e.key === 'a' && searchInput === document.activeElement) {
+                    e.preventDefault();
+                    selectAllBtn?.click();
+                }
+                
+                // Escape to clear search
+                if (e.key === 'Escape' && searchInput === document.activeElement) {
+                    clearSearchBtn?.click();
+                }
+            });
+
+            // Add smooth scrolling for items grid
+            const itemsContainer = document.querySelector('.items-grid-container');
+            if (itemsContainer) {
+                itemsContainer.style.scrollBehavior = 'smooth';
+            }
+        });
+    </script>
 </main>
 @section Scripts {
 }

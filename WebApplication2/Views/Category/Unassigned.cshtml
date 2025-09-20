@@ -1,0 +1,58 @@
+@model List<WebApplication2.Models.MenuItem>
+@using WebApplication2.Models;
+@{
+    ViewBag.Title = "Uncategorized Items";
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+}
+<main>
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="category-title" style="font-family:'Victor Mono',monospace;font-size:2.0rem;color:var(--primary-brand);margin:0;">Uncategorized Items</h1>
+        <a asp-action="Index" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Back to Categories</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">All items are assigned to a category.</div>
+    }
+    else
+    {
+        <form asp-action="AssignUnassigned" method="post" class="mb-3">
+            @Html.AntiForgeryToken()
+            <div class="row g-2 align-items-end mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Assign selected to category</label>
+                    <select class="form-select" name="categoryId" required>
+                        <option value="" selected disabled>-- Choose a category --</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.CategoryId">@c.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-check me-1"></i>Assign Selected</button>
+                </div>
+            </div>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                @foreach (var item in Model)
+                {
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body d-flex gap-3 align-items-start">
+                                <input type="checkbox" class="form-check-input mt-2" name="menuItemIds" value="@item.MenuItemId" id="mi_@item.MenuItemId" />
+                                <div class="flex-grow-1">
+                                    <label for="mi_@item.MenuItemId" class="form-label m-0">
+                                        <div class="fw-bold">@item.Name</div>
+                                        <div class="text-muted small">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                                        <div class="small"><span class="badge bg-secondary">No Category</span></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </form>
+    }
+</main>

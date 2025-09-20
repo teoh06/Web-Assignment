@@ -140,6 +140,8 @@ public class MenuItemDetailsVM
     public List<MenuItemComment> Comments { get; set; }
     public double AverageRating => Ratings?.Count > 0 ? Ratings.Average(r => r.Value) : 0;
     public int RatingsCount => Ratings?.Count ?? 0;
+    // Whether the currently logged-in member is allowed to rate (has purchased before)
+    public bool CanRate { get; set; } = false;
 }
 
 public class TrackOrderVM

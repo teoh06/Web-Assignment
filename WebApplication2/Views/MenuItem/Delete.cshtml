@@ -54,7 +54,7 @@
 
     .items-container {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
         gap: 1.5rem;
         padding: 1.5rem;
         margin: 1rem 0;
@@ -110,26 +110,40 @@
     }
 
     .item-details {
-        padding: 1.2rem;
+        padding: 1.5rem;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
     .item-name {
         font-size: 1.2rem;
         font-weight: 600;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.8rem;
         color: var(--text-primary);
+        line-height: 1.4;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
 
     .item-price {
-        font-size: 1.1rem;
+        font-size: 1.3rem;
         color: var(--danger-color);
-        font-weight: 600;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        white-space: nowrap;
+        overflow: visible;
     }
 
     .item-category {
         font-size: 0.9rem;
         color: var(--text-secondary);
-        margin-top: 0.5rem;
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .warning-box {
@@ -268,9 +282,33 @@
         font-size: 0.9rem;
     }
 
+    @@media (max-width: 992px) {
+        .items-container {
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+        }
+    }
+
     @@media (max-width: 768px) {
         .items-container {
             grid-template-columns: 1fr;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .item-details {
+            padding: 1.2rem;
+            min-height: 100px;
+        }
+
+        .item-name {
+            font-size: 1.1rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .item-price {
+            font-size: 1.2rem;
         }
 
         .confirmation-section {
@@ -280,6 +318,32 @@
         .delete-btn, .cancel-btn {
             width: 100%;
             margin: 0.5rem 0;
+        }
+
+        .summary-stats {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            margin: 1rem;
+            padding: 0.5rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .items-container {
+            padding: 0.5rem;
+        }
+
+        .item-details {
+            padding: 1rem;
+        }
+
+        .delete-card-header {
+            padding: 1rem;
+        }
+
+        .warning-box {
+            margin: 1rem;
+            padding: 1rem;
         }
     }
 </style>
@@ -313,7 +377,7 @@
                     <div class="stat-label">Items to Delete</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value">@Model.Select(i => i.Category?.Name).Distinct().Count()</div>
+                    <div class="stat-value">@Model.Where(i => i.Category != null).Select(i => i.Category.Name).Distinct().Count()</div>
                     <div class="stat-label">Categories Affected</div>
                 </div>
                 <div class="stat-item">
@@ -332,11 +396,17 @@
                         <div class="item-overlay"></div>
                     </div>
                     <div class="item-details">
-                        <div class="item-name">@item.Name</div>
-                        <div class="item-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                        <div>
+                            <div class="item-name">@item.Name</div>
+                            <div class="item-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
+                        </div>
                         <div class="item-category">
                             <i class="fas fa-tag me-1"></i>
-                            @item.Category?.Name
+                            <span>@(item.Category != null ? item.Category.Name : "No Category")</span>
+                            @if (item.Category == null)
+                            {
+                                <span class="badge bg-secondary">No Category</span>
+                            }
                         </div>
                     </div>
                 </div>
@@ -353,6 +423,7 @@
                    autocomplete="off" />
             
             <form asp-action="Delete" method="post" id="deleteForm">
+                @Html.AntiForgeryToken()
                 @foreach (var item in Model)
                 {
                     <input type="hidden" name="ids" value="@item.MenuItemId" />

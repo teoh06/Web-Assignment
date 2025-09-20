@@ -13,6 +13,7 @@ public static class SeedData
         context.Database.EnsureCreated();
 
         SeedAdmins(context, serviceProvider);
+        SeedChefs(context, serviceProvider);
         SeedMembers(context, serviceProvider);
         SeedCategories(context);
         SeedMenuItems(context);
@@ -37,6 +38,27 @@ public static class SeedData
             }
         };
         context.Admins.AddRange(defaultAdmins);
+        context.SaveChanges();
+    }
+
+    // --- Seed Chefs ---
+    private static void SeedChefs(DB context, IServiceProvider serviceProvider)
+    {
+        if (context.Chefs.Any()) return;
+        var helper = new Helper(
+            serviceProvider.GetRequiredService<IWebHostEnvironment>(),
+            serviceProvider.GetRequiredService<IHttpContextAccessor>(),
+            serviceProvider.GetRequiredService<IConfiguration>());
+        var defaultChefs = new[]
+        {
+            new Chef
+            {
+                Email = "chef@gmail.com",
+                Name = "Chef",
+                Hash = helper.HashPassword("123456")
+            }
+        };
+        context.Chefs.AddRange(defaultChefs);
         context.SaveChanges();
     }
 

@@ -75,15 +75,24 @@
                         <span id="avg-rating" class="fw-bold">@Model.AverageRating.ToString("0.0")</span> / 5
                         <span class="ms-2">(@Model.RatingsCount ratings)</span>
                     </div>
-                    <div class="mb-2">
-                        <label>Rate this item:</label>
-                        <span id="user-rating">
-                            @for (int i = 1; i <= 5; i++)
-                            {
-                                <span class="star" data-value="@i" style="font-size:1.5em; cursor:pointer; color:#d4aa46;">☆</span>
-                            }
-                        </span>
-                    </div>
+                    @if (Model.CanRate)
+                    {
+                        <div class="mb-2">
+                            <label>Rate this item:</label>
+                            <span id="user-rating">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <span class="star" data-value="@i" style="font-size:1.5em; cursor:pointer; color:#d4aa46;">☆</span>
+                                }
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted small mb-2">
+                            You can rate this item after you have purchased it.
+                        </div>
+                    }
                 </div>
             }
             @if (User.IsInRole("Admin"))
