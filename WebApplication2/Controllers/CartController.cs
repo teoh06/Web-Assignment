@@ -34,6 +34,56 @@ namespace WebApplication2.Controllers
         }
 
         // -------------------
+        // Cancel a Pending order (Member-only): remove order and its items
+        // -------------------
+        [HttpPost]
+        [Authorize(Roles = "Member")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelOrder(int id, string? reason)
+        {
+            var order = await _db.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.OrderId == id && o.MemberEmail == User.Identity.Name);
+            if (order == null) return Json(new { success = false, message = "Order not found." });
+            if (order.Status != "Pending") return Json(new { success = false, message = "Only pending orders can be cancelled." });
+
+            // Remove order items first (in case cascade delete is not configured)
+            if (order.OrderItems != null && order.OrderItems.Any())
+            {
+                _db.OrderItems.RemoveRange(order.OrderItems);
+            }
+
+            // Remove the order record itself
+            _db.Orders.Remove(order);
+            await _db.SaveChangesAsync();
+            return Json(new { success = true, message = "Order cancelled and removed successfully." });
+        }
+
+        // -------------------
+        // Refund an order (Member-only) - allow for Paid or Delivered
+        // -------------------
+        [HttpPost]
+        [Authorize(Roles = "Member")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RefundOrder(int id, string reason)
+        {
+            var order = await _db.Orders.Include(o => o.OrderItems).FirstOrDefaultAsync(o => o.OrderId == id && o.MemberEmail == User.Identity.Name);
+            if (order == null) return Json(new { success = false, message = "Order not found." });
+            if (order.Status != "Paid" && order.Status != "Delivered")
+                return Json(new { success = false, message = "Only paid or delivered orders can be refunded." });
+
+            // Restock items
+            foreach (var item in order.OrderItems)
+            {
+                var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
+                if (menuItem != null) menuItem.StockQuantity += item.Quantity;
+            }
+            order.Status = "Refunded";
+            await _db.SaveChangesAsync();
+            return Json(new { success = true, message = "Refund processed successfully." });
+        }
+
+        // -------------------
         // Add item to cart (AJAX)
         // -------------------
         [HttpPost]
@@ -228,54 +278,131 @@ namespace WebApplication2.Controllers
         }
 
         // -------------------
-        // Payment page
+        // Create Pending Order from Cart then redirect to Payment
         // -------------------
-        public IActionResult Payment()
+        [HttpPost]
+        [Authorize(Roles = "Member")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreatePendingOrder()
         {
             if (!User.IsInRole("Member"))
                 return Unauthorized();
 
+            // Load cart
             RemoveInactiveItemsFromCart();
-
-            var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey);
+            var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? LoadCartFromCookie();
             if (cart == null || !cart.Any())
             {
-                cart = LoadCartFromCookie();
-                HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
-            }
-            var total = cart.Sum(item => item.Price * item.Quantity);
-
-            if (total <= 0)
-            {
-                TempData["Error"] = "Your cart is empty or total is zero. Please add items to proceed.";
+                TempData["Error"] = "Your cart is empty. Please add items before proceeding to payment.";
                 return RedirectToAction("Index");
             }
 
-            var member = _db.Members.FirstOrDefault(m => m.Email == User.Identity.Name);
+            var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+            if (member == null)
+                return Unauthorized();
+
+            // Create a new Pending order and copy items (do NOT deduct stock yet)
+            var order = new Order
+            {
+                MemberEmail = member.Email,
+                MemberName = member.Name,
+                MemberPhone = member.PhoneNumber,
+                OrderDate = DateTime.Now,
+                Status = "Pending",
+                // Initialize non-nullable fields to safe defaults until user confirms payment
+                PaymentMethod = string.Empty,
+                DeliveryAddress = string.Empty,
+                DeliveryOption = "Pending"
+            };
+            _db.Orders.Add(order);
+            await _db.SaveChangesAsync();
+
+            foreach (var item in cart)
+            {
+                _db.OrderItems.Add(new OrderItem
+                {
+                    OrderId = order.OrderId,
+                    MenuItemId = item.MenuItemId,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.Price,
+                    SelectedPersonalizations = item.SelectedPersonalizations
+                });
+            }
+            await _db.SaveChangesAsync();
+
+            // Generate and persist an order token to mitigate duplicate submission
+            var orderToken = Guid.NewGuid().ToString();
+            HttpContext.Session.SetString($"OrderToken_{order.OrderId}", orderToken);
+
+            // Redirect to Payment for this order
+            return RedirectToAction("Payment", new { id = order.OrderId });
+        }
+
+        // -------------------
+        // Payment page
+        // -------------------
+        public async Task<IActionResult> Payment(int id)
+        {
+            if (!User.IsInRole("Member"))
+                return Unauthorized();
+
+            // Load the existing Pending order for this member
+            var order = await _db.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+                .FirstOrDefaultAsync(o => o.OrderId == id && o.MemberEmail == User.Identity.Name);
+            if (order == null)
+            {
+                TempData["Error"] = "Order not found.";
+                return RedirectToAction("Index");
+            }
+
+            if (order.Status != "Pending")
+            {
+                TempData["Info"] = "This order is no longer pending.";
+                return RedirectToAction("History");
+            }
+
+            var total = order.OrderItems.Sum(i => i.UnitPrice * i.Quantity);
+            var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
             var vm = new PaymentVM
             {
                 Total = total,
-                CartItems = cart,
+                CartItems = order.OrderItems.Select(oi => new CartItemVM
+                {
+                    MenuItemId = oi.MenuItemId,
+                    Name = oi.MenuItem?.Name ?? "Item",
+                    Price = oi.UnitPrice,
+                    Quantity = oi.Quantity,
+                    PhotoURL = oi.MenuItem?.PhotoURL ?? "default.jpg",
+                    SelectedPersonalizations = oi.SelectedPersonalizations
+                }).ToList(),
                 DeliveryAddress = member?.Address ?? ""
             };
 
             // --- Anti-duplicate order token ---
-            var orderToken = Guid.NewGuid().ToString();
-            HttpContext.Session.SetString("OrderToken", orderToken);
+            var sessionKey = $"OrderToken_{order.OrderId}";
+            var orderToken = HttpContext.Session.GetString(sessionKey);
+            if (string.IsNullOrEmpty(orderToken))
+            {
+                orderToken = Guid.NewGuid().ToString();
+                HttpContext.Session.SetString(sessionKey, orderToken);
+            }
             ViewBag.OrderToken = orderToken;
+            ViewBag.OrderId = order.OrderId;
 
             return View(vm);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Payment(PaymentVM vm, string orderToken)
+        public async Task<IActionResult> Payment(PaymentVM vm, string orderToken, int orderId)
         {
             if (!User.IsInRole("Member"))
                 return Unauthorized();
 
             // --- Enhanced Anti-duplicate order token check ---
-            var sessionToken = HttpContext.Session.GetString("OrderToken");
+            var sessionToken = HttpContext.Session.GetString($"OrderToken_{orderId}");
             if (string.IsNullOrEmpty(orderToken) || orderToken != sessionToken)
             {
                 ModelState.AddModelError("", "Duplicate or invalid order submission detected. Please refresh and try again.");
@@ -297,13 +424,36 @@ namespace WebApplication2.Controllers
             try
             {
                 // Invalidate token after use
-                HttpContext.Session.Remove("OrderToken");
+                HttpContext.Session.Remove($"OrderToken_{orderId}");
 
                 RemoveInactiveItemsFromCart();
 
-                var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
-                vm.Total = cart.Sum(item => item.Price * item.Quantity);
-                vm.CartItems = cart;
+                // Load the order created during pending step
+                var order = await _db.Orders
+                    .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.MenuItem)
+                    .FirstOrDefaultAsync(o => o.OrderId == orderId && o.MemberEmail == User.Identity.Name);
+                if (order == null)
+                {
+                    ModelState.AddModelError("", "Order not found.");
+                    return View(vm);
+                }
+                if (order.Status != "Pending")
+                {
+                    TempData["Info"] = "This order is no longer pending.";
+                    return RedirectToAction("History");
+                }
+
+                vm.CartItems = order.OrderItems.Select(oi => new CartItemVM
+                {
+                    MenuItemId = oi.MenuItemId,
+                    Name = oi.MenuItem?.Name ?? "Item",
+                    Price = oi.UnitPrice,
+                    Quantity = oi.Quantity,
+                    PhotoURL = oi.MenuItem?.PhotoURL ?? "default.jpg",
+                    SelectedPersonalizations = oi.SelectedPersonalizations
+                }).ToList();
+                vm.Total = vm.CartItems.Sum(x => x.Price * x.Quantity);
 
                 var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
                 if (vm.DeliveryOption == "Pickup")
@@ -330,99 +480,64 @@ namespace WebApplication2.Controllers
                         ModelState.AddModelError(nameof(vm.CardNumber), "Card number is required for card payment.");
                     }
                 }
-                if (!ModelState.IsValid || vm.Total <= 0 || !cart.Any())
+                if (!ModelState.IsValid || vm.Total <= 0 || vm.CartItems == null || !vm.CartItems.Any())
                 {
-                    if (vm.Total <= 0 || !cart.Any())
+                    if (vm.Total <= 0 || vm.CartItems == null || !vm.CartItems.Any())
                     {
                         ModelState.AddModelError("", "Your cart is empty or total is zero. Cannot proceed with payment.");
                     }
                     return View(vm);
                 }
 
-                // Generate order hash for duplicate detection (only for same-session prevention)
-                var cartHash = GenerateCartHash(cart, member.Email);
-                
-                // Check for duplicate orders within the same session (last 30 seconds) - only prevent rapid double-clicks
-                var recentDuplicate = await _db.Orders
-                    .Where(o => o.MemberEmail == member.Email && 
-                               o.OrderHash == cartHash &&
-                               o.OrderDate > DateTime.Now.AddSeconds(-30))
-                    .FirstOrDefaultAsync();
-                
-                if (recentDuplicate != null)
-                {
-                    ModelState.AddModelError("", $"⚠️ Duplicate submission detected! You just placed this order (Order #{recentDuplicate.OrderId}). Please wait a moment before placing another order.");
-                    TempData["Error"] = $"Duplicate submission prevented. You just placed Order #{recentDuplicate.OrderId}.";
-                    return View(vm);
-                }
-
-                // When creating a new order, copy member info
-                var order = new Order
-                {
-                    MemberEmail = member.Email,
-                    MemberName = member.Name,
-                    MemberPhone = !string.IsNullOrWhiteSpace(vm.PhoneNumber) ? vm.PhoneNumber : (member?.PhoneNumber ?? ""),
-                    OrderDate = DateTime.Now,
-                    Status = "Paid", // Always start as Paid after successful payment processing
-                    PaymentMethod = vm.PaymentMethod,
-                    DeliveryAddress = vm.DeliveryOption == "Pickup" ? string.Empty : vm.DeliveryAddress,
-                    DeliveryOption = vm.DeliveryOption,
-                    DeliveryInstructions = vm.DeliveryInstructions,
-                    CardNumber = vm.PaymentMethod == "Card" && !string.IsNullOrEmpty(vm.CardNumber)
-                        ? vm.CardNumber.Substring(Math.Max(0, vm.CardNumber.Length - 4))
-                        : null,
-                    OrderHash = cartHash
-                };
-                _db.Orders.Add(order);
+                // Update existing pending order to Paid and persist payment-related fields
+                order.MemberPhone = !string.IsNullOrWhiteSpace(vm.PhoneNumber) ? vm.PhoneNumber : (member?.PhoneNumber ?? "");
+                order.PaymentMethod = vm.PaymentMethod;
+                order.DeliveryAddress = vm.DeliveryOption == "Pickup" ? string.Empty : vm.DeliveryAddress;
+                order.DeliveryOption = vm.DeliveryOption;
+                order.DeliveryInstructions = vm.DeliveryInstructions;
+                order.CardNumber = vm.PaymentMethod == "Card" && !string.IsNullOrEmpty(vm.CardNumber)
+                    ? vm.CardNumber.Substring(Math.Max(0, vm.CardNumber.Length - 4))
+                    : null;
+                order.Status = "Paid";
                 await _db.SaveChangesAsync();
 
                 // Check stock availability before finalizing order
                 bool stockIssue = false;
                 string stockErrorMessage = "";
                 
-                foreach (var item in cart)
+                foreach (var item in order.OrderItems)
                 {
                     var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
                     if (menuItem == null)
                     {
                         stockIssue = true;
-                        stockErrorMessage = $"Menu item {item.Name} no longer exists.";
+                        stockErrorMessage = $"A menu item in your order no longer exists.";
                         break;
                     }
                     
                     if (menuItem.StockQuantity < item.Quantity)
                     {
                         stockIssue = true;
-                        stockErrorMessage = $"Not enough stock for {item.Name}. Only {menuItem.StockQuantity} available.";
+                        stockErrorMessage = $"Not enough stock for {menuItem.Name}. Only {menuItem.StockQuantity} available.";
                         break;
                     }
                 }
                 
                 if (stockIssue)
                 {
-                    // Remove the order we just created
-                    _db.Orders.Remove(order);
+                    // Revert status to Pending (it already is) and inform user
+                    order.Status = "Pending";
                     await _db.SaveChangesAsync();
-                    
                     ModelState.AddModelError("", stockErrorMessage);
                     return View(vm);
                 }
                 
-                foreach (var item in cart)
+                foreach (var item in order.OrderItems)
                 {
-                    // Add order item
-                    _db.OrderItems.Add(new OrderItem
-                    {
-                        OrderId = order.OrderId,
-                        MenuItemId = item.MenuItemId,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.Price,
-                        SelectedPersonalizations = item.SelectedPersonalizations
-                    });
-                    
                     // Update stock quantity
                     var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
-                    menuItem.StockQuantity -= item.Quantity;
+                    if (menuItem != null)
+                        menuItem.StockQuantity -= item.Quantity;
                 }
                 await _db.SaveChangesAsync();
 
@@ -442,15 +557,15 @@ namespace WebApplication2.Controllers
                 {
                     OrderId = order.OrderId,
                     Date = order.OrderDate,
-                    Items = cart.Select(x => new CartItemVM
+                    Items = order.OrderItems.Select(oi => new CartItemVM
                     {
-                        MenuItemId = x.MenuItemId,
-                        Name = x.Name,
-                        Price = x.Price,
-                        Quantity = x.Quantity,
-                        SelectedPersonalizations = x.SelectedPersonalizations
+                        MenuItemId = oi.MenuItemId,
+                        Name = oi.MenuItem?.Name ?? "Item",
+                        Price = oi.UnitPrice,
+                        Quantity = oi.Quantity,
+                        SelectedPersonalizations = oi.SelectedPersonalizations
                     }).ToList(),
-                    Total = cart.Sum(x => x.Price * x.Quantity),
+                    Total = order.OrderItems.Sum(x => x.UnitPrice * x.Quantity),
                     PaymentMethod = vm.PaymentMethod,
                     MemberEmail = member?.Email ?? User.Identity.Name,
                     Status = order.Status,
@@ -1175,54 +1290,7 @@ namespace WebApplication2.Controllers
             return RedirectToAction("History");
         }
         
-        // POST: /Cart/CancelOrder
-        [Authorize(Roles = "Member")]
-        [HttpPost]
-        public async Task<IActionResult> CancelOrder(int orderId, string reason)
-        {
-            try
-            {
-                // Find the order and verify ownership
-                var order = await _db.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId && o.MemberEmail == User.Identity.Name);
-                
-                if (order == null)
-                {
-                    return Json(new { success = false, message = "Order not found or you do not have access." });
-                }
-                
-                // Verify order can be cancelled (only Pending or Preparing orders)
-                if (order.Status != "Pending" && order.Status != "Preparing")
-                {
-                    return Json(new { success = false, message = $"Cannot cancel order with status '{order.Status}'." });
-                }
-                
-                // Update order status
-                order.Status = "Cancelled";
-                await _db.SaveChangesAsync();
-                
-                // Get member information for SMS notification
-                var member = await _db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
-                string phoneNumber = member?.PhoneNumber;
-                
-                // Log cancellation with reason
-                Console.WriteLine($"Order #{orderId} cancelled by {User.Identity.Name}. Reason: {reason}");
-                
-                // Implement actual SMS notification here
-                // For now, we'll just log that we would send an SMS
-                if (!string.IsNullOrEmpty(phoneNumber))
-                {
-                    Console.WriteLine($"SMS notification would be sent to {phoneNumber} for order cancellation #{orderId}");
-                    // In a real implementation, you would call an SMS service here
-                }
-                
-                return Json(new { success = true, message = "Order cancelled successfully." });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error cancelling order: {ex.Message}");
-                return Json(new { success = false, message = "An error occurred while cancelling the order." });
-            }
-        }
+        
 
         // --- WISH LIST ACTIONS ---
         [Authorize(Roles = "Member")]

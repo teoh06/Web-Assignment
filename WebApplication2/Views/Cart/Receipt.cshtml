@@ -299,6 +299,12 @@ else
             <p class="receipt-subtitle">Thank you for your purchase!</p>
         </div>
         <div class="@(isEmailReceipt ? "email-receipt-body" : "receipt-body")" style="@(isEmailReceipt ? "padding: 20px;" : "")">
+            @if (!isEmailReceipt)
+            {
+                <form id="antiforgery-receipt" method="post">
+                    @Html.AntiForgeryToken()
+                </form>
+            }
             <!-- Order Information -->
             <div class="row g-4">
                 <div class="col-md-6">
@@ -419,6 +425,36 @@ else
                     </table>
                 </div>
             </div>
+
+            @if (!isEmailReceipt && User.IsInRole("Member"))
+            {
+                <!-- Rate Your Purchase -->
+                <div class="info-section mt-4">
+                    <h5 class="section-title"><i class="fas fa-star text-warning me-2"></i>Rate Your Purchase</h5>
+                    <div class="row g-3">
+                        @foreach (var item in Model.Items)
+                        {
+                            <div class="col-md-6">
+                                <div class="card h-100" style="border:1px solid var(--border-lighter);">
+                                    <div class="card-body d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="fw-bold">@item.Name</div>
+                                            <div class="text-muted small">Tap to rate</div>
+                                        </div>
+                                        <div class="receipt-stars" data-menu-item-id="@item.MenuItemId">
+                                            <span class="star" data-value="1">☆</span>
+                                            <span class="star" data-value="2">☆</span>
+                                            <span class="star" data-value="3">☆</span>
+                                            <span class="star" data-value="4">☆</span>
+                                            <span class="star" data-value="5">☆</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
 
             <!-- Payment Information for Card Payments -->
             @if (Model.PaymentMethod == "Card" && !string.IsNullOrEmpty(Model.CardNumber))
@@ -651,4 +687,60 @@ else
             --logo-filter: brightness(0) invert(1);
         }
     }
+
+    /* Rating stars on receipt */
+    .receipt-stars .star {
+        font-size: 1.4rem;
+        cursor: pointer;
+        color: #d4aa46;
+        margin-left: 2px;
+    }
 </style>
+
+@if (!isEmailReceipt)
+{
+    <script>
+        (function(){
+            function getAntiForgeryToken() {
+                var token = document.querySelector('#antiforgery-receipt input[name="__RequestVerificationToken"]');
+                return token ? token.value : '';
+            }
+            function bindReceiptStars(){
+                const groups = document.querySelectorAll('.receipt-stars');
+                groups.forEach(group => {
+                    const stars = group.querySelectorAll('.star');
+                    stars.forEach(star => {
+                        star.addEventListener('mouseover', function(){
+                            const val = parseInt(this.getAttribute('data-value'));
+                            stars.forEach((s, i) => s.textContent = (i < val ? '★' : '☆'));
+                        });
+                        star.addEventListener('mouseout', function(){
+                            stars.forEach(s => s.textContent = '☆');
+                        });
+                        star.addEventListener('click', function(){
+                            const val = this.getAttribute('data-value');
+                            const menuItemId = group.getAttribute('data-menu-item-id');
+                            const body = `menuItemId=${encodeURIComponent(menuItemId)}&value=${encodeURIComponent(val)}`;
+                            fetch('/MenuItem/AddRating', {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'RequestVerificationToken': getAntiForgeryToken()
+                                },
+                                body
+                            }).then(r => {
+                                if (r.status === 403) { alert('You can only rate items you have purchased.'); return null; }
+                                return r ? r.json() : null;
+                            }).then(data => {
+                                if (!data) return;
+                                // simple visual feedback
+                                stars.forEach((s, i) => s.textContent = (i < val ? '★' : '☆'));
+                            }).catch(() => alert('Failed to submit rating.'));
+                        });
+                    });
+                });
+            }
+            document.addEventListener('DOMContentLoaded', bindReceiptStars);
+        })();
+    </script>
+}

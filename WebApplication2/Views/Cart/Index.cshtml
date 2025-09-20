@@ -1,4 +1,4 @@
-﻿@model List<WebApplication2.Models.CartItemVM>
+@model List<WebApplication2.Models.CartItemVM>
 @using Microsoft.AspNetCore.Http;
 @inject IHtmlHelper Html
 
@@ -112,7 +112,10 @@
                                             RM @Model.Sum(item => item.Price * item.Quantity).ToString("0.00")
                                         </strong>
                                     </div>
-                                    <a asp-action="Payment" class="btn btn-success w-100 mb-2">Proceed to Payment</a>
+                                    <form asp-action="CreatePendingOrder" asp-controller="Cart" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-success w-100 mb-2">Proceed to Payment</button>
+                                    </form>
                                     <button onclick="clearCart()" class="btn btn-outline-danger w-100">Clear Cart</button>
                                 </div>
                             </div>

@@ -14,6 +14,7 @@ public class DB : DbContext
     // DB Sets
     public DbSet<User> Users { get; set; }
     public DbSet<Admin> Admins { get; set; }
+    public DbSet<Chef> Chefs { get; set; }
     public DbSet<Member> Members { get; set; }
     public DbSet<MenuItem> MenuItems { get; set; }
     public DbSet<Category> Categories { get; set; }
@@ -36,6 +37,14 @@ public class DB : DbContext
         // modelBuilder.Entity<Admin>().ToTable("Admins");
         // modelBuilder.Entity<Member>().ToTable("Members");
         
+        // MenuItem -> Category: optional relationship, set null on category delete
+        modelBuilder.Entity<MenuItem>()
+            .HasOne(m => m.Category)
+            .WithMany(c => c.MenuItems)
+            .HasForeignKey(m => m.CategoryId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Add unique constraint to prevent duplicate orders within a short time window
         modelBuilder.Entity<Order>()
             .HasIndex(o => new { o.MemberEmail, o.OrderHash })
@@ -76,10 +85,9 @@ public class User
     public DateTime? OtpExpiry { get; set; }
 }
 
-public class Admin : User
-{
-    // Additional admin-specific fields can go here
-}
+public class Admin : User {}
+
+public class Chef : User {}
 
 public class Member : User
 {
@@ -136,8 +144,7 @@ public class MenuItem
     public string? PhotoURL { get; set; }
 
     // Foreign key
-    [Required(ErrorMessage = "Category is required")]
-    public int CategoryId { get; set; }
+    public int? CategoryId { get; set; }
     public Category? Category { get; set; }
 
     public ICollection<MenuItemImage> MenuItemImages { get; set; } = new List<MenuItemImage>();

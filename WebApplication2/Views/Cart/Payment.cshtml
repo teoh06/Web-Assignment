@@ -1,4 +1,4 @@
-﻿@using System.Globalization;
+@using System.Globalization;
 @using WebApplication2.Controllers;
 
 @model WebApplication2.Models.PaymentVM
@@ -12,7 +12,9 @@
             <h2 class="mb-4 text-center">Complete Your Order</h2>
             
             <form asp-action="Payment" method="post" class="needs-validation" novalidate>
+                @Html.AntiForgeryToken()
                 <input type="hidden" name="orderToken" value="@ViewBag.OrderToken" />
+                <input type="hidden" name="orderId" value="@ViewBag.OrderId" />
                 
                 <div class="row">
                     <!-- Left Column: Order Details -->
@@ -626,7 +628,7 @@
                         
                         // Show error message
                         const errorDiv = document.createElement('div');
-                        errorDiv.className = 'alert alert-warning mt-3';
+                        errorDiv.className = 'alert mt-3';
                         errorDiv.innerHTML = '<strong>Warning:</strong> The payment is taking longer than expected. Please try again.';
                         form.appendChild(errorDiv);
                         

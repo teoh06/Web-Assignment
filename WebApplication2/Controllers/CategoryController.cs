@@ -51,8 +51,13 @@ public class CategoryController : Controller
                 return View(category);
             }
 
-            // Check if category name already exists
-            var existingCategory = db.Categories.FirstOrDefault(c => c.Name.ToLower() == category.Name.ToLower());
+            // Normalize/trim name
+            category.Name = category.Name.Trim();
+
+            // Check if category name already exists (case-insensitive)
+            var existingCategory = db.Categories
+                .AsEnumerable()
+                .FirstOrDefault(c => string.Equals(c.Name?.Trim(), category.Name, StringComparison.OrdinalIgnoreCase));
             if (existingCategory != null)
             {
                 ModelState.AddModelError("Name", "A category with this name already exists.");
@@ -108,8 +113,13 @@ public class CategoryController : Controller
                 return View(category);
             }
 
-            // Check if category name already exists (excluding current category)
-            var existingCategory = db.Categories.FirstOrDefault(c => c.Name.ToLower() == category.Name.ToLower() && c.CategoryId != id);
+            // Normalize/trim name
+            category.Name = category.Name.Trim();
+
+            // Check if category name already exists (excluding current category), case-insensitive
+            var existingCategory = db.Categories
+                .AsEnumerable()
+                .FirstOrDefault(c => c.CategoryId != id && string.Equals(c.Name?.Trim(), category.Name, StringComparison.OrdinalIgnoreCase));
             if (existingCategory != null)
             {
                 ModelState.AddModelError("Name", "A category with this name already exists.");
@@ -150,8 +160,67 @@ public class CategoryController : Controller
         {
             db.Categories.Remove(category);
             db.SaveChanges();
+            TempData["SuccessMessage"] = $"Category '{category.Name}' deleted. Items remain intact and can be reassigned later.";
         }
         return RedirectToAction(nameof(Index));
+    }
+
+    // POST: /Category/AssignItems
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult AssignItems(int categoryId, int[] menuItemIds)
+    {
+        if (categoryId <= 0)
+        {
+            TempData["ErrorMessage"] = "Invalid category.";
+            return RedirectToAction(nameof(Index));
+        }
+        var category = db.Categories.Find(categoryId);
+        if (category == null)
+        {
+            TempData["ErrorMessage"] = "Category not found.";
+            return RedirectToAction(nameof(Index));
+        }
+        if (menuItemIds == null || menuItemIds.Length == 0)
+        {
+            TempData["ErrorMessage"] = "No menu items selected.";
+            return RedirectToAction("Details", new { id = categoryId });
+        }
+
+        var items = db.MenuItems.Where(m => menuItemIds.Contains(m.MenuItemId)).ToList();
+        foreach (var item in items)
+        {
+            item.CategoryId = categoryId;
+        }
+        db.SaveChanges();
+        TempData["SuccessMessage"] = $"Assigned {items.Count} item(s) to '{category.Name}'.";
+        return RedirectToAction("Details", new { id = categoryId });
+    }
+
+    // POST: /Category/UnassignItems
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult UnassignItems(int categoryId, int[] menuItemIds)
+    {
+        var category = db.Categories.Find(categoryId);
+        if (category == null)
+        {
+            TempData["ErrorMessage"] = "Category not found.";
+            return RedirectToAction(nameof(Index));
+        }
+        if (menuItemIds == null || menuItemIds.Length == 0)
+        {
+            TempData["ErrorMessage"] = "No menu items selected to unassign.";
+            return RedirectToAction("Details", new { id = categoryId });
+        }
+        var items = db.MenuItems.Where(m => m.CategoryId == categoryId && menuItemIds.Contains(m.MenuItemId)).ToList();
+        foreach (var item in items)
+        {
+            item.CategoryId = null;
+        }
+        db.SaveChanges();
+        TempData["SuccessMessage"] = $"Unassigned {items.Count} item(s) from '{category.Name}'.";
+        return RedirectToAction("Details", new { id = categoryId });
     }
 
     // GET: /Category/Details/5
@@ -160,6 +229,27 @@ public class CategoryController : Controller
         var category = db.Categories.Find(id);
         if (category == null) return NotFound();
         return View(category);
+    }
+
+    // GET: /Category/Unassigned
+    [HttpGet]
+    public IActionResult Unassigned()
+    {
+        var items = db.MenuItems
+            .Include(m => m.Category)
+            .Where(m => m.CategoryId == null)
+            .OrderBy(m => m.Name)
+            .ToList();
+        ViewBag.Categories = db.Categories.OrderBy(c => c.Name).ToList();
+        return View(items);
+    }
+
+    // POST: /Category/AssignUnassigned
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult AssignUnassigned(int categoryId, int[] menuItemIds)
+    {
+        return AssignItems(categoryId, menuItemIds);
     }
 
     [HttpPost]

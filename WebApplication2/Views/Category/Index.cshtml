@@ -1,11 +1,16 @@
-﻿@model IEnumerable<WebApplication2.Models.Category>
+@model IEnumerable<WebApplication2.Models.Category>
+@using WebApplication2.Models;
 @{
     ViewBag.Title = "Categories";
+    var db = Context.RequestServices.GetService(typeof(DB)) as DB;
 }
 <main>
     <div class="category-header d-flex align-items-center justify-content-between mb-4">
         <h1 class="category-title" style="font-family:'Victor Mono',monospace;font-size:2.2rem;color:var(--primary-brand);margin:0;">Manage Categories</h1>
-        <a asp-action="Create" class="btn btn-primary btn-lg"><i class="fas fa-plus me-2"></i> Create New Category</a>
+        <div class="d-flex gap-2">
+            <a asp-action="Unassigned" class="btn btn-outline-info btn-lg"><i class="fas fa-filter me-2"></i> Uncategorized Items</a>
+            <a asp-action="Create" class="btn btn-primary btn-lg"><i class="fas fa-plus me-2"></i> Create New Category</a>
+        </div>
     </div>
     @if (Model.Any())
     {
@@ -17,6 +22,33 @@
                         <div class="card-body d-flex flex-column justify-content-between glowing">
                             <div>
                                 <h2 class="category-name card-title mb-2" style="color:var(--primary-brand);font-size:1.5rem;">@item.Name</h2>
+                                @{ var count = db.MenuItems.Count(m => m.CategoryId == item.CategoryId); }
+                                <div class="text-muted mb-2"><i class="fas fa-list me-1"></i> @count item(s)</div>
+                                @if (count > 0)
+                                {
+                                    var mini = db.MenuItems.Where(m => m.CategoryId == item.CategoryId)
+                                                           .OrderBy(m => m.Name)
+                                                           .Select(m => new { m.Name, m.PhotoURL, m.Price })
+                                                           .ToList();
+                                    var collapseId = $"collapse_{item.CategoryId}";
+                                    <button class="btn btn-sm btn-outline-secondary mb-2 show-items-btn" type="button" onclick="toggleItems('@collapseId', this)">
+                                        <i class="fas fa-chevron-down me-1"></i> <span class="btn-text">Show Items</span>
+                                    </button>
+                                    <div class="items-list" id="@collapseId" style="display: none;">
+                                        <div class="list-group list-group-flush">
+                                            @foreach (var n in mini)
+                                            {
+                                                var img = string.IsNullOrEmpty(n.PhotoURL) ? "/images/default.jpg" : (n.PhotoURL.StartsWith("http") ? n.PhotoURL : "/images/" + n.PhotoURL);
+                                                <div class="list-group-item d-flex align-items-center gap-2">
+                                                    <!-- use data-src and a small placeholder, load actual image when collapse is shown -->
+                                                    <img data-src="@img" src="/images/default.jpg" alt="@n.Name" class="mini-item-img" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" loading="lazy" />
+                                                    <span class="flex-grow-1 text-truncate">@n.Name</span>
+                                                    <span class="text-muted small">@n.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
                             </div>
                             <div class="mt-3 d-flex gap-2">
                                 <a asp-action="Edit" asp-route-id="@item.CategoryId" class="btn btn-warning btn-sm"><i class="fas fa-edit me-2"></i> Edit</a>
@@ -36,4 +68,46 @@
             <p class="text-muted">No categories found. Start by creating a new one!</p>
         </div>
     }
+
+    <script>
+        function toggleItems(collapseId, button) {
+            const itemsList = document.getElementById(collapseId);
+            const textSpan = button.querySelector('.btn-text');
+            const icon = button.querySelector('i.fas');
+            
+            // Close all other open items first
+            document.querySelectorAll('.items-list').forEach(list => {
+                if (list.id !== collapseId && list.style.display === 'block') {
+                    list.style.display = 'none';
+                    // Reset other buttons
+                    const otherBtn = document.querySelector(`button[onclick*="${list.id}"]`);
+                    if (otherBtn) {
+                        const otherText = otherBtn.querySelector('.btn-text');
+                        const otherIcon = otherBtn.querySelector('i.fas');
+                        if (otherText) otherText.textContent = 'Show Items';
+                        if (otherIcon) otherIcon.style.transform = '';
+                    }
+                }
+            });
+            
+            if (itemsList.style.display === 'none' || itemsList.style.display === '') {
+                // Show items
+                itemsList.style.display = 'block';
+                if (textSpan) textSpan.textContent = 'Hide Items';
+                if (icon) icon.style.transform = 'rotate(180deg)';
+                
+                // Lazy load images
+                itemsList.querySelectorAll('img[data-src]').forEach(img => {
+                    if (img.getAttribute('src') !== img.dataset.src) {
+                        img.setAttribute('src', img.dataset.src);
+                    }
+                });
+            } else {
+                // Hide items
+                itemsList.style.display = 'none';
+                if (textSpan) textSpan.textContent = 'Show Items';
+                if (icon) icon.style.transform = '';
+            }
+        }
+    </script>
 </main>

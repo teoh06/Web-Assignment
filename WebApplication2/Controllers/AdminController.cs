@@ -21,7 +21,7 @@ using WebApplication2.Services;
 
 namespace WebApplication2.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,Chef")]
 public class AdminController : Controller
 {
     private readonly DB _context;
@@ -35,9 +35,11 @@ public class AdminController : Controller
         this._emailService = emailService;
     }
 
+    [Authorize(Roles = "Admin")]
     public IActionResult Index() => View();
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public IActionResult SalesSummary()
     {
         var sales = _context.Orders
@@ -64,11 +66,13 @@ public class AdminController : Controller
 
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public IActionResult SalesReportSection()
     {
         return PartialView("_SalesReportSection");
     }
 
+    [Authorize(Roles = "Admin")]
     public IActionResult ManageUsers()
     {
         var admin = _context.Admins.ToList<User>();
@@ -77,6 +81,7 @@ public class AdminController : Controller
         return PartialView("_ManageUsers", all);
     }
 
+    [Authorize(Roles = "Admin")]
     public IActionResult SalesReport()
     {
         QuestPDF.Settings.License = LicenseType.Community;
@@ -225,6 +230,7 @@ public class AdminController : Controller
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public IActionResult SalesChartData()
     {
         var data = _context.Orders
@@ -243,6 +249,7 @@ public class AdminController : Controller
         });
     }
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public IActionResult MembersChartData()
     {
         var adminCount = _context.Admins.Count();
@@ -256,6 +263,7 @@ public class AdminController : Controller
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public IActionResult TopMenuChartData()
     {
         var data = _context.OrderItems
@@ -348,7 +356,7 @@ public class AdminController : Controller
 
     // POST: /Admin/UpdateOrderStatusAjax
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Chef")]
     public async Task<IActionResult> UpdateOrderStatusAjax(int orderId, string status)
     {
         try
@@ -388,7 +396,7 @@ public class AdminController : Controller
 
     // GET: /Admin/GetOrderDetails
     [HttpGet]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Chef")]
     public async Task<IActionResult> GetOrderDetails(int orderId)
     {
         try

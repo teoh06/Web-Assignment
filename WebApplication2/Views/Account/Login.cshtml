@@ -18,7 +18,7 @@
 
         @if (ViewBag.PendingVerificationEmail != null)
         {
-            <div class="alert alert-warning" role="alert" style="margin-bottom: 16px;">
+            <div class="alert" role="alert" style="margin-bottom: 16px;">
                 Your account is not verified yet. Please enter the verification code sent to <strong>@ViewBag.PendingVerificationEmail</strong>.
                 <div class="mt-2">
                     <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("RequestOtp", "Account", new { email = (string)ViewBag.PendingVerificationEmail, action = "complete your login", returnUrl = Url.Action("Login", "Account") })">Resend Code</a>

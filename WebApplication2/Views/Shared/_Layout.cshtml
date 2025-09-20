@@ -258,6 +258,7 @@
                         @(User.IsInRole("Member") && member != null ? member.Name : User.Identity?.Name ?? "Member") |
                         @(User.IsInRole("Admin") ? "Admin" : "")
                         @(User.IsInRole("Member") ? "Member" : "")
+                        @(User.IsInRole("Chef") ? "Chef" : "")
                     </div>
                     @if (User.IsInRole("Member") && member != null)
                     {
@@ -294,6 +295,11 @@
             <a href="/Category/Index">Manage Categories</a>
             <a class="nav-link default-button" asp-controller="Admin" asp-action="Index">Admin Panel</a>
             <a href="/Admin/Orders">Order Maintenance</a>
+        }
+
+        @if (User.IsInRole("Chef"))
+        {
+            <a class="nav-link default-button" asp-controller="Admin" asp-action="Orders">Chef Orders</a>
         }
 
         @if (User.Identity!.IsAuthenticated)

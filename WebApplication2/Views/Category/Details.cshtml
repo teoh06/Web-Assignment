@@ -42,35 +42,232 @@
                     <a asp-action="Edit" asp-route-id="@Model.CategoryId" class="btn btn-outline-primary btn-sm mt-2"><i class="fas fa-cogs me-1"></i> Manage Options</a>
                 </div>
             </div>
-            <div class="details-card">
-                <div class="details-card-header"><i class="fas fa-utensils me-2"></i> Menu Items <span class="badge bg-primary ms-2">@menuItems.Count</span></div>
+            <div class="details-card menu-items-section">
+                <div class="details-card-header">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <div><i class="fas fa-utensils me-2"></i> Menu Items <span class="badge bg-primary ms-2" id="menuItemsCount">@menuItems.Count</span></div>
+                        <div class="menu-actions">
+                            <a asp-controller="MenuItem" asp-action="Create" asp-route-categoryId="@Model.CategoryId" class="btn btn-success btn-sm">
+                                <i class="fas fa-plus me-1"></i> Add New Item
+                            </a>
+                        </div>
+                    </div>
+                </div>
                 <div class="details-card-body">
                     @if (menuItems.Any()) {
-                        <div class="menu-items-scroll">
-                            @foreach (var item in menuItems) {
-                                <div class="menu-item-card formal-menu-card">
-                                    <div class="item-image">
-                                        @if (!string.IsNullOrEmpty(item.PhotoURL)) {
-                                            <img src="@(item.PhotoURL.StartsWith("http") ? item.PhotoURL : "/images/" + item.PhotoURL)" alt="@item.Name" />
-                                        } else {
-                                            <div class="no-image"><i class="fas fa-image"></i></div>
-                                        }
-                                    </div>
-                                    <div class="item-info">
-                                        <h3 class="item-name">@item.Name</h3>
-                                        <p class="item-description">@(item.Description.Length > 80 ? item.Description.Substring(0, 80) + "..." : item.Description)</p>
-                                        <div class="item-price in-the-middle">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
-                                        <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye me-1"></i> View Details</a>
+                        <!-- Enhanced Search and Filter Section -->
+                        <div class="menu-search-section mb-4">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-12 col-md-8">
+                                    <div class="search-input-wrapper">
+                                        <i class="fas fa-search search-icon"></i>
+                                        <input type="text" id="menuItemSearch" class="form-control search-input" placeholder="Search menu items by name or price..." />
+                                        <button type="button" class="btn btn-sm btn-outline-secondary clear-search" id="clearMenuSearch" style="display: none;">
+                                            <i class="fas fa-times"></i>
+                                        </button>
                                     </div>
                                 </div>
-                            }
+                                <div class="col-12 col-md-4">
+                                    <div class="selection-info">
+                                        <span class="badge bg-info" id="visibleItemsCount">@menuItems.Count items</span>
+                                        <span class="badge bg-warning ms-2" id="selectedItemsCount" style="display: none;">0 selected</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Enhanced Menu Items Grid -->
+                        <div class="menu-items-container">
+                            <form asp-action="UnassignItems" asp-controller="Category" method="post" class="unassign-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="categoryId" value="@Model.CategoryId" />
+                                <div class="menu-items-grid" id="menuItemsGrid">
+                                    @foreach (var item in menuItems) {
+                                        <div class="menu-item-card" data-name="@item.Name.ToLower()" data-price="@item.Price">
+                                            <div class="item-checkbox-wrapper">
+                                                <input class="item-checkbox" type="checkbox" name="menuItemIds" value="@item.MenuItemId" id="ua_@item.MenuItemId" />
+                                                <label class="checkbox-label" for="ua_@item.MenuItemId">
+                                                    <i class="fas fa-check check-icon"></i>
+                                                </label>
+                                            </div>
+                                            <div class="item-image-wrapper">
+                                                @if (!string.IsNullOrEmpty(item.PhotoURL))
+                                                {
+                                                    <img src="@(item.PhotoURL.StartsWith("http") ? item.PhotoURL : "/images/" + item.PhotoURL)" alt="@item.Name" class="item-image" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="item-image placeholder">
+                                                        <i class="fas fa-utensils"></i>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="item-content">
+                                                <h6 class="item-name">@item.Name</h6>
+                                                <p class="item-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</p>
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <p class="item-description">@item.Description</p>
+                                                }
+                                                @if (item.StockQuantity <= 5 && item.StockQuantity > 0)
+                                                {
+                                                    <span class="badge bg-warning text-dark">Low Stock: @item.StockQuantity</span>
+                                                }
+                                                else if (item.StockQuantity == 0)
+                                                {
+                                                    <span class="badge bg-danger">Out of Stock</span>
+                                                }
+                                            </div>
+                                            <div class="item-actions">
+                                                <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId" class="btn btn-outline-primary btn-sm" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a asp-controller="MenuItem" asp-action="Edit" asp-route-id="@item.MenuItemId" class="btn btn-outline-secondary btn-sm" title="Edit Item">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </div>
+                                            <div class="item-overlay">
+                                                <i class="fas fa-check-circle"></i>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                <!-- Bulk Actions -->
+                                <div class="bulk-actions-section mt-4">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="bulk-selection">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" id="selectAllMenuItems">
+                                                <i class="fas fa-check-square me-1"></i> Select All
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="clearAllMenuItems">
+                                                <i class="fas fa-square me-1"></i> Clear All
+                                            </button>
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-danger btn-lg unassign-btn" disabled>
+                                            <i class="fas fa-unlink me-2"></i> Unassign Selected Items
+                                            <span class="selected-count-text"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     } else {
                         <div class="empty-state">
                             <i class="fas fa-utensils empty-icon"></i>
                             <h3 class="empty-title">No Menu Items Yet</h3>
                             <p class="empty-description">This category doesn't have any menu items. Start adding delicious items to showcase in this category!</p>
-                            <a asp-controller="MenuItem" asp-action="Create" class="btn btn-primary"><i class="fas fa-plus me-2"></i> Add First Menu Item</a>
+                            <a asp-controller="MenuItem" asp-action="Create" asp-route-categoryId="@Model.CategoryId" class="btn btn-primary btn-lg">
+                                <i class="fas fa-plus me-2"></i> Add First Menu Item
+                            </a>
+                        </div>
+                    }
+                </div>
+                <hr />
+                <div class="details-card-header">
+                    <div><i class="fas fa-plus-square me-2"></i> Assign Existing Items</div>
+                </div>
+                <div class="details-card-body" id="assignCollapse">
+                    @{
+                        var availableItems = db.MenuItems.Where(m => m.CategoryId == null).OrderBy(m => m.Name).ToList();
+                    }
+                    @if (availableItems.Any())
+                    {
+                        <form asp-action="AssignItems" asp-controller="Category" method="post" class="assign-items-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="categoryId" value="@Model.CategoryId" />
+                            <!-- Enhanced Assign Search Section -->
+                            <div class="assign-search-section mb-4">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-12 col-md-8">
+                                        <div class="search-input-wrapper">
+                                            <i class="fas fa-search search-icon"></i>
+                                            <input type="text" id="assignSearch" class="form-control search-input" placeholder="Search unassigned items..." />
+                                            <button type="button" class="btn btn-sm btn-outline-secondary clear-search" id="clearAssignSearch" style="display: none;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <div class="selection-info">
+                                            <span class="badge bg-info" id="availableItemsCount">@availableItems.Count unassigned</span>
+                                            <span class="badge bg-success ms-2" id="selectedAssignCount" style="display: none;">0 selected</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Enhanced Assign Items Grid -->
+                            <div class="assign-items-container">
+                                <div class="assign-items-grid" id="assignList">
+                                    @foreach (var ai in availableItems)
+                                    {
+                                        <div class="assign-item-card" data-name="@ai.Name.ToLower()" data-price="@ai.Price">
+                                            <div class="item-checkbox-wrapper">
+                                                <input class="assign-checkbox" type="checkbox" name="menuItemIds" value="@ai.MenuItemId" id="mi_@ai.MenuItemId">
+                                                <label class="checkbox-label" for="mi_@ai.MenuItemId">
+                                                    <i class="fas fa-check check-icon"></i>
+                                                </label>
+                                            </div>
+                                            <div class="item-content">
+                                                @if (!string.IsNullOrEmpty(ai.PhotoURL))
+                                                {
+                                                    <div class="item-image">
+                                                        <img src="@(ai.PhotoURL.StartsWith("http") ? ai.PhotoURL : "/images/" + ai.PhotoURL)" alt="@ai.Name" />
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="item-image placeholder">
+                                                        <i class="fas fa-utensils"></i>
+                                                    </div>
+                                                }
+                                                <div class="item-details">
+                                                    <h6 class="item-name">@ai.Name</h6>
+                                                    <p class="item-price">@ai.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</p>
+                                                    @if (ai.StockQuantity <= 5 && ai.StockQuantity > 0)
+                                                    {
+                                                        <span class="badge bg-warning text-dark">Low Stock: @ai.StockQuantity</span>
+                                                    }
+                                                    else if (ai.StockQuantity == 0)
+                                                    {
+                                                        <span class="badge bg-danger">Out of Stock</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="item-overlay">
+                                                <i class="fas fa-plus-circle"></i>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Assign Actions -->
+                            <div class="assign-actions-section mt-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="bulk-actions">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="selectAllAssign">
+                                            <i class="fas fa-check-square me-1"></i> Select All
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="clearAllAssign">
+                                            <i class="fas fa-square me-1"></i> Clear All
+                                        </button>
+                                    </div>
+                                    <button type="submit" class="btn btn-success btn-lg assign-btn" disabled>
+                                        <i class="fas fa-check me-2"></i> Assign Selected Items
+                                        <span class="selected-count-text"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Unassigned Items</h5>
+                            <p class="text-muted">All menu items are currently assigned to categories. Create new items or unassign items from other categories first.</p>
                         </div>
                     }
                 </div>
@@ -148,45 +345,713 @@
             flex-direction: column;
             align-items: center;
         }
-        .formal-menu-card .item-image {
-            width: 180px;
-            height: 140px;
-            border-radius: 8px;
+        /* Enhanced Menu Items Styles */
+        .menu-items-section {
+            border: 1px solid #2d3748;
+        }
+        
+        .menu-search-section, .assign-search-section {
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2d3748;
+        }
+        
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            z-index: 2;
+        }
+        
+        .search-input {
+            padding-left: 45px;
+            padding-right: 45px;
+            background: var(--bg-primary);
+            border: 2px solid #2d3748;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            border-color: var(--primary-brand);
+            box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
+            background: #1a202c;
+        }
+        
+        .clear-search {
+            position: absolute;
+            right: 10px;
+            border: none;
+            background: transparent;
+            z-index: 2;
+        }
+        
+        .selection-info {
+            text-align: right;
+        }
+        
+        .selection-info .badge {
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+        }
+        
+        .menu-items-container, .assign-items-container {
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2d3748;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .menu-items-grid, .assign-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .menu-item-card, .assign-item-card {
+            position: relative;
+            border: 2px solid #2d3748;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
             overflow: hidden;
-            margin-bottom: 12px;
+            min-height: 100px;
+        }
+        
+        .menu-item-card:hover, .assign-item-card:hover {
+            border-color: var(--primary-brand);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .menu-item-card.selected, .assign-item-card.selected {
+            border-color: var(--accent-green);
+            background: linear-gradient(135deg, rgba(78, 167, 125, 0.62) 0%, rgb(174, 178, 184) 100%);
+        }
+        
+        .item-checkbox-wrapper {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 3;
+        }
+        
+        .item-checkbox, .assign-checkbox {
+            display: none;
+        }
+        
+        .checkbox-label {
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #4a5568;
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
-        .formal-menu-card .item-image img {
+        
+        .checkbox-label .check-icon {
+            opacity: 0;
+            color: white;
+            font-size: 14px;
+            transition: opacity 0.3s ease;
+        }
+        
+        .item-checkbox:checked + .checkbox-label,
+        .assign-checkbox:checked + .checkbox-label {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+        
+        .item-checkbox:checked + .checkbox-label .check-icon,
+        .assign-checkbox:checked + .checkbox-label .check-icon {
+            opacity: 1;
+        }
+        
+        .item-image-wrapper {
+            width: 100%;
+            height: 120px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .item-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
             border-radius: 8px;
+            padding: 8px;
         }
-        .formal-menu-card .item-info {
-            text-align: center;
+        
+        .item-image.placeholder {
+            background: #2d3748;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
         }
-        .formal-menu-card .item-name {
+        
+        .item-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .item-content .item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        
+        .item-details {
+            flex: 1;
+        }
+        
+        .item-name {
             font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 8px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .item-price {
+            font-size: 1.2rem;
             font-weight: bold;
-            margin-bottom: 6px;
-        }
-        .formal-menu-card .item-description {
-            font-size: 0.95rem;
-            margin-bottom: 8px;
-            min-height: 48px;
-        }
-        .formal-menu-card .item-price {
-            font-size: 1.05rem;
             color: var(--accent-green);
-            font-weight: bold;
-            margin-bottom: 8px;
+            margin: 0 0 8px 0;
         }
-        .formal-menu-card .btn-outline-primary {
+        
+        .item-description {
+            font-size: 0.9rem;
+            margin: 0 0 8px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            padding-top: 12px;
+        }
+        
+        .item-actions .btn {
+            flex: 1;
             border-radius: 6px;
-            padding: 6px 14px;
-            font-size: 0.95rem;
+            padding: 6px 12px;
+        }
+        
+        .item-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(66, 153, 225, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .item-overlay i {
+            font-size: 2.5rem;
+            color: white;
+        }
+        
+        .menu-item-card:hover .item-overlay,
+        .assign-item-card:hover .item-overlay {
+            opacity: 1;
+        }
+        
+        .bulk-actions-section, .assign-actions-section {
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2d3748;
+        }
+        
+        .bulk-actions .btn, .bulk-selection .btn {
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 500;
+        }
+        
+        .unassign-btn, .assign-btn {
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .unassign-btn:disabled, .assign-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .unassign-btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(220, 38, 127, 0.4);
+        }
+        
+        .assign-btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+        }
+        
+        .selected-count-text {
+            font-weight: normal;
+            opacity: 0.9;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            border-radius: 12px;
+            border: 2px dashed #2d3748;
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+        
+        .empty-title {
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+        
+        .empty-description {
+            margin-bottom: 24px;
+        }
+        
+        /* Responsive Design */
+        @@media (max-width: 1200px) {
+            .details-content-grid {
+                grid-template-columns: 1fr;
+            }
+            .menu-items-grid, .assign-items-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+        }
+        
+        @@media (max-width: 768px) {
+            .menu-search-section .row, .assign-search-section .row {
+                flex-direction: column;
+            }
+            .selection-info {
+                text-align: left;
+                margin-top: 10px;
+            }
+            .menu-items-grid, .assign-items-grid {
+                grid-template-columns: 1fr;
+            }
+            .bulk-actions-section .d-flex, .assign-actions-section .d-flex {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .bulk-selection, .bulk-actions {
+                display: flex;
+                gap: 10px;
+            }
+            .unassign-btn, .assign-btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+        
+        @@media (max-width: 480px) {
+            .menu-item-card, .assign-item-card {
+                padding: 12px;
+                min-height: 180px;
+            }
+            .item-image-wrapper {
+                height: 100px;
+            }
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Menu Items Search Functionality
+            const menuSearchInput = document.getElementById('menuItemSearch');
+            const clearMenuSearchBtn = document.getElementById('clearMenuSearch');
+            const visibleItemsCount = document.getElementById('visibleItemsCount');
+            const selectedItemsCount = document.getElementById('selectedItemsCount');
+            const selectAllMenuBtn = document.getElementById('selectAllMenuItems');
+            const clearAllMenuBtn = document.getElementById('clearAllMenuItems');
+            const unassignBtn = document.querySelector('.unassign-btn');
+            const menuSelectedCountText = document.querySelector('.unassign-btn .selected-count-text');
+
+            // Assign Items Search Functionality
+            const assignSearchInput = document.getElementById('assignSearch');
+            const clearAssignSearchBtn = document.getElementById('clearAssignSearch');
+            const availableItemsCount = document.getElementById('availableItemsCount');
+            const selectedAssignCount = document.getElementById('selectedAssignCount');
+            const selectAllAssignBtn = document.getElementById('selectAllAssign');
+            const clearAllAssignBtn = document.getElementById('clearAllAssign');
+            const assignBtn = document.querySelector('.assign-btn');
+            const assignSelectedCountText = document.querySelector('.assign-btn .selected-count-text');
+
+            // Menu Items Search
+            if (menuSearchInput) {
+                menuSearchInput.addEventListener('input', function() {
+                    const query = this.value.trim().toLowerCase();
+                    const menuItems = document.querySelectorAll('#menuItemsGrid .menu-item-card');
+                    let visibleCount = 0;
+
+                    menuItems.forEach(item => {
+                        const name = item.getAttribute('data-name') || '';
+                        const price = item.getAttribute('data-price') || '';
+                        const isVisible = name.includes(query) || price.includes(query);
+                        
+                        item.style.display = isVisible ? '' : 'none';
+                        if (isVisible) visibleCount++;
+                    });
+
+                    // Update visible count
+                    if (visibleItemsCount) {
+                        visibleItemsCount.textContent = `${visibleCount} items ${query ? 'found' : ''}`;
+                    }
+
+                    // Show/hide clear button
+                    if (clearMenuSearchBtn) {
+                        clearMenuSearchBtn.style.display = query ? 'block' : 'none';
+                    }
+                });
+
+                // Clear menu search
+                if (clearMenuSearchBtn) {
+                    clearMenuSearchBtn.addEventListener('click', function() {
+                        menuSearchInput.value = '';
+                        menuSearchInput.dispatchEvent(new Event('input'));
+                        menuSearchInput.focus();
+                    });
+                }
+            }
+
+            // Assign Items Search
+            if (assignSearchInput) {
+                assignSearchInput.addEventListener('input', function() {
+                    const query = this.value.trim().toLowerCase();
+                    const assignItems = document.querySelectorAll('#assignList .assign-item-card');
+                    let visibleCount = 0;
+
+                    assignItems.forEach(item => {
+                        const name = item.getAttribute('data-name') || '';
+                        const price = item.getAttribute('data-price') || '';
+                        const isVisible = name.includes(query) || price.includes(query);
+                        
+                        item.style.display = isVisible ? '' : 'none';
+                        if (isVisible) visibleCount++;
+                    });
+
+                    // Update available count
+                    if (availableItemsCount) {
+                        availableItemsCount.textContent = `${visibleCount} ${query ? 'found' : 'unassigned'}`;
+                    }
+
+                    // Show/hide clear button
+                    if (clearAssignSearchBtn) {
+                        clearAssignSearchBtn.style.display = query ? 'block' : 'none';
+                    }
+                });
+
+                // Clear assign search
+                if (clearAssignSearchBtn) {
+                    clearAssignSearchBtn.addEventListener('click', function() {
+                        assignSearchInput.value = '';
+                        assignSearchInput.dispatchEvent(new Event('input'));
+                        assignSearchInput.focus();
+                    });
+                }
+            }
+
+            // Menu Items Checkbox Interactions
+            const menuCheckboxes = document.querySelectorAll('.item-checkbox');
+            
+            menuCheckboxes.forEach(checkbox => {
+                const card = checkbox.closest('.menu-item-card');
+                
+                // Card click to toggle checkbox
+                if (card) {
+                    card.addEventListener('click', function(e) {
+                        if (e.target !== checkbox && !e.target.closest('.checkbox-label') && !e.target.closest('.item-actions')) {
+                            checkbox.checked = !checkbox.checked;
+                            checkbox.dispatchEvent(new Event('change'));
+                        }
+                    });
+                }
+
+                // Checkbox change event
+                checkbox.addEventListener('change', function() {
+                    updateMenuCardSelection(this);
+                    updateMenuSelectionCount();
+                    updateUnassignButton();
+                });
+            });
+
+            // Assign Items Checkbox Interactions
+            const assignCheckboxes = document.querySelectorAll('.assign-checkbox');
+            
+            assignCheckboxes.forEach(checkbox => {
+                const card = checkbox.closest('.assign-item-card');
+                
+                // Card click to toggle checkbox
+                if (card) {
+                    card.addEventListener('click', function(e) {
+                        if (e.target !== checkbox && !e.target.closest('.checkbox-label')) {
+                            checkbox.checked = !checkbox.checked;
+                            checkbox.dispatchEvent(new Event('change'));
+                        }
+                    });
+                }
+
+                // Checkbox change event
+                checkbox.addEventListener('change', function() {
+                    updateAssignCardSelection(this);
+                    updateAssignSelectionCount();
+                    updateAssignButton();
+                });
+            });
+
+            // Update card visual states
+            function updateMenuCardSelection(checkbox) {
+                const card = checkbox.closest('.menu-item-card');
+                if (card) {
+                    card.classList.toggle('selected', checkbox.checked);
+                }
+            }
+
+            function updateAssignCardSelection(checkbox) {
+                const card = checkbox.closest('.assign-item-card');
+                if (card) {
+                    card.classList.toggle('selected', checkbox.checked);
+                }
+            }
+
+            // Update selection counts
+            function updateMenuSelectionCount() {
+                const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+                const count = checkedBoxes.length;
+                
+                if (selectedItemsCount) {
+                    if (count > 0) {
+                        selectedItemsCount.textContent = `${count} selected`;
+                        selectedItemsCount.style.display = 'inline-block';
+                    } else {
+                        selectedItemsCount.style.display = 'none';
+                    }
+                }
+
+                if (menuSelectedCountText) {
+                    menuSelectedCountText.textContent = count > 0 ? `(${count})` : '';
+                }
+            }
+
+            function updateAssignSelectionCount() {
+                const checkedBoxes = document.querySelectorAll('.assign-checkbox:checked');
+                const count = checkedBoxes.length;
+                
+                if (selectedAssignCount) {
+                    if (count > 0) {
+                        selectedAssignCount.textContent = `${count} selected`;
+                        selectedAssignCount.style.display = 'inline-block';
+                    } else {
+                        selectedAssignCount.style.display = 'none';
+                    }
+                }
+
+                if (assignSelectedCountText) {
+                    assignSelectedCountText.textContent = count > 0 ? `(${count})` : '';
+                }
+            }
+
+            // Update button states
+            function updateUnassignButton() {
+                const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+                if (unassignBtn) {
+                    unassignBtn.disabled = checkedBoxes.length === 0;
+                }
+            }
+
+            function updateAssignButton() {
+                const checkedBoxes = document.querySelectorAll('.assign-checkbox:checked');
+                if (assignBtn) {
+                    assignBtn.disabled = checkedBoxes.length === 0;
+                }
+            }
+
+            // Select All functionality for Menu Items
+            if (selectAllMenuBtn) {
+                selectAllMenuBtn.addEventListener('click', function() {
+                    const visibleCheckboxes = Array.from(menuCheckboxes).filter(cb => {
+                        const card = cb.closest('.menu-item-card');
+                        return card && card.style.display !== 'none';
+                    });
+
+                    const allChecked = visibleCheckboxes.every(cb => cb.checked);
+                    
+                    visibleCheckboxes.forEach(checkbox => {
+                        checkbox.checked = !allChecked;
+                        updateMenuCardSelection(checkbox);
+                    });
+
+                    updateMenuSelectionCount();
+                    updateUnassignButton();
+                    
+                    // Update button text
+                    this.innerHTML = allChecked 
+                        ? '<i class="fas fa-check-square me-1"></i> Select All'
+                        : '<i class="fas fa-square me-1"></i> Select All';
+                });
+            }
+
+            // Clear All functionality for Menu Items
+            if (clearAllMenuBtn) {
+                clearAllMenuBtn.addEventListener('click', function() {
+                    menuCheckboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                        updateMenuCardSelection(checkbox);
+                    });
+
+                    updateMenuSelectionCount();
+                    updateUnassignButton();
+                    
+                    // Reset select all button
+                    if (selectAllMenuBtn) {
+                        selectAllMenuBtn.innerHTML = '<i class="fas fa-check-square me-1"></i> Select All';
+                    }
+                });
+            }
+
+            // Select All functionality for Assign Items
+            if (selectAllAssignBtn) {
+                selectAllAssignBtn.addEventListener('click', function() {
+                    const visibleCheckboxes = Array.from(assignCheckboxes).filter(cb => {
+                        const card = cb.closest('.assign-item-card');
+                        return card && card.style.display !== 'none';
+                    });
+
+                    const allChecked = visibleCheckboxes.every(cb => cb.checked);
+                    
+                    visibleCheckboxes.forEach(checkbox => {
+                        checkbox.checked = !allChecked;
+                        updateAssignCardSelection(checkbox);
+                    });
+
+                    updateAssignSelectionCount();
+                    updateAssignButton();
+                    
+                    // Update button text
+                    this.innerHTML = allChecked 
+                        ? '<i class="fas fa-check-square me-1"></i> Select All'
+                        : '<i class="fas fa-square me-1"></i> Select All';
+                });
+            }
+
+            // Clear All functionality for Assign Items
+            if (clearAllAssignBtn) {
+                clearAllAssignBtn.addEventListener('click', function() {
+                    assignCheckboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                        updateAssignCardSelection(checkbox);
+                    });
+
+                    updateAssignSelectionCount();
+                    updateAssignButton();
+                    
+                    // Reset select all button
+                    if (selectAllAssignBtn) {
+                        selectAllAssignBtn.innerHTML = '<i class="fas fa-check-square me-1"></i> Select All';
+                    }
+                });
+            }
+
+            // Form submission enhancements
+            const unassignForm = document.querySelector('.unassign-form');
+            const assignForm = document.querySelector('.assign-items-form');
+
+            if (unassignForm) {
+                unassignForm.addEventListener('submit', function(e) {
+                    const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+                    if (checkedBoxes.length === 0) {
+                        e.preventDefault();
+                        alert('Please select at least one item to unassign.');
+                        return false;
+                    }
+
+                    // Add loading state to button
+                    if (unassignBtn) {
+                        unassignBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Unassigning...';
+                        unassignBtn.disabled = true;
+                    }
+                });
+            }
+
+            if (assignForm) {
+                assignForm.addEventListener('submit', function(e) {
+                    const checkedBoxes = document.querySelectorAll('.assign-checkbox:checked');
+                    if (checkedBoxes.length === 0) {
+                        e.preventDefault();
+                        alert('Please select at least one item to assign.');
+                        return false;
+                    }
+
+                    // Add loading state to button
+                    if (assignBtn) {
+                        assignBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Assigning...';
+                        assignBtn.disabled = true;
+                    }
+                });
+            }
+
+            // Initialize states
+            updateMenuSelectionCount();
+            updateUnassignButton();
+            updateAssignSelectionCount();
+            updateAssignButton();
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Escape to clear search
+                if (e.key === 'Escape') {
+                    if (menuSearchInput === document.activeElement) {
+                        clearMenuSearchBtn?.click();
+                    } else if (assignSearchInput === document.activeElement) {
+                        clearAssignSearchBtn?.click();
+                    }
+                }
+            });
+
+            // Add smooth scrolling for containers
+            const containers = document.querySelectorAll('.menu-items-container, .assign-items-container');
+            containers.forEach(container => {
+                container.style.scrollBehavior = 'smooth';
+            });
+        });
+    </script>
 </main>

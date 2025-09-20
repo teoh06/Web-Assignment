@@ -72,10 +72,12 @@ public class AccountController : Controller
             return View(vm);
         }
 
-        // (1) Get user (admin or member) record based on email (PK)
+        // (1) Get user (member, admin, or chef) record based on email (PK)
         var u = db.Members.Find(vm.Email) as User;
         if (u == null)
             u = db.Admins.Find(vm.Email);
+        if (u == null)
+            u = db.Chefs.Find(vm.Email);
 
         // (2) Custom validation -> verify password
         if (u == null || !hp.VerifyPassword(u.Hash, vm.Password))
@@ -125,6 +127,8 @@ public class AccountController : Controller
             {
                 if (u is Admin)
                     return RedirectToAction("Index", "Admin");
+                else if (u is Chef)
+                    return RedirectToAction("Orders", "Admin");
                 else
                     return RedirectToAction("Index", "Home");
             }

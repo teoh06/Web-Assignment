@@ -52,6 +52,9 @@
                 <a class="btn btn-success add-product-btn" asp-controller="MenuItem" asp-action="Create">
                     <i class="fas fa-plus"></i> Add New Product
                 </a>
+                <button id="bulkDeleteBtn" class="btn btn-danger ms-2 bulk-delete-btn" style="display:none;">
+                    <i class="fas fa-trash"></i> Delete Selected Items
+                </button>
             </div>
             <div class="selected-count" style="display:none;">
                 <span class="badge bg-danger" id="selectedCount">0 items selected</span>
@@ -81,6 +84,13 @@
             double avgRating = ratings.Count > 0 ? ratings.Average(r => r.Value) : 0;
             <div class="menu-item-card" data-aos="fade-up">
                 <div class="item-image">
+                    @if (isAdmin)
+                    {
+                        <label class="admin-select-checkbox">
+                            <input type="checkbox" class="item-checkbox" data-item-id="@item.MenuItemId" data-item-name="@item.Name" />
+                            <span class="custom-checkbox"></span>
+                        </label>
+                    }
                     <a asp-controller="MenuItem" asp-action="Details" asp-route-id="@item.MenuItemId">
                         <img src="~/Images/@(item.PhotoURL ?? "default.jpg")" alt="@item.Name" loading="lazy" />
                     </a>
@@ -121,6 +131,9 @@
                                 </form>
                                 <a class="btn btn-sm btn-warning edit-btn" asp-action="Edit" asp-route-id="@item.MenuItemId">
                                     <i class="fas fa-edit"></i>
+                                </a>
+                                <a class="btn btn-sm btn-danger delete-btn" asp-action="Delete" asp-route-ids="@item.MenuItemId">
+                                    <i class="fas fa-trash"></i>
                                 </a>
                             </div>
                         }
@@ -516,352 +529,357 @@
         align-items: center;
         cursor: pointer;
     }
-    .admin-select-checkbox input[type="checkbox"] {
-        display: none;
-    }
-    .admin-select-checkbox .custom-checkbox {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: #fff;
-        border: 2px solid #1565C0;
-        box-shadow: 0 2px 8px #0002;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: border-color 0.2s, background 0.2s;
-        position: relative;
-        font-size: 20px;
-        color: #1565C0;
-    }
-    .admin-select-checkbox input[type="checkbox"]:checked + .custom-checkbox {
-        background: #1565C0;
-        border-color: #1565C0;
-        color: #fff;
-    }
-    .admin-select-checkbox .custom-checkbox::after {
-        content: '\2713'; /* Unicode checkmark */
-        display: none;
-        font-size: 20px;
-        font-weight: bold;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-    }
-    .admin-select-checkbox input[type="checkbox"]:checked + .custom-checkbox::after {
-        display: block;
-    }
+
+        .admin-select-checkbox input[type="checkbox"] {
+            display: none;
+        }
+
+        .admin-select-checkbox .custom-checkbox {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #1565C0;
+            box-shadow: 0 2px 8px #0002;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+            font-size: 20px;
+            color: #1565C0;
+        }
+
+        .admin-select-checkbox input[type="checkbox"]:checked + .custom-checkbox {
+            background: #1565C0;
+            border-color: #1565C0;
+            color: #fff;
+        }
+
+        .admin-select-checkbox .custom-checkbox::after {
+            content: '\2713'; /* Unicode checkmark */
+            display: none;
+            font-size: 20px;
+            font-weight: bold;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .admin-select-checkbox input[type="checkbox"]:checked + .custom-checkbox::after {
+            display: block;
+        }
 </style>
 
 @section Scripts {
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script>
-        // Initialize AOS
-        AOS.init({
-            duration: 800,
-            once: true
-        });
-
-        // Inject rating star CSS for dynamic content
-        function injectStarCss() {
-            if (!document.getElementById('dynamic-star-css')) {
-                const style = document.createElement('style');
-                style.id = 'dynamic-star-css';
-                style.innerHTML = `
-                    .star-full { color: #ffd700 !important; }
-                    .star-half { color: #ffd700 !important; opacity: 0.6 !important; }
-                    .star-empty { color: #b0b8c1 !important; }
-                `;
-                document.head.appendChild(style);
-            }
-        }
-
-        // Keep track of selected items globally
-        const selectedItems = new Set();
-        let lastCheckboxStates = new Map();
-
-        function updateMenuItems(items) {
-            injectStarCss(); // Ensure CSS is present
-            const grid = document.getElementById('menuItemsGrid');
-            const isAdmin = @Json.Serialize(isAdmin);
-            const isMember = @Json.Serialize(isMember);
-
-            if (!items || items.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <p>No menu items found matching your criteria.</p>
-                    </div>`;
-                return;
-            }
-
-            // Save checkbox states before updating grid
-            if (isAdmin) {
-                document.querySelectorAll('.item-checkbox').forEach(checkbox => {
-                    lastCheckboxStates.set(checkbox.dataset.itemId, checkbox.checked);
+                // Initialize AOS
+                AOS.init({
+                    duration: 800,
+                    once: true
                 });
+
+                // Inject rating star CSS for dynamic content
+                function injectStarCss() {
+                    if (!document.getElementById('dynamic-star-css')) {
+                        const style = document.createElement('style');
+                        style.id = 'dynamic-star-css';
+                        style.innerHTML = `
+                            .star-full { color: #ffd700 !important; }
+                            .star-half { color: #ffd700 !important; opacity: 0.6 !important; }
+                            .star-empty { color: #b0b8c1 !important; }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                }
+
+                // Keep track of selected items globally
+                const selectedItems = new Set();
+                let lastCheckboxStates = new Map();
+
+                function updateMenuItems(items) {
+                    injectStarCss(); // Ensure CSS is present
+                    const grid = document.getElementById('menuItemsGrid');
+                    const isAdmin = @Json.Serialize(isAdmin);
+                    const isMember = @Json.Serialize(isMember);
+
+                    if (!items || items.length === 0) {
+                        grid.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-search"></i>
+                                <p>No menu items found matching your criteria.</p>
+                            </div>`;
+                        return;
+                    }
+
+                    // Save checkbox states before updating grid
+                    if (isAdmin) {
+                        document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+                            lastCheckboxStates.set(checkbox.dataset.itemId, checkbox.checked);
+                        });
+                    }
+
+                    grid.innerHTML = items.map(item => `
+                        <div class="menu-item-card${selectedItems.has(item.menuItemId.toString()) ? ' selected' : ''}">
+                            ${isAdmin ? `
+                                <div class="item-image">
+                                    <label class="admin-select-checkbox">
+                                        <input type="checkbox" class="item-checkbox"
+                                            data-item-id="${item.menuItemId}"
+                                            data-item-name="${item.name}"
+                                            ${selectedItems.has(item.menuItemId.toString()) ? 'checked' : ''} />
+                                        <span class="custom-checkbox"></span>
+                                    </label>
+                                    <a href="/MenuItem/Details/${item.menuItemId}">
+                                        <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
+                                    </a>
+                                    <div class="item-badges">
+                                        <span class="item-price">${item.price}</span>
+                                        <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
+                                    </div>
+                                    ${!item.isActive ? '<span class="status-badge inactive-badge">Inactive</span>' : ''}
+                                    ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
+                                    ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
+                                </div>
+                            ` : `
+                                <div class="item-image">
+                                    <a href="/MenuItem/Details/${item.menuItemId}">
+                                        <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
+                                    </a>
+                                    <div class="item-badges">
+                                        <span class="item-price">${item.price}</span>
+                                        <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
+                                    </div>
+                                    ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
+                                    ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
+                                </div>
+                            `}
+                            <div class="item-info">
+                                <h3 class="item-name">${item.name}</h3>
+                                <p class="item-category">${item.categoryName}</p>
+                                <p class="item-stock">Stock: ${item.stockQuantity}</p>
+                                <div class="item-actions">
+                                    ${getItemActions(item, isAdmin, isMember)}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    // Reattach checkbox listeners and restore states
+                    if (isAdmin) {
+                        attachCheckboxListeners();
+                        updateBulkDeleteUI();
+                    }
+
+                    attachFormListeners();
+                }
+
+                // Modify checkbox event handler
+                function attachCheckboxListeners() {
+                    document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+                        checkbox.addEventListener('change', function() {
+                            const itemId = this.dataset.itemId;
+                            if (this.checked) {
+                                selectedItems.add(itemId);
+                                this.closest('.menu-item-card').classList.add('selected');
+                            } else {
+                                selectedItems.delete(itemId);
+                                this.closest('.menu-item-card').classList.remove('selected');
+                            }
+                            updateBulkDeleteUI();
+                        });
+
+                        // Restore state if item was previously selected
+                        if (selectedItems.has(checkbox.dataset.itemId)) {
+                            checkbox.checked = true;
+                            checkbox.closest('.menu-item-card').classList.add('selected');
+                        }
+                    });
+                }
+
+                function updateBulkDeleteUI() {
+                    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+                    const selectedCountDisplay = document.querySelector('.selected-count');
+                    const selectedCountBadge = document.getElementById('selectedCount');
+
+                    const count = selectedItems.size;
+                    if (count > 0) {
+                        bulkDeleteBtn.style.display = 'inline-block';
+                        selectedCountDisplay.style.display = 'block';
+                        selectedCountBadge.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+                    } else {
+                        bulkDeleteBtn.style.display = 'none';
+                        selectedCountDisplay.style.display = 'none';
+                    }
+                }
+
+                // Initialize bulk delete functionality
+                if (document.getElementById('bulkDeleteBtn')) {
+                    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+                    // Initial setup of checkboxes
+                    attachCheckboxListeners();
+
+                    bulkDeleteBtn.addEventListener('click', function() {
+                        if (selectedItems.size > 0) {
+                            // Change from DeleteBulk to Delete
+                            window.location.href = `/MenuItem/Delete?ids=${Array.from(selectedItems).join(',')}`;
+                        }
+                    });
+                }
+
+                window.addEventListener('pageshow', function() {
+            if (typeof selectedItems !== 'undefined') {
+                selectedItems.clear();
             }
-
-            grid.innerHTML = items.map(item => `
-                <div class="menu-item-card${selectedItems.has(item.menuItemId.toString()) ? ' selected' : ''}">
-                    ${isAdmin ? `
-                        <div class="item-image">
-                            <label class="admin-select-checkbox">
-                                <input type="checkbox" class="item-checkbox"
-                                    data-item-id="${item.menuItemId}"
-                                    data-item-name="${item.name}"
-                                    ${selectedItems.has(item.menuItemId.toString()) ? 'checked' : ''} />
-                                <span class="custom-checkbox"></span>
-                            </label>
-                            <a href="/MenuItem/Details/${item.menuItemId}">
-                                <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
-                            </a>
-                            <div class="item-badges">
-                                <span class="item-price">${item.price}</span>
-                                <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
-                            </div>
-                            ${!item.isActive ? '<span class="status-badge inactive-badge">Inactive</span>' : ''}
-                            ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
-                            ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
-                        </div>
-                    ` : `
-                        <div class="item-image">
-                            <a href="/MenuItem/Details/${item.menuItemId}">
-                                <img src="/Images/${item.photoURL || 'default.jpg'}" alt="${item.name}" />
-                            </a>
-                            <div class="item-badges">
-                                <span class="item-price">${item.price}</span>
-                                <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
-                            </div>
-                            ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
-                            ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
-                        </div>
-                    `}
-                    <div class="item-info">
-                        <h3 class="item-name">${item.name}</h3>
-                        <p class="item-category">${item.categoryName}</p>
-                        <p class="item-stock">Stock: ${item.stockQuantity}</p>
-                        <div class="item-actions">
-                            ${getItemActions(item, isAdmin, isMember)}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            // Reattach checkbox listeners and restore states
-            if (isAdmin) {
-                attachCheckboxListeners();
+            document.querySelectorAll('.item-checkbox').forEach(cb => {
+                cb.checked = false;
+                if (cb.closest('.menu-item-card')) {
+                    cb.closest('.menu-item-card').classList.remove('selected');
+                }
+            });
+            if (typeof updateBulkDeleteUI === 'function') {
                 updateBulkDeleteUI();
             }
-
-            attachFormListeners();
-        }
-
-        // Modify checkbox event handler
-        function attachCheckboxListeners() {
-            document.querySelectorAll('.item-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const itemId = this.dataset.itemId;
-                    if (this.checked) {
-                        selectedItems.add(itemId);
-                        this.closest('.menu-item-card').classList.add('selected');
-                    } else {
-                        selectedItems.delete(itemId);
-                        this.closest('.menu-item-card').classList.remove('selected');
-                    }
-                    updateBulkDeleteUI();
-                });
-
-                // Restore state if item was previously selected
-                if (selectedItems.has(checkbox.dataset.itemId)) {
-                    checkbox.checked = true;
-                    checkbox.closest('.menu-item-card').classList.add('selected');
-                }
-            });
-        }
-
-        function updateBulkDeleteUI() {
-            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-            const selectedCountDisplay = document.querySelector('.selected-count');
-            const selectedCountBadge = document.getElementById('selectedCount');
-
-            const count = selectedItems.size;
-            if (count > 0) {
-                bulkDeleteBtn.style.display = 'inline-block';
-                selectedCountDisplay.style.display = 'block';
-                selectedCountBadge.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
-            } else {
-                bulkDeleteBtn.style.display = 'none';
-                selectedCountDisplay.style.display = 'none';
-            }
-        }
-
-        // Initialize bulk delete functionality
-        if (document.getElementById('bulkDeleteBtn')) {
-            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-
-            // Initial setup of checkboxes
-            attachCheckboxListeners();
-
-            bulkDeleteBtn.addEventListener('click', function() {
-                if (selectedItems.size > 0) {
-                    // Change from DeleteBulk to Delete
-                    window.location.href = `/MenuItem/Delete?ids=${Array.from(selectedItems).join(',')}`;
-                }
-            });
-        }
-
-        window.addEventListener('pageshow', function() {
-    if (typeof selectedItems !== 'undefined') {
-        selectedItems.clear();
-    }
-    document.querySelectorAll('.item-checkbox').forEach(cb => {
-        cb.checked = false;
-        if (cb.closest('.menu-item-card')) {
-            cb.closest('.menu-item-card').classList.remove('selected');
-        }
-    });
-    if (typeof updateBulkDeleteUI === 'function') {
-        updateBulkDeleteUI();
-    }
-});
-
-        document.getElementById('filterForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            performFilter();
         });
 
-        document.getElementById('clearFilters').addEventListener('click', function() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('categorySelect').value = '';
-            document.getElementById('minPriceInput').value = '';
-            document.getElementById('maxPriceInput').value = '';
-            performFilter();
-            // Don't clear selections when clearing filters
-        });
-
-        document.getElementById('searchInput').addEventListener('input', debounce(performFilter, 500));
-        document.getElementById('categorySelect').addEventListener('change', performFilter);
-        document.getElementById('minPriceInput').addEventListener('change', performFilter);
-        document.getElementById('maxPriceInput').addEventListener('change', performFilter);
-
-        function performFilter() {
-            const search = document.getElementById('searchInput').value;
-            const categoryId = document.getElementById('categorySelect').value;
-            const minPrice = document.getElementById('minPriceInput').value;
-            const maxPrice = document.getElementById('maxPriceInput').value;
-
-            document.getElementById('loadingIndicator').style.display = 'block';
-            document.getElementById('menuItemsGrid').style.opacity = '0.5';
-
-            const params = new URLSearchParams();
-            if (search) params.append('search', search);
-            if (categoryId) params.append('categoryId', categoryId);
-            if (minPrice) params.append('minPrice', minPrice);
-            if (maxPrice) params.append('maxPrice', maxPrice);
-
-            fetch(`@Url.Action("GetFilteredMenuItems", "MenuItem")?${params.toString()}`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.json();
-                })
-                .then(data => {
-                    updateMenuItems(data);
-                })
-                .catch(error => {
-                    console.error('Error filtering menu items:', error);
-                    document.getElementById('menuItemsGrid').innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><p>Failed to filter menu items. Please try again.</p></div>`;
-                })
-                .finally(() => {
-                    document.getElementById('loadingIndicator').style.display = 'none';
-                    document.getElementById('menuItemsGrid').style.opacity = '1';
-                });
-        }
-
-        function getItemActions(item, isAdmin, isMember) {
-            if (isAdmin) {
-                return `
-                    <form action="/MenuItem/ToggleActive" method="post" class="d-inline">
-                        <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
-                        <input type="hidden" name="id" value="${item.menuItemId}" />
-                        <button type="submit" class="btn btn-sm ${item.isActive ? 'btn-secondary' : 'btn-success'}">
-                            ${item.isActive ? 'Deactivate' : 'Activate'}
-                        </button>
-                    </form>
-                    <a class="btn btn-sm btn-warning" href="/MenuItem/Edit/${item.menuItemId}">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                    <a class="btn btn-sm btn-danger" href="/MenuItem/Delete/${item.menuItemId}">
-                        <i class="fas fa-trash"></i>
-                    </a>
-                    <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
-                        <i class="fas fa-info-circle"></i> Details
-                    </a>`;
-            } else if (isMember) {
-                return `
-                    <form class="add-to-cart-form">
-                        <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
-                        <input type="hidden" name="menuItemId" value="${item.menuItemId}" />
-                        <div class="quantity-control">
-                            <input type="number" name="quantity" value="1" min="1" max="100" class="form-control" />
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-cart-plus"></i> Add to Cart
-                            </button>
-                        </div>
-                    </form>
-                    <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
-                        <i class="fas fa-info-circle"></i> Details
-                    </a>`;
-            }
-            return `
-                <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
-                    <i class="fas fa-info-circle"></i> Details
-                </a>`;
-        }
-
-        function attachFormListeners() {
-            document.querySelectorAll('.add-to-cart-form').forEach(form => {
-                form.addEventListener('submit', function(e) {
+                document.getElementById('filterForm').addEventListener('submit', function(e) {
                     e.preventDefault();
-                    const formData = new FormData(this);
-                    fetch('/Cart/Add', {
-                        method: 'POST',
-                        headers: {
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                        },
-                        body: new URLSearchParams(formData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                        } else {
-                            alert(data.message || 'Failed to add to cart.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Something went wrong.');
-                    });
+                    performFilter();
                 });
-            });
-        }
 
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
+                document.getElementById('clearFilters').addEventListener('click', function() {
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('categorySelect').value = '';
+                    document.getElementById('minPriceInput').value = '';
+                    document.getElementById('maxPriceInput').value = '';
+                    performFilter();
+                    // Don't clear selections when clearing filters
+                });
 
-        // Initialize form listeners
-        attachFormListeners();
+                document.getElementById('searchInput').addEventListener('input', debounce(performFilter, 500));
+                document.getElementById('categorySelect').addEventListener('change', performFilter);
+                document.getElementById('minPriceInput').addEventListener('change', performFilter);
+                document.getElementById('maxPriceInput').addEventListener('change', performFilter);
+
+                function performFilter() {
+                    const search = document.getElementById('searchInput').value;
+                    const categoryId = document.getElementById('categorySelect').value;
+                    const minPrice = document.getElementById('minPriceInput').value;
+                    const maxPrice = document.getElementById('maxPriceInput').value;
+
+                    document.getElementById('loadingIndicator').style.display = 'block';
+                    document.getElementById('menuItemsGrid').style.opacity = '0.5';
+
+                    const params = new URLSearchParams();
+                    if (search) params.append('search', search);
+                    if (categoryId) params.append('categoryId', categoryId);
+                    if (minPrice) params.append('minPrice', minPrice);
+                    if (maxPrice) params.append('maxPrice', maxPrice);
+
+                    fetch(`@Url.Action("GetFilteredMenuItems", "MenuItem")?${params.toString()}`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            return response.json();
+                        })
+                        .then(data => {
+                            updateMenuItems(data);
+                        })
+                        .catch(error => {
+                            console.error('Error filtering menu items:', error);
+                            document.getElementById('menuItemsGrid').innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><p>Failed to filter menu items. Please try again.</p></div>`;
+                        })
+                        .finally(() => {
+                            document.getElementById('loadingIndicator').style.display = 'none';
+                            document.getElementById('menuItemsGrid').style.opacity = '1';
+                        });
+                }
+
+                function getItemActions(item, isAdmin, isMember) {
+                    if (isAdmin) {
+                        return `
+                            <form action="/MenuItem/ToggleActive" method="post" class="d-inline">
+                                <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
+                                <input type="hidden" name="id" value="${item.menuItemId}" />
+                                <button type="submit" class="btn btn-sm ${item.isActive ? 'btn-secondary' : 'btn-success'}">
+                                    ${item.isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                            </form>
+                            <a class="btn btn-sm btn-warning" href="/MenuItem/Edit/${item.menuItemId}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a class="btn btn-sm btn-danger" href="/MenuItem/Delete?ids=${item.menuItemId}">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
+                                <i class="fas fa-info-circle"></i> Details
+                            </a>`;
+                    } else if (isMember) {
+                        return `
+                            <form class="add-to-cart-form">
+                                <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
+                                <input type="hidden" name="menuItemId" value="${item.menuItemId}" />
+                                <div class="quantity-control">
+                                    <input type="number" name="quantity" value="1" min="1" max="100" class="form-control" />
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-cart-plus"></i> Add to Cart
+                                    </button>
+                                </div>
+                            </form>
+                            <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
+                                <i class="fas fa-info-circle"></i> Details
+                            </a>`;
+                    }
+                    return `
+                        <a class="btn btn-sm btn-info" href="/MenuItem/Details/${item.menuItemId}">
+                            <i class="fas fa-info-circle"></i> Details
+                        </a>`;
+                }
+
+                function attachFormListeners() {
+                    document.querySelectorAll('.add-to-cart-form').forEach(form => {
+                        form.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            const formData = new FormData(this);
+                            fetch('/Cart/Add', {
+                                method: 'POST',
+                                headers: {
+                                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                                },
+                                body: new URLSearchParams(formData)
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert(data.message);
+                                } else {
+                                    alert(data.message || 'Failed to add to cart.');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                alert('Something went wrong.');
+                            });
+                        });
+                    });
+                }
+
+                function debounce(func, wait) {
+                    let timeout;
+                    return function executedFunction(...args) {
+                        const later = () => {
+                            clearTimeout(timeout);
+                            func(...args);
+                        };
+                        clearTimeout(timeout);
+                        timeout = setTimeout(later, wait);
+                    };
+                }
+
+                // Initialize form listeners
+                attachFormListeners();
     </script>
 }

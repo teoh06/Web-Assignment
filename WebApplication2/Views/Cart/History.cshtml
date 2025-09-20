@@ -6,6 +6,8 @@
     var selectedStatus = Context.Request.Query["status"].ToString();
 }
 
+@Html.AntiForgeryToken()
+
 @section Scripts {
     <script src="/js/email-receipt.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -100,6 +102,95 @@
             $(document).on('click', '.track-order-btn', function() {
                 const orderId = $(this).data('order-id');
                 window.location.href = '/Cart/Track?orderNumber=' + orderId;
+            });
+            
+            // --- Cancel Order Button ---
+            $(document).on('click', '.cancel-order-btn', function() {
+                const orderId = $(this).data('order-id');
+                const modalEl = document.getElementById('cancelOrderModal');
+                if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    modalEl.dataset.orderId = orderId;
+                    const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    bsModal.show();
+                } else {
+                    // Fallback if Bootstrap JS not loaded: use confirm()
+                    if (confirm('Are you sure you want to cancel this order?')) {
+                        const token = $('input[name="__RequestVerificationToken"]').first().val();
+                        $.ajax({
+                            url: '/Cart/CancelOrder',
+                            type: 'POST',
+                            headers: { 'RequestVerificationToken': token },
+                            data: { id: orderId, reason: '' },
+                            success: function(res) {
+                                if (res.success) {
+                                    const card = $(`.order-card[data-order-id='${orderId}']`);
+                                    if (card && card.length) {
+                                        card.fadeOut(200, function(){ $(this).remove(); });
+                                    } else {
+                                        location.reload();
+                                    }
+                                } else {
+                                    alert(res.message || 'Failed to cancel order.');
+                                }
+                            },
+                            error: function() { alert('Error cancelling order.'); }
+                        });
+                    }
+                }
+            });
+
+            // --- Confirm Cancel Order ---
+            $('#confirmCancelOrder').on('click', function() {
+                const modalEl = document.getElementById('cancelOrderModal');
+                const orderId = modalEl ? modalEl.dataset.orderId : null;
+                const reason = $('#cancelReason').val();
+                const token = $('input[name="__RequestVerificationToken"]').first().val();
+                $.ajax({
+                    url: '/Cart/CancelOrder',
+                    type: 'POST',
+                    headers: { 'RequestVerificationToken': token },
+                    data: { id: orderId, reason: reason },
+                    success: function(res) {
+                        if (res.success) {
+                            // Hide modal
+                            const bsModal = bootstrap.Modal.getInstance(modalEl);
+                            if (bsModal) bsModal.hide();
+                            // Remove the order card from DOM for better UX
+                            const card = $(`.order-card[data-order-id='${orderId}']`);
+                            if (card && card.length) {
+                                card.fadeOut(200, function(){
+                                    $(this).remove();
+                                });
+                            } else {
+                                location.reload();
+                            }
+                        } else {
+                            alert(res.message || 'Failed to cancel order.');
+                        }
+                    },
+                    error: function() { alert('Error cancelling order.'); }
+                });
+            });
+
+            // --- Refund Order Button ---
+            $(document).on('click', '.refund-order-btn', function() {
+                const orderId = $(this).data('order-id');
+                const reason = prompt('Please provide a reason for the refund (optional):') || '';
+                const token = $('input[name="__RequestVerificationToken"]').first().val();
+                if (!confirm('Confirm refund for Order #' + orderId + '?')) return;
+                $.ajax({
+                    url: '/Cart/RefundOrder',
+                    type: 'POST',
+                    data: { id: orderId, reason: reason, __RequestVerificationToken: token },
+                    success: function(res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            alert(res.message || 'Failed to process refund.');
+                        }
+                    },
+                    error: function() { alert('Error processing refund.'); }
+                });
             });
             
             // --- Reorder Button: Add items to cart ---
@@ -532,24 +623,14 @@
                         </div>
                         <button class="btn btn-outline-primary btn-sm mt-2" onclick="$('#searchInput').val('').focus(); performSearch();">
                             <i class="fas fa-times me-1"></i> Clear Search
-                
-                // No auto-scrolling when paginating - let users stay where they are
-                        <i class="fas fa-check-circle me-2"></i>
-                        Found <strong>${matchedCount}</strong> order${matchedCount !== 1 ? 's' : ''} matching <strong>"${searchTerm}"</strong>
-                        <button class="btn btn-outline-success btn-sm ms-2" onclick="$('#searchInput').val(''); performSearch(); $('#search-results-info').remove();">
-                            <i class="fas fa-times me-1"></i> Clear
                         </button>
                     </div>
                 `;
-                $('#orderListingContainer').prepend(resultsInfo);
-                
-                // Remove results info after 5 seconds
-                setTimeout(() => {
-                    $('#search-results-info').fadeOut(() => {
-                        $('#search-results-info').remove();
-                    });
-                }, 5000);
+                $('#orderListingContainer').prepend(noResultsHtml);
             }
+            
+            // Reinitialize pagination with filtered results
+            initPagination();
         }
         
         // Function to filter orders by status
@@ -1146,8 +1227,7 @@
         }
         
         .action-btn i {
-            font-size: 1.2rem;
-            margin-bottom: 0.25rem;
+            margin-right: 4px;
         }
         
         .action-btn:hover {
@@ -1908,7 +1988,7 @@
                                                 <span>Reorder</span>
                                             </button>
                                         </div>
-                                        @if (order.Status == "Pending" || order.Status == "Preparing")
+                                        @if (order.Status == "Pending")
                                         {
                                             <div class="btn-row">
                                                 <button type="button" class="action-btn btn-danger cancel-order-btn" data-order-id="@order.OrderId">
@@ -1917,13 +1997,13 @@
                                                 </button>
                                             </div>
                                         }
-                                        else if (order.Status == "Served")
+                                        else if (order.Status == "Paid" || order.Status == "Delivered")
                                         {
                                             <div class="btn-row">
-                                                <a asp-action="Refund" asp-controller="Cart" asp-route-id="@order.OrderId" class="action-btn btn-warning">
+                                                <button type="button" class="action-btn btn-warning refund-order-btn" data-order-id="@order.OrderId">
                                                     <i class="fas fa-undo"></i>
                                                     <span>Refund</span>
-                                                </a>
+                                                </button>
                                             </div>
                                         }
                                     </div>
