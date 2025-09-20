@@ -385,12 +385,113 @@
             </div>
         </div>
 
+        <!-- Role and Modification Info -->
+        <div class="status-update-form mb-4">
+            <h3 class="form-section-title">
+                <i class="fas fa-user-shield"></i>
+                Role & Modification Information
+            </h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <i class="fas fa-user info-icon"></i>
+                    <div class="info-content">
+                        <span class="info-label">Current User Role</span>
+                        <span class="info-value">@ViewBag.UserRole</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-history info-icon"></i>
+                    <div class="info-content">
+                        <span class="info-label">Total Modifications</span>
+                        <span class="info-value">@Model.StatusModificationCount / 2</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-user-tie info-icon"></i>
+                    <div class="info-content">
+                        <span class="info-label">Admin Modifications</span>
+                        <span class="info-value">@Model.AdminModificationCount / 1</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-utensils info-icon"></i>
+                    <div class="info-content">
+                        <span class="info-label">Chef Modifications</span>
+                        <span class="info-value">@Model.ChefModificationCount / 1</span>
+                    </div>
+                </div>
+            </div>
+            @if (Model.StatusModificationCount >= 2)
+            {
+                <div class="alert mt-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Maximum Modifications Reached:</strong> This order has been modified 2 times (the maximum allowed).
+                </div>
+            }
+            else if (Model.IsFinalStatus)
+            {
+                <div class="alert mt-3">
+                    <i class="fas fa-lock"></i>
+                    <strong>Final Status:</strong> This order has a final status and cannot be modified further.
+                </div>
+            }
+            else if (ViewBag.IsChef == true && Model.ChefModificationCount >= 1)
+            {
+                <div class="alert mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Chef Limit Reached:</strong> You (Chef) have already modified this order once. 
+                    @if (Model.AdminModificationCount == 0)
+                    {
+                        <text>Admin can still make 1 modification.</text>
+                    }
+                    else
+                    {
+                        <text>Admin has also used their modification.</text>
+                    }
+                </div>
+            }
+            else if (ViewBag.IsAdmin == true && Model.AdminModificationCount >= 1)
+            {
+                <div class="alert mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Admin Limit Reached:</strong> You (Admin) have already modified this order once. 
+                    @if (Model.ChefModificationCount == 0)
+                    {
+                        <text>Chef can still make 1 modification.</text>
+                    }
+                    else
+                    {
+                        <text>Chef has also used their modification.</text>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert mt-3">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Modification Available:</strong> 
+                    @if (ViewBag.IsChef == true)
+                    {
+                        <text>You (Chef) can modify this order. Remaining: Chef (1), Admin (@(1 - Model.AdminModificationCount))</text>
+                    }
+                    else if (ViewBag.IsAdmin == true)
+                    {
+                        <text>You (Admin) can modify this order. Remaining: Admin (1), Chef (@(1 - Model.ChefModificationCount))</text>
+                    }
+                </div>
+            }
+        </div>
+
         <!-- Status Update Form -->
         <div class="status-update-form">
             <h3 class="form-section-title">
                 <i class="fas fa-edit"></i>
                 Update Order Status
             </h3>
+            
+            @{
+                bool canCurrentUserModify = (ViewBag.IsChef == true && Model.CanChefModify) || (ViewBag.IsAdmin == true && Model.CanAdminModify);
+            }
             
             <form asp-action="UpdateOrderStatus" method="post">
                 @Html.AntiForgeryToken()
@@ -399,23 +500,77 @@
                 <div class="mb-4">
                     <label for="Status" class="form-label">
                         <i class="fas fa-flag"></i> Select New Status
+                        @if (!canCurrentUserModify)
+                        {
+                            <span class="text-muted">(Modification not allowed)</span>
+                        }
                     </label>
-                    <select asp-for="Status" class="form-select status-select">
-                        <option value="Pending">🕐 Pending</option>
-                        <option value="Paid">💳 Paid</option>
-                        <option value="Preparing">👨‍🍳 Preparing</option>
-                        <option value="Ready for Pickup">✅ Ready for Pickup</option>
-                        <option value="Delivered">📦 Delivered</option>
-                        <option value="Refunded">💰 Refunded</option>
-                        <option value="Declined">⛔ Declined</option>
-                    </select>
+                    @{
+                        // Use role-based allowed statuses from ViewBag
+                        string[] allowedStatuses = ViewBag.AllowedStatuses as string[] ?? new string[0];
+                        var statusIcons = new Dictionary<string, string>
+                        {
+                            {"Pending", "🕐"},
+                            {"Paid", "💳"},
+                            {"Preparing", "👨‍🍳"},
+                            {"Ready for Pickup", "✅"},
+                            {"Delivered", "📦"},
+                            {"Refunded", "💰"},
+                            {"Declined", "⛔"}
+                        };
+                    }
+                    
+                    @if (canCurrentUserModify)
+                    {
+                        <select asp-for="Status" class="form-select status-select">
+                            @foreach (var status in allowedStatuses)
+                            {
+                                var icon = statusIcons.ContainsKey(status) ? statusIcons[status] : "📋";
+                                if (Model.Status == status)
+                                {
+                                    <option value="@status" selected>@icon @status</option>
+                                }
+                                else
+                                {
+                                    <option value="@status">@icon @status</option>
+                                }
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <select asp-for="Status" class="form-select status-select" disabled>
+                            @foreach (var status in allowedStatuses)
+                            {
+                                var icon = statusIcons.ContainsKey(status) ? statusIcons[status] : "📋";
+                                if (Model.Status == status)
+                                {
+                                    <option value="@status" selected>@icon @status</option>
+                                }
+                                else
+                                {
+                                    <option value="@status">@icon @status</option>
+                                }
+                            }
+                        </select>
+                    }
                 </div>
                 
                 <div class="action-buttons">
-                    <button type="submit" class="btn-update">
-                        <i class="fas fa-save"></i>
-                        Update Status
-                    </button>
+                    @if (canCurrentUserModify)
+                    {
+                        <button type="submit" class="btn-update">
+                            <i class="fas fa-save"></i>
+                            Update Status
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn-update" disabled>
+                            <i class="fas fa-ban"></i>
+                            Cannot Modify
+                        </button>
+                    }
                     <a asp-action="Orders" class="btn-back">
                         <i class="fas fa-arrow-left"></i>
                         Back to Orders

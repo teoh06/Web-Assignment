@@ -1107,4 +1107,31 @@ public class AccountController : Controller
     {
         return PartialView("GetFavoriteListPartial");
     }
+
+    // AJAX endpoint to get member information for auto-fill
+    [Authorize(Roles = "Member")]
+    [HttpGet]
+    public async Task<IActionResult> GetMemberInfo()
+    {
+        try
+        {
+            var member = await db.Members.FirstOrDefaultAsync(m => m.Email == User.Identity.Name);
+            if (member == null)
+            {
+                return Json(new { success = false, message = "Member not found" });
+            }
+
+            return Json(new 
+            { 
+                success = true, 
+                phoneNumber = member.PhoneNumber ?? "",
+                address = member.Address ?? "",
+                name = member.Name ?? ""
+            });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "Error retrieving member information" });
+        }
+    }
 }

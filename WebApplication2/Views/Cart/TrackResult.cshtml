@@ -105,9 +105,9 @@ else
         
         <!-- Payment Button - Modern Design -->
         <div id="paymentButtonContainer" class="payment-section" style="display: none;">
-            <button id="proceedPaymentBtn" class="payment-btn-modern" onclick="proceedToPayment('@order.OrderNumber')">
-                <span class="btn-icon">💳</span>
-                <span class="btn-text">Proceed to Payment</span>
+            <button id="proceedPaymentBtn" class="payment-btn-modern pulse-payment-btn" onclick="proceedToPayment('@order.OrderNumber')">
+                <span class="btn-icon"><i class="fas fa-credit-card"></i></span>
+                <span class="btn-text">Complete Payment</span>
                 <div class="btn-glow"></div>
             </button>
         </div>
@@ -349,8 +349,15 @@ else
 
         // Function to handle payment button click
         function proceedToPayment(orderNumber) {
-            // Redirect to payment page with order context
-            window.location.href = '/Cart/Payment?orderId=' + orderNumber;
+            // Debug logging
+            console.log('Completing payment for order:', orderNumber);
+            
+            // Use consistent URL format with History view
+            var paymentUrl = '@Url.Action("Payment", "Cart")/' + orderNumber;
+            console.log('Payment URL:', paymentUrl);
+            
+            // Redirect to payment page with order ID as route parameter
+            window.location.href = paymentUrl;
         }
     }
 
@@ -372,6 +379,26 @@ else
         #proceedPaymentBtn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(255, 193, 7, 0.4);
+        }
+        
+        /* Pulse animation for payment button */
+        .pulse-payment-btn {
+            animation: paymentPulse 2s infinite;
+        }
+        
+        @@keyframes paymentPulse {
+            0% { 
+                box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 6px 20px rgba(255, 193, 7, 0.6);
+                transform: scale(1.02);
+            }
+            100% { 
+                box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+                transform: scale(1);
+            }
         }
     </style>
 }

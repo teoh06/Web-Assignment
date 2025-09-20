@@ -151,6 +151,11 @@ public class MenuItem
 
     // --- Add IsActive property for menu item filtering ---
     public bool IsActive { get; set; } = true;
+    
+    // --- Add soft delete functionality to preserve order history ---
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; } // Track who deleted the item
 
     // --- Add ratings navigation property ---
     public ICollection<MenuItemRating> MenuItemRatings { get; set; } = new List<MenuItemRating>();
@@ -197,6 +202,22 @@ public class Order
     // --- Anti-duplicate order protection ---
     [MaxLength(64)]
     public string? OrderHash { get; set; } // Hash of cart contents for duplicate detection
+    
+    // --- Status modification tracking ---
+    public int StatusModificationCount { get; set; } = 0; // Track total number of status changes
+    public DateTime? LastStatusChangeDate { get; set; } // Track when status was last changed
+    public string? PreviousStatus { get; set; } // Track previous status for audit
+    
+    // --- Role-specific modification tracking ---
+    public int ChefModificationCount { get; set; } = 0; // Track Chef modifications
+    public int AdminModificationCount { get; set; } = 0; // Track Admin modifications
+    public string? LastModifiedByRole { get; set; } // Track which role made the last change
+    
+    // --- Helper properties for business rules ---
+    public bool IsFinalStatus => Status == "Refunded" || Status == "Delivered" || Status == "Declined" || Status == "Ready for Pickup";
+    public bool CanModifyStatus => StatusModificationCount < 2 && !IsFinalStatus;
+    public bool CanChefModify => ChefModificationCount == 0 && StatusModificationCount < 2 && !IsFinalStatus;
+    public bool CanAdminModify => AdminModificationCount == 0 && StatusModificationCount < 2 && !IsFinalStatus;
 }
 
 public class OrderItem

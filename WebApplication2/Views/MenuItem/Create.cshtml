@@ -252,7 +252,7 @@
                 if (!file) return;
                 const isTxt = file.name.toLowerCase().endsWith('.txt') || file.type === 'text/plain';
                 if (!isTxt) {
-                    bulkUploadMessage.innerHTML = '<div class="alert alert-danger">Only .txt files are allowed.</div>';
+                    bulkUploadMessage.innerHTML = '<div class="alert">Only .txt files are allowed.</div>';
                     return;
                 }
 
@@ -292,7 +292,7 @@
                     bulkUploadMessage.innerHTML = `<div class="alert alert-success">${text}</div>`;
                 })
                 .catch(err => {
-                    bulkUploadMessage.innerHTML = `<div class="alert alert-danger">Upload failed: ${err.message}</div>`;
+                    bulkUploadMessage.innerHTML = `<div class="alert">Upload failed: ${err.message}</div>`;
                 });
             }
 

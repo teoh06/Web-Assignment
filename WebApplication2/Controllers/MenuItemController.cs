@@ -35,6 +35,9 @@ public class MenuItemController : Controller
 
         IQueryable<MenuItem> query = db.MenuItems;
 
+        // Always hide deleted items from main menu display
+        query = query.Where(m => !m.IsDeleted);
+
         // Hide inactive items for non-admins
         if (!User.IsInRole("Admin"))
         {
@@ -340,7 +343,7 @@ public class MenuItemController : Controller
         var menuItem = db.MenuItems
             .Include(m => m.Category)
             .Include(m => m.MenuItemImages)
-            .FirstOrDefault(m => m.MenuItemId == id);
+            .FirstOrDefault(m => m.MenuItemId == id && !m.IsDeleted);
 
         if (menuItem == null) return NotFound();
 
@@ -573,7 +576,7 @@ public class MenuItemController : Controller
     {
         var menuItem = db.MenuItems
             .Include(m => m.Category)
-            .Where(m => m.MenuItemId == id)
+            .Where(m => m.MenuItemId == id && !m.IsDeleted)
             .Select(m => new {
                 id = m.MenuItemId,
                 name = m.Name,
@@ -651,6 +654,7 @@ public class MenuItemController : Controller
             var query = db.MenuItems
                 .Include(m => m.Category)
                 .Include(m => m.MenuItemRatings)
+                .Where(m => !m.IsDeleted) // Exclude deleted items from filtering
                 .AsQueryable();
 
             // Search by name, description, or category name
@@ -804,7 +808,6 @@ public class MenuItemController : Controller
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpGet("MenuItem/Delete/{ids?}")]
     public IActionResult Delete(string ids)
     {
         if (string.IsNullOrEmpty(ids))
@@ -834,7 +837,6 @@ public class MenuItemController : Controller
     [ActionName("Delete")]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Admin")]
-    [Route("MenuItem/Delete")]
     public IActionResult DeleteConfirmed(int[] ids)
     {
         if (ids == null || !ids.Any())
@@ -844,19 +846,28 @@ public class MenuItemController : Controller
 
         try
         {
-            var items = db.MenuItems.Where(m => ids.Contains(m.MenuItemId)).ToList();
+            var items = db.MenuItems.Where(m => ids.Contains(m.MenuItemId) && !m.IsDeleted).ToList();
+            
+            if (!items.Any())
+            {
+                TempData["ErrorMessage"] = "No valid menu items found to delete.";
+                return RedirectToAction(nameof(Index));
+            }
+            
             foreach (var item in items)
             {
-                // Delete associated image if exists
-                if (!string.IsNullOrEmpty(item.PhotoURL))
-                {
-                    DeleteImage(item.PhotoURL);
-                }
-                db.MenuItems.Remove(item);
+                // Soft delete: Mark as deleted but preserve data for order history
+                item.IsDeleted = true;
+                item.IsActive = false; // Also mark as inactive
+                item.DeletedAt = DateTime.Now;
+                item.DeletedBy = User.Identity?.Name ?? "System";
+                
+                // Note: We keep the image and database record to preserve order history
+                // Images are kept because orders may reference them in receipts/history
             }
 
             db.SaveChanges();
-            TempData["SuccessMessage"] = $"Successfully deleted {items.Count} menu item{(items.Count != 1 ? "s" : "")}!";
+            TempData["SuccessMessage"] = $"Successfully deleted {items.Count} menu item{(items.Count != 1 ? "s" : "")}! Order history preserved.";
             return RedirectToAction(nameof(Index));
         }
         catch (Exception ex)
@@ -864,6 +875,52 @@ public class MenuItemController : Controller
             logger.LogError(ex, "Error deleting menu items: {Message}", ex.Message);
             TempData["ErrorMessage"] = "An error occurred while deleting the items.";
             return RedirectToAction(nameof(Index));
+        }
+    }
+
+    // Admin method to view deleted items for recovery
+    [Authorize(Roles = "Admin")]
+    public IActionResult DeletedItems()
+    {
+        var deletedItems = db.MenuItems
+            .Include(m => m.Category)
+            .Where(m => m.IsDeleted)
+            .OrderByDescending(m => m.DeletedAt)
+            .ToList();
+
+        return View(deletedItems);
+    }
+
+    // Admin method to restore deleted items
+    [Authorize(Roles = "Admin")]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult RestoreItem(int id)
+    {
+        try
+        {
+            var item = db.MenuItems.FirstOrDefault(m => m.MenuItemId == id && m.IsDeleted);
+            if (item == null)
+            {
+                TempData["ErrorMessage"] = "Item not found or not deleted.";
+                return RedirectToAction(nameof(DeletedItems));
+            }
+
+            // Restore the item
+            item.IsDeleted = false;
+            item.IsActive = true; // Also reactivate
+            item.DeletedAt = null;
+            item.DeletedBy = null;
+
+            db.SaveChanges();
+            TempData["SuccessMessage"] = $"Successfully restored '{item.Name}'!";
+            return RedirectToAction(nameof(DeletedItems));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error restoring menu item: {Message}", ex.Message);
+            TempData["ErrorMessage"] = "An error occurred while restoring the item.";
+            return RedirectToAction(nameof(DeletedItems));
         }
     }
 

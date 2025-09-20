@@ -116,7 +116,7 @@
                 </div>
                 <div class="item-info">
                     <h3 class="item-name">@item.Name</h3>
-                    <p class="item-category">@item.Category?.Name</p>
+                    <p class="item-category">@(item.Category?.Name ?? "No Category")</p>
                     <p class="item-stock">Stock: @item.StockQuantity</p>
                     <div class="item-actions">
                         @if (isAdmin)
@@ -659,7 +659,7 @@
                             `}
                             <div class="item-info">
                                 <h3 class="item-name">${item.name}</h3>
-                                <p class="item-category">${item.categoryName}</p>
+                                <p class="item-category">${item.categoryName || 'No Category'}</p>
                                 <p class="item-stock">Stock: ${item.stockQuantity}</p>
                                 <div class="item-actions">
                                     ${getItemActions(item, isAdmin, isMember)}
