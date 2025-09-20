@@ -295,8 +295,28 @@ public class AdminController : Controller
     // GET: /Admin/OrderDetail/{id}
     public async Task<IActionResult> OrderDetail(int id)
     {
-        var order = await _context.Orders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).FirstOrDefaultAsync(o => o.OrderId == id);
+        var order = await _context.Orders
+            .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.MenuItem)
+            .ThenInclude(mi => mi.Category)
+            .FirstOrDefaultAsync(o => o.OrderId == id);
+        
         if (order == null) return NotFound();
+        
+        // Debug logging to check order data
+        System.Diagnostics.Debug.WriteLine($"Order {id} - PaymentMethod: '{order.PaymentMethod}', DeliveryOption: '{order.DeliveryOption}', Status: '{order.Status}'");
+        
+        // Ensure we have proper default values if data is missing
+        if (string.IsNullOrEmpty(order.PaymentMethod))
+        {
+            order.PaymentMethod = "Not specified";
+        }
+        
+        if (string.IsNullOrEmpty(order.DeliveryOption))
+        {
+            order.DeliveryOption = "Standard";
+        }
+        
         return View(order);
     }
 
@@ -305,6 +325,13 @@ public class AdminController : Controller
     {
         var order = await _context.Orders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).ThenInclude(mi => mi.Category).FirstOrDefaultAsync(o => o.OrderId == id);
         if (order == null) return NotFound();
+        
+        // Pass role-specific information to the view
+        ViewBag.AllowedStatuses = GetAllowedStatusesForRole();
+        ViewBag.IsAdmin = User.IsInRole("Admin");
+        ViewBag.IsChef = User.IsInRole("Chef");
+        ViewBag.UserRole = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Chef") ? "Chef" : "Unknown");
+        
         return View(order);
     }
 
@@ -319,7 +346,56 @@ public class AdminController : Controller
             .FirstOrDefaultAsync(o => o.OrderId == model.OrderId);
         if (order == null) return NotFound();
 
+        // Business rule: Check if user can modify this order
+        var (canModify, errorMessage) = CanUserModifyOrder(order);
+        if (!canModify)
+        {
+            TempData["Error"] = $"Order #{order.OrderId}: {errorMessage}";
+            return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
+        }
+
+        // Role-based validation: Check if user can modify to this status
+        if (!CanUserModifyToStatus(model.Status))
+        {
+            string userRole = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Chef") ? "Chef" : "Unknown");
+            TempData["Error"] = $"Access denied. {userRole} role cannot modify order status to '{model.Status}'. Chefs can only update food-related statuses.";
+            return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
+        }
+
+        // Store previous status for audit and update tracking
+        string previousStatus = order.Status;
+        string currentUserRole = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Chef") ? "Chef" : "Unknown");
+        
+        order.PreviousStatus = previousStatus;
         order.Status = model.Status;
+        order.StatusModificationCount++;
+        order.LastStatusChangeDate = DateTime.Now;
+        order.LastModifiedByRole = currentUserRole;
+        
+        // Update role-specific modification counts
+        if (User.IsInRole("Admin"))
+        {
+            order.AdminModificationCount++;
+        }
+        else if (User.IsInRole("Chef"))
+        {
+            order.ChefModificationCount++;
+        }
+
+        // Business rule: Delete orders with Refunded or Declined status
+        if (model.Status == "Refunded" || model.Status == "Declined")
+        {
+            // Send notification email before deletion
+            await SendStatusChangeNotification(order, model.Status);
+            
+            // Delete the order and all related items
+            _context.Orders.Remove(order);
+            await _context.SaveChangesAsync();
+            
+            TempData["Success"] = $"Order #{order.OrderId} has been {model.Status.ToLower()} and removed from the system. Customer has been notified.";
+            return RedirectToAction("Orders");
+        }
+
         await _context.SaveChangesAsync();
 
         // --- Send email to member about status change ---
@@ -354,6 +430,113 @@ public class AdminController : Controller
         return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
     }
 
+    // Helper method to get allowed statuses based on user role
+    private string[] GetAllowedStatusesForRole()
+    {
+        if (User.IsInRole("Admin"))
+        {
+            // Admin can modify all statuses
+            return new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered", "Refunded", "Declined" };
+        }
+        else if (User.IsInRole("Chef"))
+        {
+            // Chef can only modify food-related statuses, not administrative ones
+            return new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered" };
+        }
+        
+        return new string[0]; // No permissions for other roles
+    }
+
+    // Helper method to check if user can modify to specific status
+    private bool CanUserModifyToStatus(string status)
+    {
+        var allowedStatuses = GetAllowedStatusesForRole();
+        return allowedStatuses.Contains(status);
+    }
+
+    // Helper method to check if user can modify order based on role-specific rules
+    private (bool canModify, string errorMessage) CanUserModifyOrder(Order order)
+    {
+        // Check if order has reached final status
+        if (order.IsFinalStatus)
+        {
+            return (false, $"Order status cannot be modified. Final status '{order.Status}' has already been set.");
+        }
+
+        // Check if order has reached maximum total modifications
+        if (order.StatusModificationCount >= 2)
+        {
+            return (false, "Order has reached maximum modification limit (2 changes total).");
+        }
+
+        // Check role-specific modification limits
+        if (User.IsInRole("Admin"))
+        {
+            if (order.AdminModificationCount >= 1)
+            {
+                return (false, "Admin has already modified this order once. Each role can only modify once.");
+            }
+        }
+        else if (User.IsInRole("Chef"))
+        {
+            if (order.ChefModificationCount >= 1)
+            {
+                return (false, "Chef has already modified this order once. Each role can only modify once.");
+            }
+        }
+        else
+        {
+            return (false, "Insufficient permissions to modify order status.");
+        }
+
+        return (true, string.Empty);
+    }
+
+    // Helper method for sending status change notifications
+    private async Task SendStatusChangeNotification(Order order, string newStatus)
+    {
+        var memberEmail = order.MemberEmail;
+        if (!string.IsNullOrEmpty(memberEmail))
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"<h2>Your Order #{order.OrderId} Status Update</h2>");
+            sb.AppendLine($"<p><b>Order Date:</b> {order.OrderDate:yyyy-MM-dd HH:mm}</p>");
+            sb.AppendLine($"<p><b>Status:</b> {newStatus}</p>");
+            
+            if (newStatus == "Refunded" || newStatus == "Declined")
+            {
+                sb.AppendLine($"<p><b>Important:</b> Your order has been {newStatus.ToLower()}. ");
+                if (newStatus == "Refunded")
+                {
+                    sb.AppendLine("Your refund will be processed within 3-5 business days.</p>");
+                }
+                else
+                {
+                    sb.AppendLine("We apologize for any inconvenience caused.</p>");
+                }
+            }
+            
+            sb.AppendLine("<h3>Order Details:</h3>");
+            sb.AppendLine("<ul>");
+            foreach (var item in order.OrderItems)
+            {
+                sb.AppendLine($"<li>{item.MenuItem?.Name ?? "Item"} x {item.Quantity} @ RM{item.UnitPrice:F2}</li>");
+            }
+            sb.AppendLine("</ul>");
+            sb.AppendLine($"<p><b>Total:</b> RM{order.OrderItems.Sum(i => i.UnitPrice * i.Quantity):F2}</p>");
+            sb.AppendLine("<p>Thank you for your understanding.</p>");
+
+            var mail = new MailMessage
+            {
+                Subject = $"Order #{order.OrderId} Status Update: {newStatus}",
+                Body = sb.ToString(),
+                IsBodyHtml = true
+            };
+            mail.To.Add(memberEmail);
+            await _emailService.SendEmailAsync(mail.To[0].Address, mail.Subject, mail.Body);
+        }
+    }
+
     // POST: /Admin/UpdateOrderStatusAjax
     [HttpPost]
     [Authorize(Roles = "Admin,Chef")]
@@ -361,31 +544,88 @@ public class AdminController : Controller
     {
         try
         {
-            var order = await _context.Orders.FindAsync(orderId);
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
             if (order == null) return Json(new { success = false, message = "Order not found" });
 
-            // Validate status
-            var validStatuses = new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered", "Refunded" };
-            if (string.IsNullOrEmpty(status) || !validStatuses.Contains(status))
+            // Validate status - use role-based validation
+            var allowedStatuses = GetAllowedStatusesForRole();
+            if (string.IsNullOrEmpty(status) || !allowedStatuses.Contains(status))
             {
-                return Json(new { success = false, message = "Invalid status" });
+                string userRole = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Chef") ? "Chef" : "Unknown");
+                string message = allowedStatuses.Length == 0 ? "No status modification permissions" : 
+                    $"Invalid status for {userRole} role. Chefs can only update food-related statuses (Pending, Paid, Preparing, Ready for Pickup, Delivered).";
+                return Json(new { success = false, message = message });
             }
 
+            // Business rule: Check if user can modify this order
+            var (canModify, errorMessage) = CanUserModifyOrder(order);
+            if (!canModify)
+            {
+                return Json(new { success = false, message = errorMessage });
+            }
+
+            // Store previous status for audit and update tracking
+            string previousStatus = order.Status;
+            string currentUserRole = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Chef") ? "Chef" : "Unknown");
+            
+            order.PreviousStatus = previousStatus;
             order.Status = status;
+            order.StatusModificationCount++;
+            order.LastStatusChangeDate = DateTime.Now;
+            order.LastModifiedByRole = currentUserRole;
+            
+            // Update role-specific modification counts
+            if (User.IsInRole("Admin"))
+            {
+                order.AdminModificationCount++;
+            }
+            else if (User.IsInRole("Chef"))
+            {
+                order.ChefModificationCount++;
+            }
+
+            // Business rule: Delete orders with Refunded or Declined status
+            if (status == "Refunded" || status == "Declined")
+            {
+                // Send notification email before deletion
+                await SendStatusChangeNotification(order, status);
+                
+                // Delete the order and all related items
+                _context.Orders.Remove(order);
+                await _context.SaveChangesAsync();
+                
+                return Json(new
+                {
+                    success = true,
+                    message = $"Order has been {status.ToLower()} and removed from the system. Customer has been notified.",
+                    orderId = orderId,
+                    status = status,
+                    deleted = true
+                });
+            }
+
             await _context.SaveChangesAsync();
 
-            // Get member email for notification
-            var memberEmail = order.MemberEmail ?? string.Empty;
-
-            // TODO: Send notification to member (SMS or email)
-            // This would be implemented with a real notification service in production
+            // Send notification for non-deletion status changes
+            await SendStatusChangeNotification(order, status);
 
             return Json(new
             {
                 success = true,
-                message = $"Order status updated to {status}",
+                message = $"Order status updated to {status}. Customer has been notified.",
                 orderId = orderId,
-                status = status
+                status = status,
+                deleted = false,
+                modificationCount = order.StatusModificationCount,
+                chefModificationCount = order.ChefModificationCount,
+                adminModificationCount = order.AdminModificationCount,
+                lastModifiedByRole = order.LastModifiedByRole,
+                canModify = order.CanModifyStatus,
+                canChefModify = order.CanChefModify,
+                canAdminModify = order.CanAdminModify
             });
         }
         catch (Exception ex)

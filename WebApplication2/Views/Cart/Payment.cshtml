@@ -73,10 +73,10 @@
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label asp-for="PhoneNumber" class="form-label">
-                                        <i class="fas fa-mobile-alt me-1"></i>Phone Number
+                                        <i class="fas fa-mobile-alt me-1"></i>Phone Number <span class="text-danger">*</span>
                                     </label>
                                     <input asp-for="PhoneNumber" class="form-control" placeholder="Enter your phone number" required />
-                                    <div class="form-text">We'll use this to contact you about your order</div>
+                                    <div class="form-text"><strong>Required:</strong> We'll use this to contact you about your order status and delivery updates</div>
                                     <span asp-validation-for="PhoneNumber" class="text-danger"></span>
                                 </div>
                             </div>
@@ -307,6 +307,17 @@
             box-shadow: none !important;
         }
         
+        /* Disabled button styling */
+        #payButton:disabled {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            opacity: 0.8;
+        }
+        
+        #payButton:disabled .fas {
+            color: #fff !important;
+        }
+        
         #payButton.processing {
             animation: pulse 1.5s infinite;
         }
@@ -370,6 +381,22 @@
                 top: auto !important;
             }
         }
+        
+        /* Validation styling for form inputs */
+        .form-control.is-valid {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        }
+        
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+        
+        .text-danger {
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -392,7 +419,10 @@
                 // Handle required fields
                 const cardInputs = cardFields.querySelectorAll('input, textarea');
                 cardInputs.forEach(input => {
-                    input.required = isCard;
+                    // Don't make billing address required - it's optional
+                    if (input.name !== 'BillingAddress') {
+                        input.required = isCard;
+                    }
                     if (!isCard) {
                         input.value = '';
                     }
@@ -431,8 +461,9 @@
                     
                     cardElement.addEventListener('click', function() {
                         radio.checked = true;
-                        updateCardStyles();
+                        togglePaymentFields();
                         toggleDeliverySections();
+                        updateCardStyles();
                     });
                     
                     radio.addEventListener('change', function() {
@@ -461,8 +492,11 @@
             // Event listeners
             paymentMethodSelect.addEventListener('change', togglePaymentFields);
             handleDeliveryOptionSelection();
+            
+            // Initial form validation check
+            setTimeout(validateFormCompleteness, 100); // Small delay to ensure all elements are ready
 
-            // Format expiry date input
+            // Format expiry date input and validate expiry
             const expiryInput = document.querySelector('[name="ExpiryDate"]');
             if (expiryInput) {
                 expiryInput.addEventListener('input', function(e) {
@@ -471,7 +505,81 @@
                         value = value.substring(0, 2) + '/' + value.substring(2);
                     }
                     e.target.value = value.substring(0, 5);
+                    
+                    // Validate expiry date in real-time
+                    validateExpiryDate(e.target);
                 });
+                
+                // Also validate on blur
+                expiryInput.addEventListener('blur', function(e) {
+                    validateExpiryDate(e.target);
+                });
+            }
+            
+            // Function to validate expiry date
+            function validateExpiryDate(input) {
+                const value = input.value;
+                const errorSpan = input.parentElement.querySelector('.text-danger');
+                
+                // Clear previous error
+                if (errorSpan) {
+                    errorSpan.textContent = '';
+                }
+                
+                if (value.length === 5) { // MM/YY format
+                    const parts = value.split('/');
+                    if (parts.length === 2) {
+                        const month = parseInt(parts[0]);
+                        const year = parseInt('20' + parts[1]); // Convert YY to 20YY
+                        
+                        // Validate month
+                        if (month < 1 || month > 12) {
+                            showExpiryError(input, 'Invalid month. Please enter 01-12.');
+                            return false;
+                        }
+                        
+                        // Check if card is expired
+                        const currentDate = new Date();
+                        const currentYear = currentDate.getFullYear();
+                        const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+                        
+                        if (year < currentYear || (year === currentYear && month < currentMonth)) {
+                            showExpiryError(input, 'Card has expired. Please use a valid card.');
+                            return false;
+                        }
+                        
+                        // Check if expiry is too far in future (more than 10 years)
+                        if (year > currentYear + 10) {
+                            showExpiryError(input, 'Invalid expiry date. Please check your card.');
+                            return false;
+                        }
+                        
+                        // Valid expiry date
+                        input.classList.remove('is-invalid');
+                        input.classList.add('is-valid');
+                        return true;
+                    }
+                }
+                
+                // Invalid format or incomplete
+                if (value.length > 0) {
+                    input.classList.remove('is-valid');
+                    input.classList.add('is-invalid');
+                }
+                
+                return false;
+            }
+            
+            // Function to show expiry error
+            function showExpiryError(input, message) {
+                input.classList.remove('is-valid');
+                input.classList.add('is-invalid');
+                
+                const errorSpan = input.parentElement.querySelector('.text-danger');
+                if (errorSpan) {
+                    errorSpan.textContent = message;
+                    errorSpan.style.display = 'block';
+                }
             }
 
             // Add spacing to card number input
@@ -479,13 +587,133 @@
             if (cardNumberInput) {
                 cardNumberInput.addEventListener('input', function(e) {
                     e.target.value = e.target.value.replace(/\D/g, '');
+                    validateFormCompleteness(); // Check form completeness on input
                 });
             }
 
-            // Initial state setup
-            togglePaymentFields();
-            toggleDeliverySections();
-            updateCardStyles();
+            // Auto-fill phone number from member profile if available
+            const phoneInput = document.querySelector('[name="PhoneNumber"]');
+            if (phoneInput && !phoneInput.value) {
+                // If phone number is empty, try to get it from member profile via AJAX
+                fetch('/Account/GetMemberInfo')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.phoneNumber) {
+                            phoneInput.value = data.phoneNumber;
+                            validateFormCompleteness(); // Check form completeness after auto-fill
+                        }
+                    })
+                    .catch(error => {
+                        console.log('Could not auto-fill phone number:', error);
+                    });
+            }
+            
+            // Function to validate form completeness and enable/disable submit button
+            function validateFormCompleteness() {
+                const payBtn = document.getElementById('payButton');
+                const buttonText = payBtn.querySelector('.button-text');
+                
+                // Check required fields
+                let isFormComplete = true;
+                let missingFields = [];
+                
+                // Check delivery option
+                const deliveryOption = document.querySelector('input[name="DeliveryOption"]:checked');
+                if (!deliveryOption) {
+                    isFormComplete = false;
+                    missingFields.push('Delivery Method');
+                }
+                
+                // Check phone number
+                const phoneNumber = document.querySelector('[name="PhoneNumber"]').value.trim();
+                if (!phoneNumber) {
+                    isFormComplete = false;
+                    missingFields.push('Phone Number');
+                }
+                
+                // Check delivery address if delivery is selected
+                if (deliveryOption && deliveryOption.value === 'Delivery') {
+                    const deliveryAddress = document.querySelector('[name="DeliveryAddress"]').value.trim();
+                    if (!deliveryAddress) {
+                        isFormComplete = false;
+                        missingFields.push('Delivery Address');
+                    }
+                }
+                
+                // Check payment method
+                const paymentMethod = document.querySelector('[name="PaymentMethod"]').value;
+                if (!paymentMethod) {
+                    isFormComplete = false;
+                    missingFields.push('Payment Method');
+                }
+                
+                // Check card fields if card payment is selected
+                if (paymentMethod === 'Card') {
+                    const cardHolderName = document.querySelector('[name="CardHolderName"]').value.trim();
+                    const cardNumber = document.querySelector('[name="CardNumber"]').value.trim();
+                    const expiryDate = document.querySelector('[name="ExpiryDate"]').value.trim();
+                    const cvv = document.querySelector('[name="CVV"]').value.trim();
+                    
+                    if (!cardHolderName) {
+                        isFormComplete = false;
+                        missingFields.push('Cardholder Name');
+                    }
+                    if (!cardNumber || cardNumber.length !== 16) {
+                        isFormComplete = false;
+                        missingFields.push('Card Number');
+                    }
+                    if (!expiryDate || expiryDate.length !== 5) {
+                        isFormComplete = false;
+                        missingFields.push('Expiry Date');
+                    } else {
+                        // Validate expiry date
+                        if (!validateExpiryDate(document.querySelector('[name="ExpiryDate"]'))) {
+                            isFormComplete = false;
+                            missingFields.push('Valid Expiry Date');
+                        }
+                    }
+                    if (!cvv || cvv.length < 3) {
+                        isFormComplete = false;
+                        missingFields.push('CVV');
+                    }
+                }
+                
+                // Update button state
+                if (isFormComplete) {
+                    payBtn.disabled = false;
+                    payBtn.classList.remove('btn-secondary');
+                    payBtn.classList.add('btn-success');
+                    buttonText.innerHTML = '<i class="fas fa-check-circle me-2"></i>Complete Order';
+                    payBtn.title = 'Click to complete your order';
+                } else {
+                    payBtn.disabled = true;
+                    payBtn.classList.remove('btn-success');
+                    payBtn.classList.add('btn-secondary');
+                    buttonText.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Complete Required Fields';
+                    payBtn.title = 'Please fill in all required fields: ' + missingFields.join(', ');
+                }
+            }
+            
+            // Add event listeners to all form inputs for real-time validation
+            const allInputs = document.querySelectorAll('input, select, textarea');
+            allInputs.forEach(input => {
+                input.addEventListener('input', validateFormCompleteness);
+                input.addEventListener('change', validateFormCompleteness);
+            });
+            
+            // Add event listeners to delivery option cards
+            document.querySelectorAll('input[name="DeliveryOption"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    toggleDeliverySections();
+                    validateFormCompleteness();
+                });
+            });
+            
+            // Add event listener to payment method select
+            paymentMethodSelect.addEventListener('change', function() {
+                togglePaymentFields();
+                validateFormCompleteness();
+            });
 
             // --- ULTRA-ROBUST spam protection and submission handling ---
             const form = document.querySelector('form');
@@ -603,6 +831,16 @@
                     e.preventDefault();
                     form.reportValidity();
                     return false;
+                }
+                
+                // Additional validation for card payment
+                if (paymentMethodSelect.value === 'Card') {
+                    const expiryInput = document.querySelector('[name="ExpiryDate"]');
+                    if (expiryInput && !validateExpiryDate(expiryInput)) {
+                        e.preventDefault();
+                        expiryInput.focus();
+                        return false;
+                    }
                 }
                 
                 // Set submission state IMMEDIATELY

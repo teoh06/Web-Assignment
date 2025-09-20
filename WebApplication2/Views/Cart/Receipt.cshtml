@@ -701,26 +701,98 @@ else
 {
     <script>
         (function(){
+            // Store current ratings for each menu item
+            const currentRatings = new Map();
+            
             function getAntiForgeryToken() {
                 var token = document.querySelector('#antiforgery-receipt input[name="__RequestVerificationToken"]');
                 return token ? token.value : '';
             }
+            
+            function updateStarsDisplay(group, rating, isHover = false) {
+                const stars = group.querySelectorAll('.star');
+                const menuItemId = group.getAttribute('data-menu-item-id');
+                const currentRating = currentRatings.get(menuItemId) || 0;
+                
+                stars.forEach((star, index) => {
+                    const starValue = index + 1;
+                    if (isHover) {
+                        star.textContent = starValue <= rating ? '★' : '☆';
+                        star.style.color = starValue <= rating ? '#ffd700' : '#d4aa46';
+                    } else {
+                        star.textContent = starValue <= currentRating ? '★' : '☆';
+                        star.style.color = starValue <= currentRating ? '#ffd700' : '#d4aa46';
+                    }
+                });
+            }
+            
+            function showRatingFeedback(group, success, message) {
+                const card = group.closest('.card');
+                const textElement = card.querySelector('.text-muted');
+                const originalText = textElement.textContent;
+                
+                textElement.textContent = message;
+                textElement.style.color = success ? '#28a745' : '#dc3545';
+                textElement.style.fontWeight = 'bold';
+                
+                setTimeout(() => {
+                    textElement.textContent = originalText;
+                    textElement.style.color = '';
+                    textElement.style.fontWeight = '';
+                }, 3000);
+            }
+            
+            function setLoadingState(group, isLoading) {
+                const stars = group.querySelectorAll('.star');
+                stars.forEach(star => {
+                    star.style.pointerEvents = isLoading ? 'none' : 'auto';
+                    star.style.opacity = isLoading ? '0.6' : '1';
+                });
+                
+                if (isLoading) {
+                    const card = group.closest('.card');
+                    const textElement = card.querySelector('.text-muted');
+                    textElement.textContent = 'Submitting rating...';
+                    textElement.style.color = '#007bff';
+                }
+            }
+            
             function bindReceiptStars(){
                 const groups = document.querySelectorAll('.receipt-stars');
+                
+                // Initialize ratings from server data
+                @foreach (var item in Model.Items)
+                {
+                    if (item.UserRating.HasValue)
+                    {
+                        <text>currentRatings.set('@item.MenuItemId', @item.UserRating.Value);</text>
+                    }
+                }
+                
                 groups.forEach(group => {
                     const stars = group.querySelectorAll('.star');
+                    const menuItemId = group.getAttribute('data-menu-item-id');
+                    
+                    // Initialize display with existing rating
+                    updateStarsDisplay(group, 0);
+                    
                     stars.forEach(star => {
                         star.addEventListener('mouseover', function(){
                             const val = parseInt(this.getAttribute('data-value'));
-                            stars.forEach((s, i) => s.textContent = (i < val ? '★' : '☆'));
+                            updateStarsDisplay(group, val, true);
                         });
+                        
                         star.addEventListener('mouseout', function(){
-                            stars.forEach(s => s.textContent = '☆');
+                            updateStarsDisplay(group, 0, false);
                         });
+                        
                         star.addEventListener('click', function(){
-                            const val = this.getAttribute('data-value');
-                            const menuItemId = group.getAttribute('data-menu-item-id');
+                            const val = parseInt(this.getAttribute('data-value'));
                             const body = `menuItemId=${encodeURIComponent(menuItemId)}&value=${encodeURIComponent(val)}`;
+                            
+                            // Set loading state
+                            setLoadingState(group, true);
+                            
                             fetch('/MenuItem/AddRating', {
                                 method: 'POST',
                                 headers: { 
@@ -729,13 +801,33 @@ else
                                 },
                                 body
                             }).then(r => {
-                                if (r.status === 403) { alert('You can only rate items you have purchased.'); return null; }
-                                return r ? r.json() : null;
+                                if (r.status === 403) { 
+                                    showRatingFeedback(group, false, 'You can only rate items you have purchased.');
+                                    return null; 
+                                }
+                                if (!r.ok) {
+                                    throw new Error('Network response was not ok');
+                                }
+                                return r.json();
                             }).then(data => {
                                 if (!data) return;
-                                // simple visual feedback
-                                stars.forEach((s, i) => s.textContent = (i < val ? '★' : '☆'));
-                            }).catch(() => alert('Failed to submit rating.'));
+                                
+                                // Update the stored rating
+                                currentRatings.set(menuItemId, val);
+                                
+                                // Update visual display
+                                updateStarsDisplay(group, 0, false);
+                                
+                                // Show success feedback
+                                showRatingFeedback(group, true, `Rated ${val} star${val !== 1 ? 's' : ''}! (Avg: ${data.avg.toFixed(1)})`);
+                                
+                            }).catch(error => {
+                                console.error('Rating submission failed:', error);
+                                showRatingFeedback(group, false, 'Failed to submit rating. Please try again.');
+                            }).finally(() => {
+                                // Remove loading state
+                                setLoadingState(group, false);
+                            });
                         });
                     });
                 });

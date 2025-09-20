@@ -346,20 +346,28 @@ namespace WebApplication2.Controllers
             if (!User.IsInRole("Member"))
                 return Unauthorized();
 
+            // Debug logging
+            Console.WriteLine($"Payment action called with ID: {id} for user: {User.Identity.Name}");
+
             // Load the existing Pending order for this member
             var order = await _db.Orders
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.MenuItem)
                 .FirstOrDefaultAsync(o => o.OrderId == id && o.MemberEmail == User.Identity.Name);
+            
+            Console.WriteLine($"Order found: {order != null}, Status: {order?.Status}");
+            
             if (order == null)
             {
-                TempData["Error"] = "Order not found.";
+                TempData["Error"] = $"Order #{id} not found or you don't have access to it.";
+                Console.WriteLine($"Order #{id} not found for user {User.Identity.Name}");
                 return RedirectToAction("Index");
             }
 
             if (order.Status != "Pending")
             {
-                TempData["Info"] = "This order is no longer pending.";
+                TempData["Info"] = $"Order #{id} is no longer pending. Current status: {order.Status}";
+                Console.WriteLine($"Order #{id} status is {order.Status}, not Pending");
                 return RedirectToAction("History");
             }
 
@@ -377,7 +385,8 @@ namespace WebApplication2.Controllers
                     PhotoURL = oi.MenuItem?.PhotoURL ?? "default.jpg",
                     SelectedPersonalizations = oi.SelectedPersonalizations
                 }).ToList(),
-                DeliveryAddress = member?.Address ?? ""
+                DeliveryAddress = member?.Address ?? "",
+                PhoneNumber = member?.PhoneNumber ?? "" // Auto-fill phone number from member profile
             };
 
             // --- Anti-duplicate order token ---
@@ -471,7 +480,15 @@ namespace WebApplication2.Controllers
                 if (vm.PaymentMethod == "Cash")
                 {
                     ModelState.Remove(nameof(vm.CardNumber));
+                    ModelState.Remove(nameof(vm.CardHolderName));
+                    ModelState.Remove(nameof(vm.ExpiryDate));
+                    ModelState.Remove(nameof(vm.CVV));
+                    ModelState.Remove(nameof(vm.BillingAddress));
                     vm.CardNumber = null;
+                    vm.CardHolderName = null;
+                    vm.ExpiryDate = null;
+                    vm.CVV = null;
+                    vm.BillingAddress = null;
                 }
                 else if (vm.PaymentMethod == "Card")
                 {
@@ -479,6 +496,41 @@ namespace WebApplication2.Controllers
                     {
                         ModelState.AddModelError(nameof(vm.CardNumber), "Card number is required for card payment.");
                     }
+                    
+                    // Validate expiry date format and ensure it's not expired
+                    if (!string.IsNullOrWhiteSpace(vm.ExpiryDate))
+                    {
+                        if (vm.ExpiryDate.Length == 5 && vm.ExpiryDate.Contains('/'))
+                        {
+                            var parts = vm.ExpiryDate.Split('/');
+                            if (parts.Length == 2 && int.TryParse(parts[0], out int month) && int.TryParse(parts[1], out int year))
+                            {
+                                // Convert YY to 20YY
+                                var fullYear = 2000 + year;
+                                var currentDate = DateTime.Now;
+                                
+                                if (month < 1 || month > 12)
+                                {
+                                    ModelState.AddModelError(nameof(vm.ExpiryDate), "Invalid month. Please enter 01-12.");
+                                }
+                                else if (fullYear < currentDate.Year || (fullYear == currentDate.Year && month < currentDate.Month))
+                                {
+                                    ModelState.AddModelError(nameof(vm.ExpiryDate), "Card has expired. Please use a valid card.");
+                                }
+                            }
+                            else
+                            {
+                                ModelState.AddModelError(nameof(vm.ExpiryDate), "Invalid expiry date format. Use MM/YY.");
+                            }
+                        }
+                        else
+                        {
+                            ModelState.AddModelError(nameof(vm.ExpiryDate), "Invalid expiry date format. Use MM/YY.");
+                        }
+                    }
+                    
+                    // Billing address is optional - remove any validation errors
+                    ModelState.Remove(nameof(vm.BillingAddress));
                 }
                 if (!ModelState.IsValid || vm.Total <= 0 || vm.CartItems == null || !vm.CartItems.Any())
                 {
@@ -695,13 +747,21 @@ namespace WebApplication2.Controllers
             string deliveryOption = order.DeliveryOption ?? TempData["LastDeliveryOption"] as string;
             string deliveryAddress = order.DeliveryAddress ?? TempData["LastDeliveryAddress"] as string;
 
+            // Get existing ratings for this user
+            var userEmail = User.Identity.Name;
+            var menuItemIds = order.OrderItems.Select(oi => oi.MenuItemId).ToList();
+            var existingRatings = await _db.MenuItemRatings
+                .Where(r => r.MemberEmail == userEmail && menuItemIds.Contains(r.MenuItemId))
+                .ToDictionaryAsync(r => r.MenuItemId, r => r.Value);
+
             var receiptItems = order.OrderItems.Select(oi => new CartItemVM
             {
                 MenuItemId = oi.MenuItemId,
                 Name = oi.MenuItem.Name,
                 Price = oi.UnitPrice,
                 Quantity = oi.Quantity,
-                SelectedPersonalizations = oi.SelectedPersonalizations
+                SelectedPersonalizations = oi.SelectedPersonalizations,
+                UserRating = existingRatings.ContainsKey(oi.MenuItemId) ? existingRatings[oi.MenuItemId] : null
             }).ToList();
 
             var vm = new ReceiptVM
@@ -900,8 +960,9 @@ namespace WebApplication2.Controllers
         private void RemoveInactiveItemsFromCart()
         {
             var cart = HttpContext.Session.GetObjectFromJson<List<CartItemVM>>(CartSessionKey) ?? new List<CartItemVM>();
-            var inactiveIds = _db.MenuItems.Where(m => !m.IsActive).Select(m => m.MenuItemId).ToHashSet();
-            cart.RemoveAll(c => inactiveIds.Contains(c.MenuItemId));
+            // Remove both inactive and deleted items from cart
+            var unavailableIds = _db.MenuItems.Where(m => !m.IsActive || m.IsDeleted).Select(m => m.MenuItemId).ToHashSet();
+            cart.RemoveAll(c => unavailableIds.Contains(c.MenuItemId));
             HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
             SaveCartToCookie(cart);
         }

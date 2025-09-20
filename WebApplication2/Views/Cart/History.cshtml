@@ -58,6 +58,19 @@
                 $(this).css("box-shadow", "none");
             });
             
+            // Special styling for return to payment button
+            $(".return-to-payment-btn").addClass("pulse-animation").hover(function() {
+                $(this).css({
+                    "box-shadow": "0 6px 12px rgba(255,193,7,0.4)",
+                    "transform": "translateY(-2px)"
+                });
+            }, function() {
+                $(this).css({
+                    "box-shadow": "0 4px 8px rgba(255,193,7,0.25)",
+                    "transform": "translateY(0)"
+                });
+            });
+            
             $(".order-card .btn-success").addClass("border-2").hover(function() {
                 $(this).css("box-shadow", "0 4px 8px rgba(40,167,69,0.25)");
             }, function() {
@@ -102,6 +115,18 @@
             $(document).on('click', '.track-order-btn', function() {
                 const orderId = $(this).data('order-id');
                 window.location.href = '/Cart/Track?orderNumber=' + orderId;
+            });
+            
+            // --- Return to Payment Button: Go directly to payment page for pending orders ---
+            $(document).on('click', '.return-to-payment-btn', function() {
+                const orderId = $(this).data('order-id');
+                console.log('Returning to payment for order:', orderId);
+                
+                // Use the same URL format as fixed in TrackResult
+                const paymentUrl = '@Url.Action("Payment", "Cart")/' + orderId;
+                console.log('Payment URL:', paymentUrl);
+                
+                window.location.href = paymentUrl;
             });
             
             // --- Cancel Order Button ---
@@ -236,7 +261,7 @@
                     },
                     error: function() {
                         // Show error message
-                        const errorAlert = $('<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                        const errorAlert = $('<div class="alert alert-dismissible fade show" role="alert">' +
                             '<i class="fas fa-exclamation-circle me-2"></i> An error occurred while processing your request.' +
                             '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
                             '</div>');
@@ -1676,9 +1701,20 @@
          }
          
          @@keyframes pageTransition {
-             0% { opacity: 0; transform: translateY(10px); }
-             100% { opacity: 1; transform: translateY(0); }
-         }
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Pulse animation for return to payment button */
+        .pulse-animation {
+            animation: pulseGlow 2s infinite;
+        }
+        
+        @@keyframes pulseGlow {
+            0% { box-shadow: 0 4px 8px rgba(255,193,7,0.25); }
+            50% { box-shadow: 0 6px 15px rgba(255,193,7,0.5); }
+            100% { box-shadow: 0 4px 8px rgba(255,193,7,0.25); }
+        } 
      </style>
 }
 
@@ -1693,7 +1729,7 @@
     }
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <div class="alert alert-dismissible fade show" role="alert">
             <i class="fas fa-exclamation-circle me-2"></i> @TempData["Error"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
@@ -1991,6 +2027,10 @@
                                         @if (order.Status == "Pending")
                                         {
                                             <div class="btn-row">
+                                                <button type="button" class="action-btn btn-warning return-to-payment-btn" data-order-id="@order.OrderId">
+                                                    <i class="fas fa-credit-card"></i>
+                                                    <span>Complete Payment</span>
+                                                </button>
                                                 <button type="button" class="action-btn btn-danger cancel-order-btn" data-order-id="@order.OrderId">
                                                     <i class="fas fa-times"></i>
                                                     <span>Cancel</span>

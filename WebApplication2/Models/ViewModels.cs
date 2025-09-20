@@ -276,6 +276,7 @@ public class CartItemVM
     public int Quantity { get; set; }
     public string PhotoURL { get; set; }
     public string? SelectedPersonalizations { get; set; }
+    public int? UserRating { get; set; } // User's rating for this item (1-5, null if not rated)
 }
 
 
