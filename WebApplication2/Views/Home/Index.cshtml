@@ -5,13 +5,17 @@
 @{
     ViewBag.Title = "Welcome to QuickBite";
     WebApplication2.Models.Member member = null;
-    List<WebApplication2.Models.MenuItem> topSell = db.MenuItems.OrderByDescending(m => db.CartItems.Where(c => c.MenuItemId == m.MenuItemId).Count()).Take(5).ToList();
+    List<WebApplication2.Models.MenuItem> topSell = db.MenuItems
+        .Where(m => !m.IsDeleted && m.IsActive) // Exclude deleted and inactive items
+        .OrderByDescending(m => db.CartItems.Where(c => c.MenuItemId == m.MenuItemId).Count())
+        .Take(5)
+        .ToList();
     List<WebApplication2.Models.MenuItem> favorites = new List<WebApplication2.Models.MenuItem>();
     if (User.IsInRole("Member"))
     {
         member = db.Members.Find(User.Identity!.Name);
         var favIds = db.MenuItemFavorites.Where(f => f.MemberEmail == User.Identity.Name).Select(f => f.MenuItemId).ToList();
-        favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId)).ToList();
+        favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId) && !m.IsDeleted && m.IsActive).ToList();
     }
 }
 <div class="hero-container">
