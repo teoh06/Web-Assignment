@@ -13,6 +13,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         $(document).ready(function () {
+            // --- Auto-remove Refunded and Declined Orders ---
+            const ordersToRemove = $('.order-card').filter(function() {
+                const orderStatus = $(this).data('order-status');
+                return orderStatus === 'Refunded' || orderStatus === 'Declined';
+            });
+            
+            if (ordersToRemove.length > 0) {
+                console.log('Auto-removing', ordersToRemove.length, 'orders with Refunded/Declined status');
+                ordersToRemove.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }
+            
             // --- Enhanced Layout/Design: Card and Button Styling ---
             $(".order-card .card").addClass("shadow border-0");
             $(".order-card .card-header").addClass("bg-light border-bottom-0");
@@ -140,6 +153,14 @@
                     // Fallback if Bootstrap JS not loaded: use confirm()
                     if (confirm('Are you sure you want to cancel this order?')) {
                         const token = $('input[name="__RequestVerificationToken"]').first().val();
+                        const orderCard = $(`.order-card[data-order-id='${orderId}']`);
+                        const cancelBtn = $(this);
+                        const originalBtnText = cancelBtn.html();
+                        
+                        // Show loading state
+                        cancelBtn.html('<i class="fas fa-spinner fa-spin me-1"></i> Cancelling...');
+                        cancelBtn.prop('disabled', true);
+                        
                         $.ajax({
                             url: '/Cart/CancelOrder',
                             type: 'POST',
@@ -147,17 +168,44 @@
                             data: { id: orderId, reason: '' },
                             success: function(res) {
                                 if (res.success) {
-                                    const card = $(`.order-card[data-order-id='${orderId}']`);
-                                    if (card && card.length) {
-                                        card.fadeOut(200, function(){ $(this).remove(); });
-                                    } else {
-                                        location.reload();
-                                    }
+                                    // Add cancel animation to the order card
+                                    orderCard.addClass('cancel-animation');
+                                    
+                                    // Show success message
+                                    const successMessage = $(`
+                                        <div class="alert cancel-success-message mt-3">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-check-circle fa-2x me-3"></i>
+                                                <div>
+                                                    <h5 class="mb-1">Order Cancelled Successfully!</h5>
+                                                    <p class="mb-0">Order #${orderId} has been cancelled and removed.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `);
+                                    $('.container.mt-3').prepend(successMessage);
+                                    
+                                    // Remove the order card after animation completes
+                                    setTimeout(function() {
+                                        orderCard.remove();
+                                        // Auto-hide success message after a few seconds
+                                        setTimeout(function() {
+                                            $('.cancel-success-message').fadeOut();
+                                        }, 3000);
+                                    }, 3000);
                                 } else {
+                                    // Reset button state
+                                    cancelBtn.html(originalBtnText);
+                                    cancelBtn.prop('disabled', false);
                                     alert(res.message || 'Failed to cancel order.');
                                 }
                             },
-                            error: function() { alert('Error cancelling order.'); }
+                            error: function() { 
+                                // Reset button state
+                                cancelBtn.html(originalBtnText);
+                                cancelBtn.prop('disabled', false);
+                                alert('Error cancelling order.'); 
+                            }
                         });
                     }
                 }
@@ -169,6 +217,14 @@
                 const orderId = modalEl ? modalEl.dataset.orderId : null;
                 const reason = $('#cancelReason').val();
                 const token = $('input[name="__RequestVerificationToken"]').first().val();
+                const orderCard = $(`.order-card[data-order-id='${orderId}']`);
+                const confirmBtn = $(this);
+                const originalBtnText = confirmBtn.html();
+                
+                // Show loading state
+                confirmBtn.html('<i class="fas fa-spinner fa-spin me-1"></i> Cancelling...');
+                confirmBtn.prop('disabled', true);
+                
                 $.ajax({
                     url: '/Cart/CancelOrder',
                     type: 'POST',
@@ -179,20 +235,49 @@
                             // Hide modal
                             const bsModal = bootstrap.Modal.getInstance(modalEl);
                             if (bsModal) bsModal.hide();
-                            // Remove the order card from DOM for better UX
-                            const card = $(`.order-card[data-order-id='${orderId}']`);
-                            if (card && card.length) {
-                                card.fadeOut(200, function(){
-                                    $(this).remove();
-                                });
-                            } else {
-                                location.reload();
-                            }
+                            
+                            // Add cancel animation to the order card
+                            orderCard.addClass('cancel-animation');
+                            
+                            // Show success message
+                            const successMessage = $(`
+                                <div class="alert cancel-success-message mt-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                                        <div>
+                                            <h5 class="mb-1">Order Cancelled Successfully!</h5>
+                                            <p class="mb-0">Order #${orderId} has been cancelled and removed.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `);
+                            $('.container.mt-3').prepend(successMessage);
+                            
+                            // Remove the order card after animation completes
+                            setTimeout(function() {
+                                orderCard.remove();
+                                // Auto-hide success message after a few seconds
+                                setTimeout(function() {
+                                    $('.cancel-success-message').fadeOut();
+                                }, 3000);
+                            }, 3000);
+                            
+                            // Reset button state
+                            confirmBtn.html(originalBtnText);
+                            confirmBtn.prop('disabled', false);
                         } else {
+                            // Reset button state
+                            confirmBtn.html(originalBtnText);
+                            confirmBtn.prop('disabled', false);
                             alert(res.message || 'Failed to cancel order.');
                         }
                     },
-                    error: function() { alert('Error cancelling order.'); }
+                    error: function() { 
+                        // Reset button state
+                        confirmBtn.html(originalBtnText);
+                        confirmBtn.prop('disabled', false);
+                        alert('Error cancelling order.'); 
+                    }
                 });
             });
 
@@ -351,7 +436,10 @@
             loadChartData();
             
             // --- Initialize Pagination ---
-            initPagination();
+            // Delay pagination initialization to ensure auto-removal is complete
+            setTimeout(function() {
+                initPagination();
+            }, 500);
         });
         
         // Function to sort orders based on selected option
@@ -547,6 +635,9 @@
         
         // Function to show orders for the current page
         function showOrdersForPage(page) {
+            // Store current scroll position
+            const currentScrollTop = $(window).scrollTop();
+            
             // Hide all orders
             $('.order-card').hide();
             
@@ -566,7 +657,8 @@
                 }, 400); // Match the animation duration
             }
             
-            // No auto-scrolling when paginating - let users stay where they are
+            // Restore scroll position to prevent jumping to top
+            $(window).scrollTop(currentScrollTop);
         }
         
         // AJAX function to perform server-side search on orders
@@ -733,7 +825,12 @@
         function renderOrders(orders) {
             const ordersList = $('#ordersList');
             
-            orders.forEach(function(order) {
+            // Filter out Refunded and Declined orders
+            const filteredOrders = orders.filter(function(order) {
+                return order.status !== 'Refunded' && order.status !== 'Declined';
+            });
+            
+            filteredOrders.forEach(function(order) {
                 // Format date
                 const orderDate = new Date(order.orderDate);
                 const formattedDate = orderDate.toLocaleDateString('en-GB');
@@ -881,9 +978,9 @@
                                             </a>
                                         </div>
                                         <div class="btn-row">
-                                            <form action="/Cart/SendReceiptEmail/${order.orderId}" method="post" class="email-form" style="flex:1;">
-                                                <input name="__RequestVerificationToken" type="hidden" value="@Html.AntiForgeryToken().ToString().Replace("<input name=\"__RequestVerificationToken\" type=\"hidden\" value=\"", "").Replace("\" />", "")" />
-                                                <button type="submit" class="action-btn btn-success email-button w-100" style="min-width:180px;max-width:280px;height:48px;display:flex;align-items:center;justify-content:center;">
+                                            <form action="/Cart/SendReceiptEmail/${order.orderId}" method="post" class="email-form">
+                                                <input name="__RequestVerificationToken" type="hidden" value="${$('input[name="__RequestVerificationToken"]').first().val()}" />
+                                                <button type="submit" class="action-btn btn-success email-button">
                                                     <i class="fas fa-envelope"></i>
                                                     <span>Email</span>
                                                     <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
@@ -1497,6 +1594,18 @@
             border: none;
             font-size: 0.85rem;
             font-weight: 600;
+            min-height: 60px;
+            justify-content: center;
+        }
+        
+        /* Ensure email form takes full width like other buttons */
+        .email-form {
+            flex: 1;
+            display: flex;
+        }
+        
+        .email-form .action-btn {
+            width: 100%;
         }
         
         .action-btn i {
@@ -1534,9 +1643,8 @@
         }
         
         .action-btn.btn-warning {
-            color: #fff;
-            background: #ffc107;
-            border-color: #ffc107;
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: white;
         }
         .order-card .card-header {
             font-size: 1.1rem;
@@ -1858,13 +1966,13 @@
              align-items: center;
              margin: 30px auto 20px auto;
              gap: 6px;
-             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+             background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
              padding: 15px 25px;
              border-radius: 25px;
-             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+             box-shadow: var(--shadow-md);
              flex-wrap: wrap;
              max-width: 800px;
-             border: 1px solid rgba(0,0,0,0.05);
+             border: 1px solid var(--border-light);
          }
          
          .pagination-controls .page-btn {
@@ -1874,30 +1982,30 @@
              display: flex;
              align-items: center;
              justify-content: center;
-             border: 2px solid #dee2e6;
-             background: white;
-             color: #495057;
+             border: 2px solid var(--border-medium);
+             background: var(--bg-primary);
+             color: var(--text-primary);
              transition: all 0.2s ease;
              cursor: pointer;
-             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+             box-shadow: var(--shadow-sm);
              margin: 0 3px;
              font-weight: 500;
              font-size: 0.9rem;
          }
          
          .pagination-controls .page-btn:hover:not(:disabled) {
-             background: linear-gradient(135deg, #007bff, #0056b3);
-             color: white;
-             border-color: #007bff;
+             background: var(--gradient-warm);
+             color: var(--text-light);
+             border-color: var(--primary-brand);
              transform: translateY(-1px);
-             box-shadow: 0 4px 12px rgba(0,123,255,0.25);
+             box-shadow: var(--shadow-lg);
          }
          
          .pagination-controls .page-btn.active {
-             background: linear-gradient(135deg, #007bff, #0056b3);
-             border-color: #007bff;
-             color: white;
-             box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+             background: var(--gradient-warm);
+             border-color: var(--primary-brand);
+             color: var(--text-light);
+             box-shadow: var(--shadow-lg);
              transform: scale(1.05);
          }
          
@@ -1922,15 +2030,15 @@
          
          .pagination-controls .page-info {
              font-size: 0.85rem;
-             color: #6c757d;
-             background: rgba(255,255,255,0.9);
+             color: var(--text-secondary);
+             background: var(--bg-primary);
              padding: 10px 18px;
              border-radius: 12px;
              margin-left: 15px;
-             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+             box-shadow: var(--shadow-sm);
              display: flex;
              align-items: center;
-             border: 1px solid #e9ecef;
+             border: 1px solid var(--border-light);
              font-weight: 500;
          }
          
@@ -1940,7 +2048,7 @@
              justify-content: center;
              padding: 0 5px;
              font-weight: bold;
-             color: #6c757d;
+             color: var(--text-secondary);
          }
          
          /* Animation for page transitions */
@@ -2014,6 +2122,58 @@
             color: white;
             border: none;
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        /* Cancel Animation Styles - Same as Refund */
+        .cancel-animation {
+            animation: cancelShrinkPop 3s ease-in-out;
+            animation-fill-mode: forwards;
+        }
+        
+        @@keyframes cancelShrinkPop {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            20% {
+                transform: scale(0.95);
+                box-shadow: 0 4px 20px rgba(255, 193, 7, 0.3);
+            }
+            40% {
+                transform: scale(0.9);
+                box-shadow: 0 6px 30px rgba(255, 87, 34, 0.4);
+            }
+            60% {
+                transform: scale(1.1);
+                box-shadow: 0 8px 40px rgba(220, 53, 69, 0.5);
+                background: linear-gradient(45deg, #dc3545, #fd7e14, #ffc107, #28a745, #20c997, #0dcaf0, #6f42c1, #e83e8c);
+                background-size: 400% 400%;
+                animation: cancelRainbow 0.5s ease infinite;
+            }
+            80% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+                display: none;
+            }
+        }
+        
+        @@keyframes cancelRainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .cancel-success-message {
+            animation: slideInFromTop 0.5s ease-out;
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
         }
         
         @@keyframes slideInFromTop {
@@ -2320,9 +2480,9 @@
                                             </a>
                                         </div>
                                         <div class="btn-row">
-                                            <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" class="email-form" style="flex:1;">
+                                            <form asp-action="SendReceiptEmail" asp-controller="Cart" asp-route-id="@order.OrderId" method="post" class="email-form">
                                                 @Html.AntiForgeryToken()
-                                                <button type="submit" class="action-btn btn-success email-button w-100" style="min-width:180px;max-width:280px;height:48px;display:flex;align-items:center;justify-content:center;">
+                                                <button type="submit" class="action-btn btn-success email-button">
                                                     <i class="fas fa-envelope"></i>
                                                     <span>Email</span>
                                                     <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>

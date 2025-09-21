@@ -543,20 +543,52 @@ public class MenuItemController : Controller
     [Authorize(Roles = "Member")]
     public IActionResult ToggleFavorite(int menuItemId)
     {
-        if (!User.Identity.IsAuthenticated) return Unauthorized();
-        var email = User.Identity.Name;
-        var fav = db.MenuItemFavorites.FirstOrDefault(f => f.MenuItemId == menuItemId && f.MemberEmail == email);
-        if (fav != null)
+        try
         {
-            db.MenuItemFavorites.Remove(fav);
-            db.SaveChanges();
-            return Json(new { favorited = false });
+            if (!User.Identity.IsAuthenticated) 
+            {
+                return Json(new { success = false, message = "Please log in to add favorites." });
+            }
+
+            if (menuItemId <= 0)
+            {
+                return Json(new { success = false, message = "Invalid menu item." });
+            }
+
+            var email = User.Identity.Name;
+            var fav = db.MenuItemFavorites.FirstOrDefault(f => f.MenuItemId == menuItemId && f.MemberEmail == email);
+            
+            if (fav != null)
+            {
+                // Remove from favorites
+                db.MenuItemFavorites.Remove(fav);
+                db.SaveChanges();
+                return Json(new { 
+                    success = true, 
+                    isFavorited = false, 
+                    favorited = false, // Keep for backward compatibility with Details page
+                    message = "Removed from favorites!" 
+                });
+            }
+            else
+            {
+                // Add to favorites
+                db.MenuItemFavorites.Add(new MenuItemFavorite { MenuItemId = menuItemId, MemberEmail = email });
+                db.SaveChanges();
+                return Json(new { 
+                    success = true, 
+                    isFavorited = true, 
+                    favorited = true, // Keep for backward compatibility with Details page
+                    message = "Added to favorites!" 
+                });
+            }
         }
-        else
+        catch (Exception ex)
         {
-            db.MenuItemFavorites.Add(new MenuItemFavorite { MenuItemId = menuItemId, MemberEmail = email });
-            db.SaveChanges();
-            return Json(new { favorited = true });
+            return Json(new { 
+                success = false, 
+                message = "Something went wrong. Please try again." 
+            });
         }
     }
 

@@ -7,21 +7,72 @@
 }
 
 <div class="container py-4">
-    <div id="cartContent" style="@(Model.Any() ? "" : "display:none;")">
-        <!-- Filter form -->
-        <form id="filterForm" class="form-inline mb-3" style="display:flex;gap:10px;flex-wrap:wrap;">
-            <input type="text" name="search" id="searchInput" placeholder="Search name..." class="form-control" />
-            <input type="number" name="minPrice" id="minPriceInput" placeholder="Min Price" class="form-control" style="width:120px;" min="0" step="0.01" />
-            <input type="number" name="maxPrice" id="maxPriceInput" placeholder="Max Price" class="form-control" style="width:120px;" min="0" step="0.01" />
-            <button type="submit" class="btn btn-primary" style="margin-left: 20px;">Filter</button>
-            <button type="button" id="clearFilters" class="btn btn-secondary">Clear</button>
-        </form>
-
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">Shopping Cart</h4>
+    <!-- Enhanced Cart Header -->
+    <div class="cart-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="header-icon me-3">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-title mb-1">Your Cart</h1>
+                        <p class="page-subtitle text-muted">Review and manage your selected items</p>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
+            <div class="col-lg-4">
+                <div class="stats-card">
+                    <div class="stats-item">
+                        <i class="fas fa-shopping-bag text-primary"></i>
+                        <div>
+                            <span class="stats-number" id="itemCount">@Model.Sum(item => item.Quantity)</span>
+                            <span class="stats-label">Items in Cart</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Enhanced Search and Filter Section -->
+        <div class="search-filter-section mt-4">
+            <form id="filterForm" class="row g-3">
+                <div class="col-lg-4">
+                    <div class="input-group search-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="search" id="searchInput" placeholder="Search items..." class="form-control" />
+                        <button class="btn btn-outline-secondary" type="button" id="clearFilters" title="Clear filters">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <input type="number" name="minPrice" id="minPriceInput" placeholder="Min Price (RM)" class="form-control filter-input" min="0" step="0.01" />
+                </div>
+                <div class="col-lg-3">
+                    <input type="number" name="maxPrice" id="maxPriceInput" placeholder="Max Price (RM)" class="form-control filter-input" min="0" step="0.01" />
+                </div>
+                <div class="col-lg-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="cartContent" style="@(Model.Any() ? "" : "display:none;")">
+        <!-- Modern Cart Items Section -->
+        <div class="cart-items-section">
+            <div class="section-header mb-4">
+                <h3 class="section-title">
+                    <i class="fas fa-list-ul me-2"></i>Cart Items
+                </h3>
+            </div>
+            
+            <div class="cart-items-container">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
@@ -100,23 +151,78 @@
                     </table>
                 </div>
 
-                <div class="cart-summary mt-4">
+                <!-- Enhanced Cart Summary -->
+                <div class="cart-summary-section mt-5">
                     <div class="row">
-                        <div class="col-md-4 offset-md-8">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Order Summary</h5>
-                                    <div class="d-flex justify-content-between mb-3">
-                                        <span>Total</span>
-                                        <strong id="grandTotal">
-                                            RM @Model.Sum(item => item.Price * item.Quantity).ToString("0.00")
-                                        </strong>
+                        <div class="col-lg-8">
+                            <div class="cart-actions-section">
+                                <div class="actions-header mb-3">
+                                    <h5 class="actions-title">
+                                        <i class="fas fa-cogs me-2"></i>Cart Actions
+                                    </h5>
+                                    <p class="actions-subtitle">Manage your shopping cart</p>
+                                </div>
+                                <div class="actions-grid">
+                                    <div class="action-card clear-cart-card">
+                                        <div class="action-icon">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </div>
+                                        <div class="action-content">
+                                            <h6 class="action-title">Clear Cart</h6>
+                                            <p class="action-description">Remove all items from your cart</p>
+                                            <button onclick="clearCart()" class="btn btn-danger action-btn">
+                                                <i class="fas fa-trash me-2"></i>Clear All
+                                            </button>
+                                        </div>
                                     </div>
+                                    <div class="action-card continue-shopping-card">
+                                        <div class="action-icon">
+                                            <i class="fas fa-utensils"></i>
+                                        </div>
+                                        <div class="action-content">
+                                            <h6 class="action-title">Continue Shopping</h6>
+                                            <p class="action-description">Browse more delicious items</p>
+                                            <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary action-btn">
+                                                <i class="fas fa-arrow-left me-2"></i>Browse Menu
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="order-summary-card">
+                                <div class="summary-header">
+                                    <h4 class="summary-title">
+                                        <i class="fas fa-calculator me-2"></i>Order Summary
+                                    </h4>
+                                </div>
+                                <div class="summary-body">
+                                    <div class="summary-row">
+                                        <span class="summary-label">Subtotal</span>
+                                        <span class="summary-value" id="grandTotal">
+                                            RM @Model.Sum(item => item.Price * item.Quantity).ToString("0.00")
+                                        </span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span class="summary-label">Delivery</span>
+                                        <span class="summary-value text-success">FREE</span>
+                                    </div>
+                                    <hr class="summary-divider">
+                                    <div class="summary-row total-row">
+                                        <span class="summary-label">Total</span>
+                                        <span class="summary-total" id="finalTotal">
+                                            RM @Model.Sum(item => item.Price * item.Quantity).ToString("0.00")
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="summary-footer">
                                     <form asp-action="CreatePendingOrder" asp-controller="Cart" method="post">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-success w-100 mb-2">Proceed to Payment</button>
+                                        <button type="submit" class="btn btn-success btn-lg w-100 checkout-btn">
+                                            <i class="fas fa-credit-card me-2"></i>Proceed to Payment
+                                        </button>
                                     </form>
-                                    <button onclick="clearCart()" class="btn btn-outline-danger w-100">Clear Cart</button>
                                 </div>
                             </div>
                         </div>
@@ -124,18 +230,25 @@
                 </div>
             </div>
         </div>
-
-        <div class="text-center mt-4">
-            <a asp-action="Index" asp-controller="MenuItem" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left me-2"></i>Continue Shopping
-            </a>
-        </div>
     </div>
 
-    <div id="emptyCart" class="text-center empty-cart" style="@(Model.Any() ? "display:none;" : "")">
-        <i class="fas fa-shopping-cart fa-3x mb-3"></i>
-        <p class="lead" id="emptyCartMessage">Your cart is empty</p>
-        <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary">Start Shopping</a>
+    <!-- Enhanced Empty Cart Section -->
+    <div id="emptyCart" class="empty-cart-section" style="@(Model.Any() ? "display:none;" : "")">
+        <div class="empty-cart-card">
+            <div class="empty-cart-icon">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <h3 class="empty-cart-title">Your cart is empty</h3>
+            <p class="empty-cart-message" id="emptyCartMessage">
+                Looks like you haven't added any items to your cart yet. 
+                Start browsing our delicious menu!
+            </p>
+            <div class="empty-cart-actions">
+                <a asp-action="Index" asp-controller="MenuItem" class="btn btn-primary btn-lg">
+                    <i class="fas fa-utensils me-2"></i>Browse Menu
+                </a>
+            </div>
+        </div>
     </div>
 
     <!-- Loading indicator -->
@@ -151,6 +264,8 @@
         document.addEventListener('DOMContentLoaded', function () {
             const cartTableBody = document.getElementById('cartTableBody');
             const grandTotalElement = document.getElementById('grandTotal');
+            const finalTotalElement = document.getElementById('finalTotal');
+            const itemCountElement = document.getElementById('itemCount');
             const cartContentDiv = document.getElementById('cartContent');
             const emptyCartDiv = document.getElementById('emptyCart');
             const emptyCartMessage = document.getElementById('emptyCartMessage');
@@ -178,6 +293,18 @@
 
             // Real-time filtering
             document.getElementById('searchInput').addEventListener('input', debounce(performFilter, 500));
+            
+            // Initialize totals on page load
+            function initializeTotals() {
+                // Ensure final total matches subtotal on page load
+                if (grandTotalElement && finalTotalElement) {
+                    const subtotalText = grandTotalElement.textContent;
+                    finalTotalElement.textContent = subtotalText;
+                }
+            }
+            
+            // Call initialization
+            initializeTotals();
 
             function performFilter() {
                 const search = document.getElementById('searchInput').value;
@@ -214,6 +341,17 @@
             function updateTable(data) {
                 const tbody = document.getElementById('cartTableBody');
                 grandTotalElement.textContent = currencyFormatter(data.fullTotal);
+                
+                // Update final total to match subtotal (since delivery is FREE)
+                if (finalTotalElement) {
+                    finalTotalElement.textContent = currencyFormatter(data.fullTotal);
+                }
+                
+                // Update item count
+                if (itemCountElement && data.items) {
+                    const totalItems = data.items.reduce((sum, item) => sum + item.quantity, 0);
+                    itemCountElement.textContent = totalItems;
+                }
 
                 if (data.items.length === 0) {
                     if (data.fullTotal === 0) {
@@ -385,90 +523,597 @@
 }
 
 <style>
+    /* =============================================================================
+       ENHANCED CART PAGE STYLING - MODERN DESIGN
+       ============================================================================= */
+    
+    /* Cart Header Styling */
+    .cart-header {
+        background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: var(--shadow-lg);
+        margin-bottom: 2rem;
+    }
+    
+    .header-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .page-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .page-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    .stats-card {
+        background: rgba(255,255,255,0.15);
+        border-radius: 15px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .stats-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .stats-item i {
+        font-size: 2rem;
+    }
+    
+    .stats-number {
+        display: block;
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    
+    .stats-label {
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+    
+    /* Search and Filter Section */
+    .search-filter-section {
+        background: rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .search-group {
+        box-shadow: var(--shadow-sm);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .search-group .input-group-text {
+        border: none;
+        color: var(--text-secondary);
+        background: var(--bg-primary);
+    }
+    
+    .search-group .form-control {
+        border: none;
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+    
+    .filter-input {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-light);
+        box-shadow: var(--shadow-sm);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        color: var(--text-primary);
+    }
+    
+    .filter-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+        border-color: var(--primary-brand);
+    }
+    
+    /* Cart Items Section */
+    .cart-items-section {
+        margin-bottom: 3rem;
+    }
+    
+    .section-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .cart-items-container {
+        background: var(--bg-primary);
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+        border: 1px solid var(--border-light);
+    }
+    
+    /* Enhanced Table Styling */
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table thead th {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-weight: 600;
+        border: none;
+        padding: 1rem;
+    }
+    
+    .table tbody td {
+        padding: 1.5rem 1rem;
+        border-color: var(--border-light);
+        vertical-align: middle;
+    }
+    
+    .table tbody tr:hover {
+        background: var(--bg-secondary);
+    }
+    
+    /* Cart Item Image */
     .cart-item-image {
         width: 80px;
         height: 80px;
         object-fit: cover;
-        border-radius: 8px;
-        border: 1px solid var(--border-lighter);
-        transition: transform 0.2s;
+        border-radius: 12px;
+        border: 2px solid var(--border-light);
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-sm);
     }
-
-        .cart-item-image:hover {
-            transform: scale(1.1);
-        }
-
+    
+    .cart-item-image:hover {
+        transform: scale(1.05);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-brand);
+    }
+    
+    /* Quantity Controls */
     .quantity-control {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 8px;
-    }
-
-        .quantity-control .form-control {
-            width: 60px;
-            text-align: center;
-            padding: 4px;
-            border-radius: 4px;
-            border: 1px solid var(--border-lighter);
-        }
-
-    .quantity-btn {
-        padding: 4px 8px;
-        line-height: 1;
-        font-size: 14px;
-    }
-
-        .quantity-btn:hover {
-            background-color: var(--bg-accent);
-            color: var(--text-light);
-        }
-
-    .empty-cart {
-        padding: 40px;
-        color: var(--text-secondary);
-    }
-
-    .cart-summary .card {
-        border: 1px solid var(--border-lighter);
-        box-shadow: 0 2px 4px var(--shadow-color);
-    }
-
-    .table td {
-        vertical-align: middle;
-    }
-
-    /* Dark theme support */
-    html.dark-theme .cart-item-image {
-        border-color: var(--border-color);
-    }
-
-    html.dark-theme .quantity-control .form-control {
-        background-color: var(--input-bg);
-        color: var(--text-primary);
-        border-color: var(--border-color);
-    }
-
-    html.dark-theme .empty-cart {
-        color: var(--text-primary);
-    }
-
-    @@media (max-width: 768px) {
-        .cart-item-image
-
-    {
-        width: 60px;
-        height: 60px;
-    }
-
-    .quantity-control {
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .table td {
+        background: var(--bg-secondary);
+        border-radius: 12px;
         padding: 8px;
     }
-
+    
+    .quantity-control .form-control {
+        width: 60px;
+        text-align: center;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid var(--border-light);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    
+    .quantity-btn {
+        padding: 8px 12px;
+        line-height: 1;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+    
+    .quantity-btn:hover {
+        background: var(--primary-brand);
+        color: var(--text-light);
+        transform: scale(1.1);
+    }
+    
+    /* Cart Summary Section */
+    .cart-summary-section {
+        margin-top: 3rem;
+    }
+    
+    /* Enhanced Cart Actions Section */
+    .cart-actions-section {
+        background: var(--bg-primary);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-light);
+        height: 100%;
+    }
+    
+    .actions-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .actions-title {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .actions-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin: 0;
+    }
+    
+    .actions-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .action-card {
+        background: var(--bg-secondary);
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid var(--border-light);
+        box-shadow: var(--shadow-sm);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-warm);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+    
+    .action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .action-card:hover::before {
+        transform: scaleX(1);
+    }
+    
+    .clear-cart-card::before {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+    }
+    
+    .continue-shopping-card::before {
+        background: var(--gradient-warm);
+    }
+    
+    .action-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .clear-cart-card .action-icon {
+        background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(200, 35, 51, 0.1));
+        color: #dc3545;
+        border: 2px solid rgba(220, 53, 69, 0.2);
+    }
+    
+    .continue-shopping-card .action-icon {
+        background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(247, 147, 30, 0.1));
+        color: var(--primary-brand);
+        border: 2px solid rgba(255, 107, 53, 0.2);
+    }
+    
+    .action-card:hover .action-icon {
+        transform: scale(1.1);
+    }
+    
+    .action-content {
+        text-align: center;
+    }
+    
+    .action-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .action-description {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+        line-height: 1.4;
+    }
+    
+    .action-btn {
+        font-size: 0.95rem;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-sm);
+        min-width: 140px;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .order-summary-card {
+        background: var(--bg-primary);
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-light);
+        overflow: hidden;
+    }
+    
+    .summary-header {
+        background: var(--bg-secondary);
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border-light);
+    }
+    
+    .summary-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-primary);
+    }
+    
+    .summary-body {
+        padding: 1.5rem;
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .summary-label {
+        font-size: 1rem;
+        color: var(--text-secondary);
+    }
+    
+    .summary-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .summary-divider {
+        border-color: var(--border-light);
+        margin: 1.5rem 0;
+    }
+    
+    .total-row {
+        margin-bottom: 0;
+    }
+    
+    .total-row .summary-label {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .summary-total {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-brand);
+    }
+    
+    .summary-footer {
+        padding: 1.5rem;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-light);
+    }
+    
+    .checkout-btn {
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 1rem;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .checkout-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    /* Enhanced Empty Cart Section */
+    .empty-cart-section {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        padding: 2rem;
+    }
+    
+    .empty-cart-card {
+        text-align: center;
+        background: var(--bg-primary);
+        border-radius: 20px;
+        padding: 3rem;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-light);
+        max-width: 500px;
+    }
+    
+    .empty-cart-icon {
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+        font-size: 3rem;
+        color: var(--text-primary);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .empty-cart-title {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+    }
+    
+    .empty-cart-message {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+    
+    .empty-cart-actions .btn {
+        font-size: 1.1rem;
+        padding: 1rem 2rem;
+        border-radius: 12px;
+    }
+    
+    /* Loading Indicator */
+    #loadingIndicator {
+        background: rgba(255,255,255,0.9);
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .cart-header {
+            padding: 1.5rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+        }
+        
+        .cart-item-image {
+            width: 60px;
+            height: 60px;
+        }
+        
+        .quantity-control {
+            flex-direction: column;
+            gap: 4px;
+            padding: 6px;
+        }
+        
+        .table td {
+            padding: 1rem 0.5rem;
+        }
+        
+        .summary-body {
+            padding: 1rem;
+        }
+        
+        .empty-cart-card {
+            padding: 2rem;
+        }
+        
+        .empty-cart-icon {
+            width: 80px;
+            height: 80px;
+            font-size: 2rem;
+        }
+        
+        /* Action Cards Responsive */
+        .cart-actions-section {
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .actions-grid {
+            gap: 1rem;
+        }
+        
+        .action-card {
+            padding: 1.25rem;
+        }
+        
+        .action-icon {
+            width: 50px;
+            height: 50px;
+            font-size: 1.25rem;
+        }
+        
+        .action-title {
+            font-size: 1rem;
+        }
+        
+        .action-description {
+            font-size: 0.85rem;
+        }
+        
+        .action-btn {
+            font-size: 0.9rem;
+            padding: 0.6rem 1.25rem;
+            min-width: 120px;
+        }
+    }
+    
+    @@media (min-width: 992px) {
+        .actions-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+    }
+    
+    /* Dark Theme Support */
+    html.dark-theme .search-group .input-group-text,
+    html.dark-theme .search-group .form-control,
+    html.dark-theme .filter-input {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border-color: var(--border-medium);
+    }
+    
+    html.dark-theme .quantity-control .form-control {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        border-color: var(--border-medium);
     }
 </style>

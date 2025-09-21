@@ -101,6 +101,12 @@
                             <span class="avg-rating">@avgRating.ToString("0.0")</span>
                         </span>
                     </div>
+                    @if (isMember)
+                    {
+                        <button class="favorite-btn" data-menu-item-id="@item.MenuItemId" title="Add to Favorites">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                    }
                     @if (isAdmin && !item.IsActive)
                     {
                         <span class="status-badge inactive-badge">Inactive</span>
@@ -355,6 +361,126 @@
     .low-stock-badge {
         background-color: rgba(255, 193, 7, 0.9);
         color: #212529;
+    }
+
+    /* Favorite Button Styling */
+    .favorite-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        color: #e0e0e0;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 5;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .favorite-btn:hover {
+        transform: scale(1.1);
+        background: rgba(255, 255, 255, 1);
+        color: #ff6b6b;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .favorite-btn.favorited {
+        background: rgba(255, 107, 107, 0.95);
+        color: white;
+        animation: heartBeat 0.6s ease-in-out;
+    }
+
+    .favorite-btn.favorited:hover {
+        background: rgba(255, 107, 107, 1);
+        color: white;
+    }
+
+    .favorite-btn.loading {
+        pointer-events: none;
+        opacity: 0.7;
+    }
+
+    .favorite-btn.loading i {
+        animation: spin 1s linear infinite;
+    }
+
+    @@keyframes heartBeat {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.3); }
+        50% { transform: scale(1.1); }
+        75% { transform: scale(1.25); }
+        100% { transform: scale(1); }
+    }
+
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Toast Notification Styling */
+    .favorite-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        color: var(--text-primary);
+        padding: 16px 20px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+        z-index: 1000;
+        transform: translateX(400px);
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .favorite-toast.show {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .favorite-toast.toast-success {
+        border-left: 4px solid #28a745;
+    }
+
+    .favorite-toast.toast-success i {
+        color: #28a745;
+    }
+
+    .favorite-toast.toast-error {
+        border-left: 4px solid #dc3545;
+    }
+
+    .favorite-toast.toast-error i {
+        color: #dc3545;
+    }
+
+    .favorite-toast.toast-info {
+        border-left: 4px solid #17a2b8;
+    }
+
+    .favorite-toast.toast-info i {
+        color: #17a2b8;
+    }
+
+    /* Dark theme support for toast */
+    html.dark-theme .favorite-toast {
+        background: rgba(33, 37, 41, 0.95);
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .item-info {
@@ -640,6 +766,7 @@
                                         <span class="item-price">${item.price}</span>
                                         <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
                                     </div>
+                                    ${isMember ? `<button class="favorite-btn" data-menu-item-id="${item.menuItemId}" title="Add to Favorites"><i class="fas fa-heart"></i></button>` : ''}
                                     ${!item.isActive ? '<span class="status-badge inactive-badge">Inactive</span>' : ''}
                                     ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
                                     ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
@@ -653,6 +780,7 @@
                                         <span class="item-price">${item.price}</span>
                                         <span class="item-rating">${item.ratingHtml || ''} <span class="avg-rating">${item.avgRating || '0.0'}</span></span>
                                     </div>
+                                    ${isMember ? `<button class="favorite-btn" data-menu-item-id="${item.menuItemId}" title="Add to Favorites"><i class="fas fa-heart"></i></button>` : ''}
                                     ${item.stockQuantity <= 0 ? '<span class="status-badge out-of-stock-badge">Out of Stock</span>' : ''}
                                     ${item.stockQuantity > 0 && item.stockQuantity < 10 ? `<span class="status-badge low-stock-badge">Low Stock: ${item.stockQuantity} left</span>` : ''}
                                 </div>
@@ -675,6 +803,140 @@
                     }
 
                     attachFormListeners();
+                    attachFavoriteListeners();
+                    loadUserFavorites();
+                }
+
+                // Favorite functionality
+                function attachFavoriteListeners() {
+                    document.querySelectorAll('.favorite-btn').forEach(btn => {
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            const menuItemId = this.dataset.menuItemId;
+                            const isFavorited = this.classList.contains('favorited');
+                            
+                            // Add loading state
+                            this.classList.add('loading');
+                            this.disabled = true;
+                            
+                            // AJAX call to toggle favorite
+                            const formData = new FormData();
+                            formData.append('menuItemId', menuItemId);
+                            formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+                            
+                            fetch('/MenuItem/ToggleFavorite', {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Toggle favorite state
+                                    if (data.isFavorited) {
+                                        this.classList.add('favorited');
+                                        this.title = 'Remove from Favorites';
+                                        // Show success message
+                                        showToast('Added to favorites!', 'success');
+                                    } else {
+                                        this.classList.remove('favorited');
+                                        this.title = 'Add to Favorites';
+                                        showToast('Removed from favorites!', 'info');
+                                    }
+                                    
+                                    // Refresh the favorite list in UpdateProfile page
+                                    refreshFavoriteList();
+                                    
+                                    // Set timestamp for cross-page communication
+                                    const timestamp = Date.now().toString();
+                                    localStorage.setItem('lastFavoriteUpdate', timestamp);
+                                    console.log('Favorite updated, timestamp set:', timestamp);
+                                } else {
+                                    showToast(data.message || 'Failed to update favorites', 'error');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error toggling favorite:', error);
+                                showToast('Something went wrong. Please try again.', 'error');
+                            })
+                            .finally(() => {
+                                // Remove loading state
+                                this.classList.remove('loading');
+                                this.disabled = false;
+                            });
+                        });
+                    });
+                }
+
+                // Load user favorites and update button states
+                function loadUserFavorites() {
+                    const isMember = @Json.Serialize(isMember);
+                    if (!isMember) return;
+
+                    fetch('/MenuItem/GetUserFavorites')
+                        .then(response => response.json())
+                        .then(favorites => {
+                            // Update all favorite buttons based on user's favorites
+                            document.querySelectorAll('.favorite-btn').forEach(btn => {
+                                const menuItemId = parseInt(btn.dataset.menuItemId);
+                                if (favorites.includes(menuItemId)) {
+                                    btn.classList.add('favorited');
+                                    btn.title = 'Remove from Favorites';
+                                } else {
+                                    btn.classList.remove('favorited');
+                                    btn.title = 'Add to Favorites';
+                                }
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error loading user favorites:', error);
+                        });
+                }
+
+                // Refresh favorite list in UpdateProfile page (same as Details page)
+                function refreshFavoriteList() {
+                    // Check if the favorites list element exists (UpdateProfile page)
+                    const favoriteListElement = document.getElementById('favoriteList');
+                    if (favoriteListElement) {
+                        fetch('/Account/GetFavoriteListPartial')
+                            .then(response => response.text())
+                            .then(html => {
+                                favoriteListElement.innerHTML = html;
+                            })
+                            .catch(error => {
+                                console.error('Error refreshing favorite list:', error);
+                            });
+                    }
+                }
+
+                // Toast notification function
+                function showToast(message, type = 'info') {
+                    // Remove existing toast
+                    const existingToast = document.querySelector('.favorite-toast');
+                    if (existingToast) {
+                        existingToast.remove();
+                    }
+
+                    // Create toast element
+                    const toast = document.createElement('div');
+                    toast.className = `favorite-toast toast-${type}`;
+                    toast.innerHTML = `
+                        <i class="fas ${type === 'success' ? 'fa-heart' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                        <span>${message}</span>
+                    `;
+
+                    // Add to page
+                    document.body.appendChild(toast);
+
+                    // Show toast
+                    setTimeout(() => toast.classList.add('show'), 100);
+
+                    // Hide and remove toast
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                        setTimeout(() => toast.remove(), 300);
+                    }, 3000);
                 }
 
                 // Modify checkbox event handler
@@ -730,6 +992,10 @@
                         }
                     });
                 }
+
+                // Initialize favorite functionality on page load
+                attachFavoriteListeners();
+                loadUserFavorites();
 
                 window.addEventListener('pageshow', function() {
             if (typeof selectedItems !== 'undefined') {
