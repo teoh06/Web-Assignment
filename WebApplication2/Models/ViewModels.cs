@@ -285,7 +285,7 @@ public class CartItemVM
 
 public class OrderHistoryVM
 {
-    public List<OrderSummaryVM> Orders { get; set; } = new List<OrderSummaryVM>();
+    public List<OrderHistoryItemVM> Orders { get; set; }
 }
 
 
@@ -317,4 +317,25 @@ public class FeaturedMenuItemVM
     public string Description { get; set; }
     public decimal Price { get; set; }
     public string Image { get; set; }
+}
+
+public class OrderHistoryItemVM
+{
+    public int OrderId { get; set; }
+    public DateTime OrderDate { get; set; }
+    public string Status { get; set; }
+    public decimal Total { get; set; }
+    public int ItemCount { get; set; } 
+    public List<OrderItemHistoryVM> Items { get; set; }
+    public string DeliveryOption { get; set; }
+    public string DeliveryAddress { get; set; }
+}
+
+public class OrderItemHistoryVM
+{
+    public string MenuItemName { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public string PhotoURL { get; set; }
+    public string SelectedPersonalizations { get; set; }
 }
