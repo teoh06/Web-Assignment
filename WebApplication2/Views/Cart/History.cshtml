@@ -105,10 +105,9 @@
             // Style images
             $(".order-card img").addClass("rounded shadow-sm border");
 
-            // --- Status Filter: Client-side filtering for immediate response ---
+            // --- Status Filter: AJAX filtering ---
             $('#statusFilter').off('change').on('change', function() {
-                const selectedStatus = $(this).val();
-                filterOrdersByStatus(selectedStatus);
+                performAjaxSearch();
             });
 
             // --- Track Order Button: Go to Track Page with Order Number ---
@@ -203,18 +202,59 @@
                 const reason = prompt('Please provide a reason for the refund (optional):') || '';
                 const token = $('input[name="__RequestVerificationToken"]').first().val();
                 if (!confirm('Confirm refund for Order #' + orderId + '?')) return;
+                
+                const orderCard = $(`.order-card[data-order-id='${orderId}']`);
+                const refundBtn = $(this);
+                const originalBtnText = refundBtn.html();
+                
+                // Show loading state
+                refundBtn.html('<i class="fas fa-spinner fa-spin me-1"></i> Processing...');
+                refundBtn.prop('disabled', true);
+                
                 $.ajax({
                     url: '/Cart/RefundOrder',
                     type: 'POST',
                     data: { id: orderId, reason: reason, __RequestVerificationToken: token },
                     success: function(res) {
                         if (res.success) {
-                            location.reload();
+                            // Add refund animation to the order card
+                            orderCard.addClass('refund-animation');
+                            
+                            // Show success message
+                            const successMessage = $(`
+                                <div class="alert refund-success-message mt-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                                        <div>
+                                            <h5 class="mb-1">Refund Processed Successfully!</h5>
+                                            <p class="mb-0">Order #${orderId} has been refunded and removed. Items have been restocked.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `);
+                            $('.container.mt-3').prepend(successMessage);
+                            
+                            // Remove the order card after animation completes
+                            setTimeout(function() {
+                                orderCard.remove();
+                                // Auto-hide success message after a few seconds
+                                setTimeout(function() {
+                                    $('.refund-success-message').fadeOut();
+                                }, 3000);
+                            }, 3000);
                         } else {
+                            // Reset button state
+                            refundBtn.html(originalBtnText);
+                            refundBtn.prop('disabled', false);
                             alert(res.message || 'Failed to process refund.');
                         }
                     },
-                    error: function() { alert('Error processing refund.'); }
+                    error: function() { 
+                        // Reset button state
+                        refundBtn.html(originalBtnText);
+                        refundBtn.prop('disabled', false);
+                        alert('Error processing refund.'); 
+                    }
                 });
             });
             
@@ -274,22 +314,31 @@
                 });
             });
             
-            // --- Search Functionality ---
+            // --- AJAX Search Functionality ---
             $('#searchBtn').on('click', function() {
-                performSearch();
+                performAjaxSearch();
             });
             
             $('#searchInput').on('keypress', function(e) {
                 if (e.which === 13) { // Enter key
                     e.preventDefault();
-                    performSearch();
+                    performAjaxSearch();
                 }
+            });
+            
+            // Real-time search with debounce
+            let searchTimeout;
+            $('#searchInput').on('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function() {
+                    performAjaxSearch();
+                }, 500); // Wait 500ms after user stops typing
             });
             
             // Clear search functionality
             $('#clearSearchBtn').on('click', function() {
                 $('#searchInput').val('');
-                performSearch(); // This will show all orders
+                performAjaxSearch(); // This will show all orders
             });
             
             // --- Sorting Functionality ---
@@ -520,142 +569,341 @@
             // No auto-scrolling when paginating - let users stay where they are
         }
         
-        // Enhanced function to perform comprehensive search on orders
-        function performSearch() {
-            const searchTerm = $('#searchInput').val().trim().toLowerCase();
+        // AJAX function to perform server-side search on orders
+        function performAjaxSearch() {
+            const searchTerm = $('#searchInput').val().trim();
+            const selectedStatus = $('#statusFilter').val();
             
-            // Remove previous no-results message
+            // Show loading state
+            showSearchLoading(true);
+            
+            // Remove previous messages
             $('#no-results-message').remove();
+            $('#search-results-info').remove();
             
-            if (!searchTerm) {
-                // If search is empty, show all orders
-                $('.order-card').show();
-                initPagination();
-                return;
-            }
-            
-            // Hide all orders initially
-            $('.order-card').hide();
-            
-            // Enhanced search: split into words and support partial matching
-            const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
-            let matchedCount = 0;
-            
-            // Show orders that match the search term
-            $('.order-card').each(function() {
-                const orderCard = $(this);
-                let isMatch = false;
-                
-                // Get searchable data from card attributes and elements
-                const orderId = orderCard.data('order-id').toString().toLowerCase();
-                const orderDate = orderCard.data('order-date').toString().toLowerCase();
-                const orderTotal = orderCard.data('order-total').toString().toLowerCase();
-                const orderStatus = orderCard.data('order-status').toString().toLowerCase();
-                const orderItems = (orderCard.data('order-items') || '').toString().toLowerCase();
-                
-                // Get text content from visible elements
-                const orderIdText = orderCard.find('.order-id').text().toLowerCase();
-                const orderDateText = orderCard.find('.order-date').text().toLowerCase();
-                const orderTimeText = orderCard.find('.order-time').text().toLowerCase();
-                const orderTotalText = orderCard.find('.order-total').text().toLowerCase();
-                const statusBadgeText = orderCard.find('.status-badge').text().toLowerCase();
-                const deliveryOptionText = orderCard.find('.detail-value').first().text().toLowerCase();
-                const deliveryAddressText = orderCard.find('.detail-value').last().text().toLowerCase();
-                
-                // Get product names from order items
-                let productNames = '';
-                orderCard.find('.order-item-name').each(function() {
-                    productNames += $(this).text().toLowerCase() + ' ';
-                });
-                
-                // Get personalizations
-                let personalizations = '';
-                orderCard.find('.item-personalization').each(function() {
-                    personalizations += $(this).text().toLowerCase() + ' ';
-                });
-                
-                // Create comprehensive search content
-                const searchableContent = [
-                    orderId, orderIdText,
-                    orderDate, orderDateText, orderTimeText,
-                    orderTotal, orderTotalText,
-                    orderStatus, statusBadgeText,
-                    orderItems, productNames,
-                    personalizations,
-                    deliveryOptionText, deliveryAddressText
-                ].join(' ');
-                
-                // Check if ALL search words are found (AND logic)
-                const allWordsMatch = searchWords.every(word => {
-                    return searchableContent.includes(word) || 
-                           // Fuzzy matching for common typos
-                           searchableContent.includes(word.replace(/o/g, '0')) ||
-                           searchableContent.includes(word.replace(/0/g, 'o')) ||
-                           searchableContent.includes(word.replace(/i/g, '1')) ||
-                           searchableContent.includes(word.replace(/1/g, 'i'));
-                });
-                
-                // Alternative: Check if ANY search word is found (OR logic)
-                const anyWordMatch = searchWords.some(word => {
-                    return searchableContent.includes(word) ||
-                           // Fuzzy matching for common typos
-                           searchableContent.includes(word.replace(/o/g, '0')) ||
-                           searchableContent.includes(word.replace(/0/g, 'o')) ||
-                           searchableContent.includes(word.replace(/i/g, '1')) ||
-                           searchableContent.includes(word.replace(/1/g, 'i'));
-                });
-                
-                // Use AND logic for multiple words, OR logic for single word
-                isMatch = searchWords.length > 1 ? allWordsMatch : anyWordMatch;
-                
-                if (isMatch) {
-                    orderCard.show();
-                    matchedCount++;
+            $.ajax({
+                url: '/Cart/SearchOrders',
+                type: 'GET',
+                data: {
+                    searchTerm: searchTerm,
+                    status: selectedStatus
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Clear existing orders
+                        $('#ordersList').empty();
+                        
+                        if (response.orders && response.orders.length > 0) {
+                            // Render new orders
+                            renderOrders(response.orders);
+                            
+                            // Show search results info
+                            showSearchResultsInfo(response.totalCount, searchTerm, selectedStatus);
+                            
+                            // Reinitialize pagination
+                            initPagination();
+                        } else {
+                            // Show no results message
+                            showNoResultsMessage(searchTerm, selectedStatus);
+                        }
+                    } else {
+                        showSearchError('Failed to search orders. Please try again.');
+                    }
+                },
+                error: function() {
+                    showSearchError('An error occurred while searching. Please try again.');
+                },
+                complete: function() {
+                    showSearchLoading(false);
                 }
             });
+        }
+        
+        // Helper function to show/hide search loading state
+        function showSearchLoading(show) {
+            if (show) {
+                $('#searchBtn').html('<i class="fas fa-spinner fa-spin me-1"></i> Searching...');
+                $('#searchBtn').prop('disabled', true);
+                $('#searchInput').prop('disabled', true);
+                $('#statusFilter').prop('disabled', true);
+            } else {
+                $('#searchBtn').html('<i class="fas fa-search me-1"></i> Search');
+                $('#searchBtn').prop('disabled', false);
+                $('#searchInput').prop('disabled', false);
+                $('#statusFilter').prop('disabled', false);
+            }
+        }
+        
+        // Helper function to show search results info
+        function showSearchResultsInfo(count, searchTerm, status) {
+            let message = `Found ${count} order${count !== 1 ? 's' : ''}`;
             
-            // Show enhanced message if no results found
-            if (matchedCount === 0) {
-                const noResultsHtml = `
-                    <div id="no-results-message" class="alert mt-4 text-center">
-                        <div class="mb-3">
-                            <i class="fas fa-search fa-2x text-muted mb-2"></i>
-                            <h5>No orders found</h5>
+            if (searchTerm && status) {
+                message += ` matching "${searchTerm}" with status "${status}"`;
+            } else if (searchTerm) {
+                message += ` matching "${searchTerm}"`;
+            } else if (status) {
+                message += ` with status "${status}"`;
+            }
+            
+            const infoHtml = `
+                <div id="search-results-info" class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>${message}
+                    <button class="btn btn-outline-primary btn-sm ms-2" onclick="clearAllFilters();">
+                        <i class="fas fa-times me-1"></i> Clear All
+                    </button>
+                </div>
+            `;
+            $('#orderListingContainer').prepend(infoHtml);
+        }
+        
+        // Helper function to show no results message
+        function showNoResultsMessage(searchTerm, status) {
+            let message = 'No orders found';
+            let searchCriteria = [];
+            
+            if (searchTerm) searchCriteria.push(`search term "${searchTerm}"`);
+            if (status) searchCriteria.push(`status "${status}"`);
+            
+            if (searchCriteria.length > 0) {
+                message += ` for ${searchCriteria.join(' and ')}`;
+            }
+            
+            const noResultsHtml = `
+                <div id="no-results-message" class="alert alert-warning mt-4 text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                        <h5>${message}</h5>
+                    </div>
+                    <div class="small text-muted">
+                        <p class="mb-2"><strong>Search tips:</strong></p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><i class="fas fa-lightbulb me-1"></i> <strong>Try searching by:</strong></p>
+                                <ul class="list-unstyled small">
+                                    <li>• Order ID (e.g., "123", "#456")</li>
+                                    <li>• Product name (e.g., "pizza", "burger")</li>
+                                    <li>• Order status (e.g., "delivered", "pending")</li>
+                                    <li>• Date (e.g., "jan", "2024", "today")</li>
+                                    <li>• Delivery address or option</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><i class="fas fa-magic me-1"></i> <strong>Search features:</strong></p>
+                                <ul class="list-unstyled small">
+                                    <li>• Real-time search as you type</li>
+                                    <li>• Partial word matching</li>
+                                    <li>• Case-insensitive search</li>
+                                    <li>• Multiple criteria support</li>
+                                </ul>
+                            </div>
                         </div>
-                        <p class="mb-2">No orders match your search for <strong>"${searchTerm}"</strong></p>
-                        <div class="small text-muted">
-                            <p class="mb-2"><strong>Search tips:</strong></p>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="mb-1"><i class="fas fa-lightbulb me-1"></i> <strong>Try searching by:</strong></p>
-                                    <ul class="list-unstyled small">
-                                        <li>• Order ID (e.g., "123", "#456")</li>
-                                        <li>• Product name (e.g., "pizza", "burger")</li>
-                                        <li>• Order status (e.g., "delivered", "pending")</li>
-                                        <li>• Date (e.g., "jan", "2024", "today")</li>
-                                    </ul>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="clearAllFilters();">
+                        <i class="fas fa-times me-1"></i> Clear All Filters
+                    </button>
+                </div>
+            `;
+            $('#orderListingContainer').prepend(noResultsHtml);
+        }
+        
+        // Helper function to show search error
+        function showSearchError(message) {
+            const errorHtml = `
+                <div id="search-error-message" class="alert alert-danger mt-3">
+                    <i class="fas fa-exclamation-circle me-2"></i>${message}
+                </div>
+            `;
+            $('#orderListingContainer').prepend(errorHtml);
+            
+            // Auto-hide error after 5 seconds
+            setTimeout(function() {
+                $('#search-error-message').fadeOut();
+            }, 5000);
+        }
+        
+        // Helper function to clear all filters
+        function clearAllFilters() {
+            $('#searchInput').val('');
+            $('#statusFilter').val('');
+            performAjaxSearch();
+        }
+        
+        // Function to render orders from AJAX response
+        function renderOrders(orders) {
+            const ordersList = $('#ordersList');
+            
+            orders.forEach(function(order) {
+                // Format date
+                const orderDate = new Date(order.orderDate);
+                const formattedDate = orderDate.toLocaleDateString('en-GB');
+                const formattedTime = orderDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                
+                // Format total
+                const formattedTotal = new Intl.NumberFormat('en-MY', { 
+                    style: 'currency', 
+                    currency: 'MYR' 
+                }).format(order.total);
+                
+                // Generate status badge
+                let statusBadge = '';
+                switch(order.status) {
+                    case 'Pending':
+                        statusBadge = '<span class="status-badge status-pending"><i class="fas fa-clock me-1"></i>Pending</span>';
+                        break;
+                    case 'Paid':
+                        statusBadge = '<span class="status-badge status-paid"><i class="fas fa-check-circle me-1"></i>Paid</span>';
+                        break;
+                    case 'Preparing':
+                        statusBadge = '<span class="status-badge status-preparing"><i class="fas fa-cog me-1"></i>Preparing</span>';
+                        break;
+                    case 'Ready for Pickup':
+                        statusBadge = '<span class="status-badge status-ready"><i class="fas fa-box-open me-1"></i>Ready for Pickup</span>';
+                        break;
+                    case 'Delivered':
+                        statusBadge = '<span class="status-badge status-delivered"><i class="fas fa-truck me-1"></i>Delivered</span>';
+                        break;
+                    default:
+                        statusBadge = `<span class="status-badge">${order.status}</span>`;
+                }
+                
+                // Generate order items HTML
+                let itemsHtml = '';
+                order.items.forEach(function(item) {
+                    const itemTotal = (item.unitPrice * item.quantity).toLocaleString('en-MY', { 
+                        style: 'currency', 
+                        currency: 'MYR' 
+                    });
+                    
+                    itemsHtml += `
+                        <div class="order-item">
+                            <div class="item-image">
+                                ${item.photoURL ? 
+                                    `<img src="${item.photoURL}" alt="${item.menuItemName}" class="img-fluid">` :
+                                    '<div class="item-placeholder"><i class="fas fa-image"></i></div>'
+                                }
+                            </div>
+                            <div class="item-details">
+                                <div class="item-name order-item-name">${item.menuItemName}</div>
+                                <div class="item-quantity">Qty: ${item.quantity}</div>
+                                ${item.selectedPersonalizations ? 
+                                    `<div class="item-personalization"><i class="fas fa-cog me-1"></i>${item.selectedPersonalizations}</div>` : 
+                                    ''
+                                }
+                            </div>
+                            <div class="item-price">${itemTotal}</div>
+                        </div>
+                    `;
+                });
+                
+                // Generate action buttons based on status
+                let actionButtons = '';
+                if (order.status === 'Pending') {
+                    actionButtons = `
+                        <div class="btn-row">
+                            <button type="button" class="action-btn btn-warning return-to-payment-btn" data-order-id="${order.orderId}">
+                                <i class="fas fa-credit-card"></i>
+                                <span>Complete Payment</span>
+                            </button>
+                            <button type="button" class="action-btn btn-danger cancel-order-btn" data-order-id="${order.orderId}">
+                                <i class="fas fa-times"></i>
+                                <span>Cancel</span>
+                            </button>
+                        </div>
+                    `;
+                } else if (order.status === 'Paid' || order.status === 'Ready for Pickup' || order.status === 'Delivered') {
+                    actionButtons = `
+                        <div class="btn-row">
+                            <button type="button" class="action-btn btn-warning refund-order-btn" data-order-id="${order.orderId}">
+                                <i class="fas fa-undo"></i>
+                                <span>Refund</span>
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                // Create the complete order card HTML
+                const orderCardHtml = `
+                    <div class="order-card" data-order-id="${order.orderId}" data-order-date="${order.orderDate}" 
+                         data-order-total="${order.total}" data-order-status="${order.status}">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="order-header">
+                                    <div class="order-info">
+                                        <div class="order-id">Order #${order.orderId.toString().padStart(6, '0')}</div>
+                                        <div class="order-date">${formattedDate}</div>
+                                        <div class="order-time">${formattedTime}</div>
+                                    </div>
+                                    <div class="order-status">
+                                        ${statusBadge}
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <p class="mb-1"><i class="fas fa-magic me-1"></i> <strong>Search features:</strong></p>
-                                    <ul class="list-unstyled small">
-                                        <li>• Partial word matching</li>
-                                        <li>• Multiple word search</li>
-                                        <li>• Case-insensitive search</li>
-                                        <li>• Typo tolerance</li>
-                                    </ul>
+                            </div>
+                            <div class="card-body">
+                                <div class="order-items-section">
+                                    <div class="section-title">
+                                        <i class="fas fa-utensils me-2"></i>Order Items (${order.itemCount})
+                                    </div>
+                                    <div class="order-items">
+                                        ${itemsHtml}
+                                    </div>
+                                </div>
+                                
+                                <div class="order-details-section">
+                                    <div class="detail-row">
+                                        <i class="fas fa-map-marker-alt text-info me-2"></i>
+                                        <span class="detail-label">Delivery:</span>
+                                        <span class="detail-value">${order.deliveryOption}</span>
+                                    </div>
+                                    ${order.deliveryAddress ? `
+                                        <div class="detail-row">
+                                            <i class="fas fa-home text-secondary me-2"></i>
+                                            <span class="detail-label">Address:</span>
+                                            <span class="detail-value">${order.deliveryAddress}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                
+                                <div class="order-footer">
+                                    <div class="total-section">
+                                        <div class="total-label">Total Amount</div>
+                                        <div class="total-amount order-total">${formattedTotal}</div>
+                                    </div>
+                                    <div class="action-buttons">
+                                        <div class="btn-row">
+                                            <a href="/Cart/Receipt/${order.orderId}" class="action-btn btn-primary">
+                                                <i class="fas fa-receipt"></i>
+                                                <span>Receipt</span>
+                                            </a>
+                                            <a href="/Cart/Track?orderNumber=${order.orderId}" class="action-btn btn-info track-order-btn" data-order-id="${order.orderId}">
+                                                <i class="fas fa-truck"></i>
+                                                <span>Track</span>
+                                            </a>
+                                        </div>
+                                        <div class="btn-row">
+                                            <form action="/Cart/SendReceiptEmail/${order.orderId}" method="post" class="email-form" style="flex:1;">
+                                                <input name="__RequestVerificationToken" type="hidden" value="@Html.AntiForgeryToken().ToString().Replace("<input name=\"__RequestVerificationToken\" type=\"hidden\" value=\"", "").Replace("\" />", "")" />
+                                                <button type="submit" class="action-btn btn-success email-button w-100" style="min-width:180px;max-width:280px;height:48px;display:flex;align-items:center;justify-content:center;">
+                                                    <i class="fas fa-envelope"></i>
+                                                    <span>Email</span>
+                                                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                                </button>
+                                            </form>
+                                            <button type="button" class="action-btn btn-secondary reorder-btn" data-order-id="${order.orderId}">
+                                                <i class="fas fa-redo"></i>
+                                                <span>Reorder</span>
+                                            </button>
+                                        </div>
+                                        ${actionButtons}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="$('#searchInput').val('').focus(); performSearch();">
-                            <i class="fas fa-times me-1"></i> Clear Search
-                        </button>
                     </div>
                 `;
-                $('#orderListingContainer').prepend(noResultsHtml);
-            }
-            
-            // Reinitialize pagination with filtered results
-            initPagination();
+                
+                ordersList.append(orderCardHtml);
+            });
         }
         
         // Function to filter orders by status
@@ -1714,6 +1962,69 @@
             0% { box-shadow: 0 4px 8px rgba(255,193,7,0.25); }
             50% { box-shadow: 0 6px 15px rgba(255,193,7,0.5); }
             100% { box-shadow: 0 4px 8px rgba(255,193,7,0.25); }
+        }
+        
+        /* Refund Animation Styles */
+        .refund-animation {
+            animation: refundShrinkPop 3s ease-in-out;
+            animation-fill-mode: forwards;
+        }
+        
+        @@keyframes refundShrinkPop {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            20% {
+                transform: scale(0.95);
+                box-shadow: 0 4px 20px rgba(255, 193, 7, 0.3);
+            }
+            40% {
+                transform: scale(0.9);
+                box-shadow: 0 6px 30px rgba(255, 87, 34, 0.4);
+            }
+            60% {
+                transform: scale(1.1);
+                box-shadow: 0 8px 40px rgba(76, 175, 80, 0.5);
+                background: linear-gradient(45deg, #4CAF50, #8BC34A, #CDDC39, #FFEB3B, #FFC107, #FF9800, #FF5722, #E91E63, #9C27B0, #673AB7);
+                background-size: 400% 400%;
+                animation: rainbow 0.5s ease infinite;
+            }
+            80% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+                display: none;
+            }
+        }
+        
+        @@keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .refund-success-message {
+            animation: slideInFromTop 0.5s ease-out;
+            background: linear-gradient(135deg, #4CAF50, #8BC34A);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        @@keyframes slideInFromTop {
+            0% {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
         } 
      </style>
 }
@@ -1795,8 +2106,6 @@
                         <option value="Preparing" selected="@(selectedStatus == "Preparing")">🔵 Preparing</option>
                         <option value="Ready for Pickup" selected="@(selectedStatus == "Ready for Pickup")">🟠 Ready for Pickup</option>
                         <option value="Delivered" selected="@(selectedStatus == "Delivered")">🟣 Delivered</option>
-                        <option value="Refunded" selected="@(selectedStatus == "Refunded")">🟠 Refunded</option>
-                        <option value="Declined" selected="@(selectedStatus == "Declined")">🔴 Declined</option>
                     </select>
                 </div>
                 <div class="col-lg-3">
@@ -2037,7 +2346,7 @@
                                                 </button>
                                             </div>
                                         }
-                                        else if (order.Status == "Paid" || order.Status == "Delivered")
+                                        else if (order.Status == "Paid" || order.Status == "Ready for Pickup" || order.Status == "Delivered")
                                         {
                                             <div class="btn-row">
                                                 <button type="button" class="action-btn btn-warning refund-order-btn" data-order-id="@order.OrderId">
