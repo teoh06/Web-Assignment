@@ -19,6 +19,9 @@ public class HomeController : Controller
     {
         var query = db.MenuItems.AsQueryable();
 
+        // Always exclude deleted items from featured
+        query = query.Where(m => !m.IsDeleted);
+
         // Hide inactive items for non-admins
         if (!User.IsInRole("Admin"))
         {
@@ -40,8 +43,6 @@ public class HomeController : Controller
 
         return View(featured);
     }
-
-
 
     // GET: Home/Both
     [Authorize]
