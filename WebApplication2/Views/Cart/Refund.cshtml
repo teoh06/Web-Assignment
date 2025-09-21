@@ -28,4 +28,143 @@
     </div>
 </div>
 @section Scripts {
+    <style>
+        /* Refund Animation Styles */
+        .refund-animation {
+            animation: refundShrinkPop 3s ease-in-out;
+            animation-fill-mode: forwards;
+        }
+        
+        @@keyframes refundShrinkPop {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            20% {
+                transform: scale(0.95);
+                box-shadow: 0 4px 20px rgba(255, 193, 7, 0.3);
+            }
+            40% {
+                transform: scale(0.9);
+                box-shadow: 0 6px 30px rgba(255, 87, 34, 0.4);
+            }
+            60% {
+                transform: scale(1.1);
+                box-shadow: 0 8px 40px rgba(76, 175, 80, 0.5);
+                background: linear-gradient(45deg, #4CAF50, #8BC34A, #CDDC39, #FFEB3B, #FFC107, #FF9800, #FF5722, #E91E63, #9C27B0, #673AB7);
+                background-size: 400% 400%;
+                animation: rainbow 0.5s ease infinite;
+            }
+            80% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+                display: none;
+            }
+        }
+        
+        @@keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .refund-success-message {
+            animation: slideInFromTop 0.5s ease-out;
+            background: linear-gradient(135deg, #4CAF50, #8BC34A);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        @@keyframes slideInFromTop {
+            0% {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Convert form to AJAX submission with animation
+            $('form').on('submit', function(e) {
+                e.preventDefault();
+                
+                const form = $(this);
+                const submitBtn = form.find('button[type="submit"]');
+                const originalBtnText = submitBtn.html();
+                
+                // Show loading state
+                submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Processing Refund...');
+                submitBtn.prop('disabled', true);
+                
+                // Get form data
+                const formData = {
+                    OrderId: $('#OrderId').val(),
+                    Reason: $('#Reason').val(),
+                    __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                };
+                
+                // Submit AJAX request
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        // Check if it's a redirect response (successful refund)
+                        if (response.includes && response.includes('Order History')) {
+                            // Show success animation on the form card
+                            $('.card').addClass('refund-animation');
+                            
+                            // Show success message
+                            const successMessage = $(`
+                                <div class="alert refund-success-message mt-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                                        <div>
+                                            <h5 class="mb-1">Refund Processed Successfully!</h5>
+                                            <p class="mb-0">Your order has been refunded and removed. Items have been restocked.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `);
+                            
+                            $('.container').prepend(successMessage);
+                            
+                            // Redirect after animation completes
+                            setTimeout(function() {
+                                window.location.href = '/Cart/History';
+                            }, 3500);
+                        } else {
+                            // Handle validation errors
+                            $('body').html(response);
+                        }
+                    },
+                    error: function() {
+                        // Reset button state
+                        submitBtn.html(originalBtnText);
+                        submitBtn.prop('disabled', false);
+                        
+                        // Show error message
+                        const errorMessage = $(`
+                            <div class="alert alert-danger mt-3">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                An error occurred while processing your refund. Please try again.
+                            </div>
+                        `);
+                        $('.card-body').prepend(errorMessage);
+                    }
+                });
+            });
+        });
+    </script>
 }

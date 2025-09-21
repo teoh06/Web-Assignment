@@ -60,7 +60,7 @@ namespace WebApplication2.Controllers
         }
 
         // -------------------
-        // Refund an order (Member-only) - allow for Paid or Delivered
+        // Refund an order (Member-only) - allow for Paid, Ready for Pickup, or Delivered
         // -------------------
         [HttpPost]
         [Authorize(Roles = "Member")]
@@ -69,8 +69,8 @@ namespace WebApplication2.Controllers
         {
             var order = await _db.Orders.Include(o => o.OrderItems).FirstOrDefaultAsync(o => o.OrderId == id && o.MemberEmail == User.Identity.Name);
             if (order == null) return Json(new { success = false, message = "Order not found." });
-            if (order.Status != "Paid" && order.Status != "Delivered")
-                return Json(new { success = false, message = "Only paid or delivered orders can be refunded." });
+            if (order.Status != "Paid" && order.Status != "Ready for Pickup" && order.Status != "Delivered")
+                return Json(new { success = false, message = "Only paid, ready for pickup, or delivered orders can be refunded." });
 
             // Restock items
             foreach (var item in order.OrderItems)
@@ -306,7 +306,7 @@ namespace WebApplication2.Controllers
             {
                 MemberEmail = member.Email,
                 MemberName = member.Name,
-                MemberPhone = member.PhoneNumber,
+                MemberPhone = string.IsNullOrWhiteSpace(member.PhoneNumber) ? "Not provided" : member.PhoneNumber,
                 OrderDate = DateTime.Now,
                 Status = "Pending",
                 // Initialize non-nullable fields to safe defaults until user confirms payment
@@ -542,7 +542,7 @@ namespace WebApplication2.Controllers
                 }
 
                 // Update existing pending order to Paid and persist payment-related fields
-                order.MemberPhone = !string.IsNullOrWhiteSpace(vm.PhoneNumber) ? vm.PhoneNumber : (member?.PhoneNumber ?? "");
+                order.MemberPhone = !string.IsNullOrWhiteSpace(vm.PhoneNumber) ? vm.PhoneNumber : (!string.IsNullOrWhiteSpace(member?.PhoneNumber) ? member.PhoneNumber : "Not provided");
                 order.PaymentMethod = vm.PaymentMethod;
                 order.DeliveryAddress = vm.DeliveryOption == "Pickup" ? string.Empty : vm.DeliveryAddress;
                 order.DeliveryOption = vm.DeliveryOption;
@@ -884,40 +884,112 @@ namespace WebApplication2.Controllers
         [Authorize(Roles = "Member")]
         public async Task<IActionResult> History()
         {
-            if (!User.IsInRole("Member"))
-            {
-                return Unauthorized();
-            }
             var memberEmail = User.Identity.Name;
             var orders = await _db.Orders
-                                  .Where(o => o.MemberEmail == memberEmail)
-                                  .OrderByDescending(o => o.OrderDate)
-                                  .Include(o => o.OrderItems)
-                                      .ThenInclude(oi => oi.MenuItem)
-                                  .ToListAsync();
-            var orderHistoryVm = new OrderHistoryVM();
-            foreach (var order in orders)
+                .Where(o => o.MemberEmail == memberEmail)
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+
+            var vm = new OrderHistoryVM
             {
-                var orderSummary = new OrderSummaryVM
+                Orders = orders.Select(o => new OrderHistoryItemVM
                 {
-                    OrderId = order.OrderId,
-                    OrderDate = order.OrderDate,
-                    Status = MapToSimplifiedStatus(order.Status),
-                    Items = order.OrderItems.Select(oi => new OrderItemVM
+                    OrderId = o.OrderId,
+                    OrderDate = o.OrderDate,
+                    Status = o.Status,
+                    Total = o.OrderItems.Sum(oi => oi.UnitPrice * oi.Quantity),
+                    ItemCount = o.OrderItems.Sum(oi => oi.Quantity),
+                    Items = o.OrderItems.Select(oi => new OrderItemHistoryVM
                     {
-                        MenuItemName = oi.MenuItem?.Name,
+                        MenuItemName = oi.MenuItem?.Name ?? "Unknown Item",
                         Quantity = oi.Quantity,
                         UnitPrice = oi.UnitPrice,
                         PhotoURL = oi.MenuItem?.PhotoURL,
                         SelectedPersonalizations = oi.SelectedPersonalizations
                     }).ToList(),
-                    Total = order.OrderItems.Sum(oi => oi.UnitPrice * oi.Quantity),
-                    DeliveryAddress = order.DeliveryAddress,
-                    DeliveryOption = order.DeliveryOption
-                };
-                orderHistoryVm.Orders.Add(orderSummary);
+                    DeliveryOption = o.DeliveryOption ?? "Unknown",
+                    DeliveryAddress = o.DeliveryAddress ?? ""
+                }).ToList()
+            };
+
+            return View(vm);
+        }
+
+        // AJAX: Search orders
+        [HttpGet]
+        [Authorize(Roles = "Member")]
+        public async Task<IActionResult> SearchOrders(string searchTerm, string status = "")
+        {
+            var memberEmail = User.Identity.Name;
+            var query = _db.Orders
+                .Where(o => o.MemberEmail == memberEmail)
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+                .AsQueryable();
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                searchTerm = searchTerm.Trim().ToLower();
+                query = query.Where(o => 
+                    // Search by Order ID
+                    o.OrderId.ToString().Contains(searchTerm) ||
+                    // Search by Status
+                    o.Status.ToLower().Contains(searchTerm) ||
+                    // Search by Delivery Address
+                    (o.DeliveryAddress != null && o.DeliveryAddress.ToLower().Contains(searchTerm)) ||
+                    // Search by Delivery Option
+                    (o.DeliveryOption != null && o.DeliveryOption.ToLower().Contains(searchTerm)) ||
+                    // Search by Menu Item Names
+                    o.OrderItems.Any(oi => oi.MenuItem != null && oi.MenuItem.Name.ToLower().Contains(searchTerm)) ||
+                    // Search by Personalizations
+                    o.OrderItems.Any(oi => oi.SelectedPersonalizations != null && oi.SelectedPersonalizations.ToLower().Contains(searchTerm)) ||
+                    // Search by Date (flexible date search)
+                    o.OrderDate.ToString("yyyy-MM-dd").Contains(searchTerm) ||
+                    o.OrderDate.ToString("dd/MM/yyyy").Contains(searchTerm) ||
+                    o.OrderDate.ToString("MMM").ToLower().Contains(searchTerm) ||
+                    o.OrderDate.Year.ToString().Contains(searchTerm)
+                );
             }
-            return View(orderHistoryVm);
+
+            // Apply status filter
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(o => o.Status == status);
+            }
+
+            var orders = await query
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+
+            var results = orders.Select(o => new OrderHistoryItemVM
+            {
+                OrderId = o.OrderId,
+                OrderDate = o.OrderDate,
+                Status = o.Status,
+                Total = o.OrderItems.Sum(oi => oi.UnitPrice * oi.Quantity),
+                ItemCount = o.OrderItems.Sum(oi => oi.Quantity),
+                Items = o.OrderItems.Select(oi => new OrderItemHistoryVM
+                {
+                    MenuItemName = oi.MenuItem?.Name ?? "Unknown Item",
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    PhotoURL = oi.MenuItem?.PhotoURL,
+                    SelectedPersonalizations = oi.SelectedPersonalizations
+                }).ToList(),
+                DeliveryOption = o.DeliveryOption ?? "Unknown",
+                DeliveryAddress = o.DeliveryAddress ?? ""
+            }).ToList();
+
+            return Json(new { 
+                success = true, 
+                orders = results,
+                totalCount = results.Count,
+                searchTerm = searchTerm,
+                status = status
+            });
         }
 
         // -------------------
@@ -1332,7 +1404,11 @@ namespace WebApplication2.Controllers
             if (!ModelState.IsValid)
                 return View(vm);
 
-            var order = await _db.Orders.FirstOrDefaultAsync(o => o.OrderId == vm.OrderId && o.MemberEmail == User.Identity.Name);
+            var order = await _db.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+                .FirstOrDefaultAsync(o => o.OrderId == vm.OrderId && o.MemberEmail == User.Identity.Name);
+            
             if (order == null)
             {
                 ModelState.AddModelError("OrderId", "Order not found or you do not have access.");
@@ -1343,11 +1419,33 @@ namespace WebApplication2.Controllers
                 ModelState.AddModelError("OrderId", "Order is already refunded or declined.");
                 return View(vm);
             }
-            // Set status to 'Refunded' (pending admin review)
-            order.Status = "Refunded";
+            if (order.Status != "Paid" && order.Status != "Ready for Pickup" && order.Status != "Delivered")
+            {
+                ModelState.AddModelError("OrderId", "Only paid, ready for pickup, or delivered orders can be refunded.");
+                return View(vm);
+            }
+
+            // Restock items back to inventory (same as Admin refund logic)
+            foreach (var item in order.OrderItems)
+            {
+                var menuItem = await _db.MenuItems.FindAsync(item.MenuItemId);
+                if (menuItem != null && !menuItem.IsDeleted) // Only restock if menu item still exists and isn't deleted
+                {
+                    menuItem.StockQuantity += item.Quantity;
+                }
+            }
+
+            // Remove order items first (in case cascade delete is not configured)
+            if (order.OrderItems != null && order.OrderItems.Any())
+            {
+                _db.OrderItems.RemoveRange(order.OrderItems);
+            }
+
+            // Remove the order record itself (same as Admin logic)
+            _db.Orders.Remove(order);
             await _db.SaveChangesAsync();
-            TempData["Success"] = $"Refund request for Order #{order.OrderId} submitted. Reason: {vm.Reason}";
-            // Optionally, notify admin or save refund request to DB
+
+            TempData["Success"] = $"Order #{order.OrderId} has been refunded successfully. Items have been restocked and the order has been removed.";
             return RedirectToAction("History");
         }
         
