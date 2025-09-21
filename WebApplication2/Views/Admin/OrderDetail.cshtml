@@ -179,15 +179,27 @@
                     </div>
                     <div class="card-body">
                         <div class="quick-actions">
-                            <button class="btn btn-success btn-block" onclick="updateStatus('Delivered')">
-                                <i class="fas fa-check"></i> Mark as Delivered
-                            </button>
-                            <button class="btn btn-warning btn-block" onclick="updateStatus('Preparing')">
-                                <i class="fas fa-utensils"></i> Mark as Preparing
-                            </button>
-                            <button class="btn btn-info btn-block" onclick="updateStatus('Ready for Pickup')">
-                                <i class="fas fa-box"></i> Ready for Pickup
-                            </button>
+                            @if (Model.DeliveryOption == "Pickup")
+                            {
+                                <!-- Pickup Order Actions -->
+                                <button class="btn btn-success btn-block" onclick="updateStatus('Ready for Pickup')">
+                                    <i class="fas fa-box"></i> Mark as Ready for Pickup
+                                </button>
+                                <button class="btn btn-warning btn-block" onclick="updateStatus('Preparing')">
+                                    <i class="fas fa-utensils"></i> Mark as Preparing
+                                </button>
+                            }
+                            else
+                            {
+                                <!-- Delivery Order Actions -->
+                                <button class="btn btn-success btn-block" onclick="updateStatus('Delivered')">
+                                    <i class="fas fa-truck"></i> Mark as Delivered
+                                </button>
+                                <button class="btn btn-warning btn-block" onclick="updateStatus('Preparing')">
+                                    <i class="fas fa-utensils"></i> Mark as Preparing
+                                </button>
+                            }
+                            
                             @if (User.IsInRole("Admin"))
                             {
                                 <button class="btn btn-danger btn-block" onclick="updateStatus('Refunded')">
@@ -221,7 +233,7 @@
                         <label for="statusSelect">Select New Status:</label>
                         <select id="statusSelect" class="form-select">
                             @{
-                                // Use role-based status options
+                                // Use role-based status options filtered by delivery option
                                 string[] statuses;
                                 if (User.IsInRole("Admin"))
                                 {
@@ -234,6 +246,16 @@
                                 else
                                 {
                                     statuses = new string[0];
+                                }
+                                
+                                // Filter statuses based on delivery option
+                                if (Model.DeliveryOption == "Pickup")
+                                {
+                                    statuses = statuses.Where(s => s != "Delivered").ToArray();
+                                }
+                                else if (Model.DeliveryOption == "Delivery")
+                                {
+                                    statuses = statuses.Where(s => s != "Ready for Pickup").ToArray();
                                 }
                             }
                             @foreach (var status in statuses)
