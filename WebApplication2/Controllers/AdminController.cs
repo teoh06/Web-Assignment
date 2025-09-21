@@ -327,7 +327,7 @@ public class AdminController : Controller
         if (order == null) return NotFound();
         
         // Pass role-specific information to the view
-        ViewBag.AllowedStatuses = GetAllowedStatusesForRole();
+        ViewBag.AllowedStatuses = GetAllowedStatusesForRole(order.DeliveryOption);
         ViewBag.IsAdmin = User.IsInRole("Admin");
         ViewBag.IsChef = User.IsInRole("Chef");
         ViewBag.UserRole = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Chef") ? "Chef" : "Unknown");
@@ -355,10 +355,26 @@ public class AdminController : Controller
         }
 
         // Role-based validation: Check if user can modify to this status
-        if (!CanUserModifyToStatus(model.Status))
+        if (!CanUserModifyToStatus(model.Status, order.DeliveryOption))
         {
             string userRole = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Chef") ? "Chef" : "Unknown");
-            TempData["Error"] = $"Access denied. {userRole} role cannot modify order status to '{model.Status}'. Chefs can only update food-related statuses.";
+            string statusErrorMessage = $"Access denied. {userRole} role cannot modify order status to '{model.Status}'.";
+            
+            // Add specific error message for delivery option conflicts
+            if (order.DeliveryOption == "Pickup" && model.Status == "Delivered")
+            {
+                statusErrorMessage += " Pickup orders cannot be marked as 'Delivered'.";
+            }
+            else if (order.DeliveryOption == "Delivery" && model.Status == "Ready for Pickup")
+            {
+                statusErrorMessage += " Delivery orders cannot be marked as 'Ready for Pickup'.";
+            }
+            else
+            {
+                statusErrorMessage += " Chefs can only update food-related statuses.";
+            }
+            
+            TempData["Error"] = statusErrorMessage;
             return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
         }
 
@@ -430,28 +446,58 @@ public class AdminController : Controller
         return RedirectToAction("UpdateOrderStatus", new { id = model.OrderId });
     }
 
-    // Helper method to get allowed statuses based on user role
-    private string[] GetAllowedStatusesForRole()
+    // Helper method to get allowed statuses based on user role and delivery option
+    private string[] GetAllowedStatusesForRole(string deliveryOption = null)
     {
+        string[] baseStatuses;
+        
         if (User.IsInRole("Admin"))
         {
             // Admin can modify all statuses
-            return new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered", "Refunded", "Declined" };
+            baseStatuses = new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered", "Refunded", "Declined" };
         }
         else if (User.IsInRole("Chef"))
         {
             // Chef can only modify food-related statuses, not administrative ones
-            return new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered" };
+            baseStatuses = new[] { "Pending", "Paid", "Preparing", "Ready for Pickup", "Delivered" };
+        }
+        else
+        {
+            return new string[0]; // No permissions for other roles
         }
         
-        return new string[0]; // No permissions for other roles
+        // Filter statuses based on delivery option
+        if (!string.IsNullOrEmpty(deliveryOption))
+        {
+            return baseStatuses.Where(status => IsValidStatusForDeliveryOption(status, deliveryOption)).ToArray();
+        }
+        
+        return baseStatuses;
     }
 
     // Helper method to check if user can modify to specific status
-    private bool CanUserModifyToStatus(string status)
+    private bool CanUserModifyToStatus(string status, string deliveryOption = null)
     {
-        var allowedStatuses = GetAllowedStatusesForRole();
+        var allowedStatuses = GetAllowedStatusesForRole(deliveryOption);
         return allowedStatuses.Contains(status);
+    }
+
+    // Helper method to check if status change is valid based on delivery option
+    private bool IsValidStatusForDeliveryOption(string status, string deliveryOption)
+    {
+        // If delivery option is "Pickup", cannot change to "Delivered"
+        if (deliveryOption == "Pickup" && status == "Delivered")
+        {
+            return false;
+        }
+        
+        // If delivery option is "Delivery", cannot change to "Ready for Pickup"
+        if (deliveryOption == "Delivery" && status == "Ready for Pickup")
+        {
+            return false;
+        }
+        
+        return true;
     }
 
     // Helper method to check if user can modify order based on role-specific rules
@@ -550,13 +596,28 @@ public class AdminController : Controller
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
             if (order == null) return Json(new { success = false, message = "Order not found" });
 
-            // Validate status - use role-based validation
-            var allowedStatuses = GetAllowedStatusesForRole();
+            // Validate status - use role-based validation with delivery option
+            var allowedStatuses = GetAllowedStatusesForRole(order.DeliveryOption);
             if (string.IsNullOrEmpty(status) || !allowedStatuses.Contains(status))
             {
                 string userRole = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Chef") ? "Chef" : "Unknown");
                 string message = allowedStatuses.Length == 0 ? "No status modification permissions" : 
-                    $"Invalid status for {userRole} role. Chefs can only update food-related statuses (Pending, Paid, Preparing, Ready for Pickup, Delivered).";
+                    $"Invalid status for {userRole} role.";
+                
+                // Add specific error message for delivery option conflicts
+                if (order.DeliveryOption == "Pickup" && status == "Delivered")
+                {
+                    message += " Pickup orders cannot be marked as 'Delivered'.";
+                }
+                else if (order.DeliveryOption == "Delivery" && status == "Ready for Pickup")
+                {
+                    message += " Delivery orders cannot be marked as 'Ready for Pickup'.";
+                }
+                else
+                {
+                    message += " Chefs can only update food-related statuses (Pending, Paid, Preparing, Ready for Pickup, Delivered).";
+                }
+                
                 return Json(new { success = false, message = message });
             }
 
