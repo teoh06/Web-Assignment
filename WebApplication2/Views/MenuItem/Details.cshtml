@@ -220,6 +220,8 @@
                     btn.classList.add('btn-outline-danger');
                 }
                 refreshFavoriteList();
+                // Set timestamp for cross-page communication
+                localStorage.setItem('lastFavoriteUpdate', Date.now().toString());
                 if (typeof showFeedback === 'function') showFeedback(data.favorited ? 'Added to favorites!' : 'Removed from favorites!', 'info');
             },
             error: function(xhr) {

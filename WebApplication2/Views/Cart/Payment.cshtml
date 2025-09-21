@@ -7,9 +7,51 @@
 }
 
 <div class="container py-4">
+    <!-- Enhanced Payment Header -->
+    <div class="payment-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-lg-12">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="header-icon me-3">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <div class="text-center">
+                        <h1 class="page-title mb-1">Complete Your Order</h1>
+                        <p class="page-subtitle text-muted">Secure checkout and payment processing</p>
+                    </div>
+                </div>
+                
+                <!-- Progress Steps -->
+                <div class="checkout-progress">
+                    <div class="progress-container">
+                        <div class="progress-step completed">
+                            <div class="step-icon">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <span class="step-label">Cart</span>
+                        </div>
+                        <div class="progress-line completed"></div>
+                        <div class="progress-step active">
+                            <div class="step-icon">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <span class="step-label">Payment</span>
+                        </div>
+                        <div class="progress-line"></div>
+                        <div class="progress-step">
+                            <div class="step-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <span class="step-label">Complete</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row justify-content-center">
         <div class="col-lg-10">
-            <h2 class="mb-4 text-center">Complete Your Order</h2>
             
             <form asp-action="Payment" method="post" class="needs-validation" novalidate>
                 @Html.AntiForgeryToken()
@@ -213,12 +255,14 @@
                         </div>
                     </div>
 
-                    <!-- Right Column: Order Summary -->
+                    <!-- Right Column: Enhanced Order Summary -->
                     <div class="col-lg-4">
                         <!-- Order Summary Card -->
-                        <div class="card sticky-top" style="top: 20px;">
-                            <div class="card-header bg-success text-white">
-                                <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Order Summary</h5>
+                        <div class="order-summary-card sticky-top" style="top: 20px;">
+                            <div class="summary-header">
+                                <h4 class="summary-title">
+                                    <i class="fas fa-shopping-cart me-2"></i>Order Summary
+                                </h4>
                             </div>
                             <div class="card-body">
                                 <!-- Order Items -->
@@ -290,6 +334,295 @@
 
 @section Scripts {
     <style>
+        /* =============================================================================
+           ENHANCED PAYMENT PAGE STYLING - MODERN DESIGN WITH LIGHT/DARK MODE
+           ============================================================================= */
+        
+        /* Payment Header Styling */
+        .payment-header {
+            background: linear-gradient(135deg, var(--bg-accent), var(--bg-secondary));
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 2rem;
+        }
+        
+        .header-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: var(--text-primary);
+        }
+        
+        .page-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin: 0;
+            color: var(--text-secondary);
+        }
+        
+        /* Checkout Progress Steps */
+        .checkout-progress {
+            margin-top: 2rem;
+        }
+        
+        .progress-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+            border: 3px solid var(--border-medium);
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+        }
+        
+        .step-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .progress-step.completed .step-icon {
+            background: var(--success-color);
+            border-color: var(--success-color);
+            color: var(--text-light);
+        }
+        
+        .progress-step.completed .step-label {
+            color: var(--success-color);
+        }
+        
+        .progress-step.active .step-icon {
+            background: var(--primary-brand);
+            border-color: var(--primary-brand);
+            color: var(--text-light);
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
+        }
+        
+        .progress-step.active .step-label {
+            color: var(--primary-brand);
+            font-weight: 600;
+        }
+        
+        .progress-line {
+            width: 80px;
+            height: 3px;
+            background: var(--border-medium);
+            margin: 0 1rem;
+            position: relative;
+            top: -25px;
+        }
+        
+        .progress-line.completed {
+            background: var(--success-color);
+        }
+        
+        /* Enhanced Form Cards */
+        .card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .card-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1.25rem;
+        }
+        
+        .card-header h5 {
+            margin: 0;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+            background: var(--bg-primary);
+        }
+        
+        /* Enhanced Delivery Option Cards */
+        .delivery-option-card .card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid var(--border-light);
+            background: var(--bg-primary);
+        }
+        
+        .delivery-option-card .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-brand);
+        }
+        
+        .delivery-option-card .card.border-primary {
+            border-color: var(--primary-brand) !important;
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.05), rgba(247, 147, 30, 0.05));
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.2);
+        }
+        
+        .delivery-option-card .card-title {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .delivery-option-card .card-text {
+            color: var(--text-secondary);
+        }
+        
+        /* Enhanced Form Controls */
+        .form-control, .form-select {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-medium);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-primary);
+            border-color: var(--primary-brand);
+            box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+            color: var(--text-primary);
+        }
+        
+        .form-label {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        /* Enhanced Order Summary */
+        .order-summary-card {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .summary-header {
+            background: linear-gradient(135deg, var(--success-color), var(--success-hover));
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .summary-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-light);
+        }
+        
+        /* Enhanced Alerts */
+        .alert {
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1));
+            color: var(--success-color);
+            border: 1px solid rgba(76, 175, 80, 0.2);
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(3, 169, 244, 0.1));
+            color: var(--info-color);
+            border: 1px solid rgba(33, 150, 243, 0.2);
+        }
+        
+        /* Enhanced Button Styling */
+        .btn {
+            border-radius: 10px;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+        
+        .btn-success {
+            background: var(--gradient-fresh);
+            color: var(--text-light);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            filter: brightness(1.1);
+        }
+        
+        .btn-outline-secondary {
+            border: 2px solid var(--border-medium);
+            color: var(--text-primary);
+            background: transparent;
+        }
+        
+        .btn-outline-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary-brand);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+        
         /* Enhanced button states for better visual feedback */
         #payButton {
             transition: all 0.3s ease;
@@ -396,6 +729,166 @@
         .text-danger {
             font-size: 0.875rem;
             margin-top: 0.25rem;
+        }
+        
+        /* Processing Indicator */
+        #processingIndicator {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1));
+            color: var(--warning-color);
+            border: 1px solid rgba(255, 193, 7, 0.2);
+            border-radius: 12px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        /* Responsive Design */
+        @@media (max-width: 991.98px) {
+            .sticky-top {
+                position: relative;
+                top: auto !important;
+            }
+            
+            .payment-header {
+                padding: 1.5rem;
+            }
+            
+            .page-title {
+                font-size: 2rem;
+            }
+            
+            .progress-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .progress-line {
+                width: 3px;
+                height: 40px;
+                top: 0;
+                margin: 0;
+            }
+            
+            .order-summary-card {
+                margin-top: 2rem;
+            }
+        }
+        
+        @@media (max-width: 768px) {
+            .payment-header {
+                padding: 1rem;
+            }
+            
+            .page-title {
+                font-size: 1.8rem;
+            }
+            
+            .header-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.25rem;
+            }
+            
+            .step-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .btn-lg {
+                padding: 0.875rem 1.5rem;
+                font-size: 1rem;
+            }
+        }
+        
+        /* Dark Theme Support */
+        html.dark-theme .delivery-option-card .card.border-primary {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(247, 147, 30, 0.1));
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+        }
+        
+        html.dark-theme .form-control::placeholder,
+        html.dark-theme .form-select::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        html.dark-theme .alert-success {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(139, 195, 74, 0.15));
+            color: var(--success-color);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        html.dark-theme .alert-info {
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.15), rgba(3, 169, 244, 0.15));
+            color: var(--info-color);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+        }
+        
+        html.dark-theme #processingIndicator {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 152, 0, 0.15));
+            color: var(--warning-color);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+        
+        /* Enhanced Form Validation */
+        .form-control.is-valid {
+            border-color: var(--success-color);
+            box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+        }
+        
+        .form-control.is-invalid {
+            border-color: var(--error-color);
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+        
+        .form-select.is-valid {
+            border-color: var(--success-color);
+            box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+        }
+        
+        .form-select.is-invalid {
+            border-color: var(--error-color);
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+        
+        /* Security Notice Styling */
+        .mt-3 small {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(76, 175, 80, 0.2);
+            color: var(--success-color);
+        }
+        
+        /* Enhanced Card Headers with Theme Colors */
+        .card-header.bg-primary {
+            background: var(--gradient-warm) !important;
+            color: var(--text-light) !important;
+        }
+        
+        .card-header.bg-info {
+            background: linear-gradient(135deg, var(--info-color), var(--info-hover)) !important;
+            color: var(--text-light) !important;
+        }
+        
+        .card-header.bg-warning {
+            background: linear-gradient(135deg, var(--warning-color), var(--warning-hover)) !important;
+            color: var(--text-light) !important;
+        }
+        
+        .card-header.bg-success {
+            background: linear-gradient(135deg, var(--success-color), var(--success-hover)) !important;
+            color: var(--text-light) !important;
+        }
+        
+        .card-header.bg-dark {
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--text-primary)) !important;
+            color: var(--text-light) !important;
         }
     </style>
     <script>

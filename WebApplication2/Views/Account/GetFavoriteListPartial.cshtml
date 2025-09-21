@@ -1,7 +1,7 @@
 @inject DB db
 @{
     var favIds = db.MenuItemFavorites.Where(f => f.MemberEmail == User.Identity.Name).Select(f => f.MenuItemId).ToList();
-    var favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId)).ToList();
+    var favorites = db.MenuItems.Where(m => favIds.Contains(m.MenuItemId) && !m.IsDeleted && m.IsActive).ToList();
 }
 @if (favorites.Any())
 {
@@ -16,7 +16,14 @@
                     <div class="favorite-name">@item.Name</div>
                     <div class="favorite-category">@item.Category?.Name</div>
                     <div class="favorite-price">@item.Price.ToString("C", new System.Globalization.CultureInfo("en-MY"))</div>
-                    <a href="/MenuItem/Details/@item.MenuItemId" class="btn btn-sm btn-info">Details</a>
+                    <div class="favorite-actions">
+                        <a href="/MenuItem/Details/@item.MenuItemId" class="btn btn-sm btn-info">Details</a>
+                        <button class="btn btn-sm btn-outline-danger remove-favorite-btn" 
+                                data-menu-item-id="@item.MenuItemId" 
+                                title="Remove from Favorites">
+                            <i class="fas fa-heart-broken"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         }

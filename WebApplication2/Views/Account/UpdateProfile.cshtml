@@ -153,7 +153,9 @@
         </section>
     </div>
     <div class="profile-favorites-card profile-settings-card">
-        <h2 class="favorite-title">Your Favorite Dishes</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+            <h2 class="favorite-title" style="margin-bottom: 0;">Your Favorite Dishes</h2>
+        </div>
         <div id="favoriteList">
             @await Html.PartialAsync("GetFavoriteListPartial")
         </div>
@@ -424,6 +426,27 @@
     .empty-favorite {
         font-style: italic;
         margin-top: 12px;
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 2rem;
+    }
+    .favorite-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+    }
+    .remove-favorite-btn {
+        padding: 4px 8px;
+        font-size: 0.875rem;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    .remove-favorite-btn:hover {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+        transform: scale(1.05);
     }
     .photo-edit-section {
         margin: 16px 0;
@@ -842,7 +865,124 @@
             hasProcessedImage = false;
         }
 
+        // Handle remove favorite functionality
+        function attachRemoveFavoriteListeners() {
+            document.querySelectorAll('.remove-favorite-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const menuItemId = this.dataset.menuItemId;
+                    const favoriteCard = this.closest('.favorite-card');
+                    
+                    // Add loading state
+                    this.disabled = true;
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    
+                    // AJAX call to remove favorite
+                    const formData = new FormData();
+                    formData.append('menuItemId', menuItemId);
+                    formData.append('__RequestVerificationToken', getAntiForgeryToken());
+                    
+                    fetch('/MenuItem/ToggleFavorite', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the card with animation
+                            favoriteCard.style.transition = 'all 0.3s ease';
+                            favoriteCard.style.transform = 'scale(0)';
+                            favoriteCard.style.opacity = '0';
+                            
+                            setTimeout(() => {
+                                favoriteCard.remove();
+                                
+                                // Check if no favorites left
+                                const remainingCards = document.querySelectorAll('.favorite-card');
+                                if (remainingCards.length === 0) {
+                                    document.getElementById('favoriteList').innerHTML = 
+                                        '<div class="empty-favorite">You have not added any favorites yet.</div>';
+                                }
+                            }, 300);
+                            
+                            showFeedback('Removed from favorites!', 'info');
+                        } else {
+                            showFeedback(data.message || 'Failed to remove favorite', 'error');
+                            // Reset button
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-heart-broken"></i>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error removing favorite:', error);
+                        showFeedback('Something went wrong. Please try again.', 'error');
+                        // Reset button
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-heart-broken"></i>';
+                    });
+                });
+            });
+        }
+
+        // Call this function whenever the favorite list is refreshed
+        function refreshFavoriteListWithListeners() {
+            console.log('Refreshing favorite list...');
+            fetch('/Account/GetFavoriteListPartial')
+                .then(response => response.text())
+                .then(html => {
+                    console.log('Favorite list refreshed successfully');
+                    document.getElementById('favoriteList').innerHTML = html;
+                    attachRemoveFavoriteListeners(); // Reattach listeners
+                })
+                .catch(error => {
+                    console.error('Error refreshing favorite list:', error);
+                });
+        }
+
+        // Auto-refresh favorites when page becomes visible (user returns to tab)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // Page became visible, refresh favorites
+                refreshFavoriteListWithListeners();
+            }
+        });
+
+        // Auto-refresh favorites when page gains focus
+        window.addEventListener('focus', function() {
+            refreshFavoriteListWithListeners();
+        });
+
+        // Auto-refresh favorites on page load
+        function autoRefreshFavorites() {
+            // Check if there was recent favorite activity
+            const lastFavoriteUpdate = localStorage.getItem('lastFavoriteUpdate');
+            const lastPageLoad = localStorage.getItem('profilePageLoad') || '0';
+            
+            console.log('Checking for favorite updates...', {
+                lastFavoriteUpdate,
+                lastPageLoad,
+                shouldRefresh: lastFavoriteUpdate && parseInt(lastFavoriteUpdate) > parseInt(lastPageLoad)
+            });
+            
+            if (lastFavoriteUpdate && parseInt(lastFavoriteUpdate) > parseInt(lastPageLoad)) {
+                // There was favorite activity since last profile page load, refresh
+                console.log('Favorite activity detected, refreshing list...');
+                refreshFavoriteListWithListeners();
+            }
+            
+            // Update page load timestamp
+            localStorage.setItem('profilePageLoad', Date.now().toString());
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize remove favorite listeners on page load
+            attachRemoveFavoriteListeners();
+            
+            // Auto-refresh favorites if needed
+            autoRefreshFavorites();
+            
             // Drag & drop and click-to-select for profile photo
             const dropArea = document.getElementById('dropArea');
             const fileInput = document.getElementById('newPhotoInputPopup');
