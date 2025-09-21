@@ -1278,11 +1278,8 @@ namespace WebApplication2.Controllers
                 // Determine if this is a manual refund (only show refunded if manually refunded)
                 bool manualRefund = order.Status == "Refunded";
 
-                // Auto-progress order status for demo purposes (only if payment is made)
-                if (paymentMade)
-                {
-                    await AutoProgressOrderStatus(order);
-                }
+                // Note: Order status progression is now handled manually by Chef/Admin only
+                // Removed automatic status progression to prevent unauthorized status changes
 
                 // Map status to simplified set
                 var displayStatus = MapToSimplifiedStatus(order.Status);
@@ -1334,46 +1331,9 @@ namespace WebApplication2.Controllers
             return order.Status != "Pending";
         }
 
-        // Auto-progress order status for demo purposes (15 seconds total)
-        private async Task AutoProgressOrderStatus(Order order)
-        {
-            // Only progress orders that are in progress (not final status)
-            if (order.Status == "Refunded" || order.Status == "Declined" || order.Status == "Delivered")
-            {
-                return;
-            }
-
-            var timeSinceOrder = DateTime.Now - order.OrderDate;
-            var totalSeconds = timeSinceOrder.TotalSeconds;
-
-            string newStatus = order.Status;
-
-            // Progress through statuses within 15 seconds, but respect delivery option
-            if (totalSeconds >= 15)
-            {
-                // Final status depends on delivery option
-                newStatus = order.DeliveryOption == "Pickup" ? "Ready for Pickup" : "Delivered";
-            }
-            else if (totalSeconds >= 10)
-            {
-                newStatus = "Preparing";
-            }
-            else if (totalSeconds >= 5)
-            {
-                newStatus = "Preparing";
-            }
-            else if (totalSeconds >= 0)
-            {
-                newStatus = "Paid"; // Keep as Paid initially
-            }
-
-            // Only update if status has changed
-            if (newStatus != order.Status)
-            {
-                order.Status = newStatus;
-                await _db.SaveChangesAsync();
-            }
-        }
+        // Note: Automatic order status progression has been removed
+        // Order statuses can now only be modified by Chef and Admin roles
+        // This ensures proper control over order status changes
 
         // Helper method to map status to simplified set
         private string MapToSimplifiedStatus(string status)
